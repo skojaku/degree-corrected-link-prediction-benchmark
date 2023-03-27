@@ -1,53 +1,100 @@
+import numpy as np
 from os.path import join as j
+import itertools
+import pandas as pd
+from snakemake.utils import Paramspace
+include: "./workflow_utils.smk" # not able to merge this with snakemake_utils.py due to some path breakage issues
 
-configfile: "workflow/config.yaml"
+# ====================
+# Root folder path setting
+# ====================
 
-# Import utilities
-include: "../workflow_utils.smk"
-include: "workflow_utils.smk"
+# network file
+DERIVED_DIR = j("data", "derived")
+NETWORK_DIR = j(DERIVED_DIR, "networks")
 
-#EMB_DIR = j(DATA_DIR, "{data}", "embeddings")
-#emb_params ={
-#    "directed": ["undirected", "directed"],
-#    "window_length": [10],
-#    "model_name": ["node2vec", "deepwalk", "adjspec", "leigenmap"],
-#    "dim": [64],
-#}
-#emb_params2 ={
-#    "directed": ["undirected", "directed"],
-#    "window_length": [10],
-#    "model_name": ["node2vec", "deepwalk", "adjspec", "leigenmap"],
-#    "dim": [64],
-#}
-#emb_paramspace = to_union_paramspace([emb_params, emb_param2])
-#EMB_FILE = j(EMB_DIR, f"paper_{emb_paramspace.wildcard_pattern}.npz")
+DATA_LIST = ["airport", "polbook", "polblog"]
+N_ITERATION = 5
 
+# ====================
+# Configuration
+# ====================
+params_negative_edge_sampler = {
+    "edgeSampling":["uniform", "degreeBiased"],
+    "testEdgeFrac":[0.1, 0.5],
+    "sampleId":list(range(N_ITERATION)),
+}
+paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 
-DATA_DIR = config["data_dir"]
+params_emb = {
+    "model":["node2vec", "deepwalk", "modularity", "leigenmap"],
+}
+paramspace_emb = to_paramspace(params_emb)
+# =============================
+# Networks & Benchmark Datasets
+# =============================
 
-PAPER_DIR = config["paper_dir"]
-PAPER_SRC, SUPP_SRC = [j(PAPER_DIR, f) for f in ("main.tex", "supp.tex")]
-PAPER, SUPP = [j(PAPER_DIR, f) for f in ("main.pdf", "supp.pdf")]
+# Edge table
+EDGE_TABLE_FILE = j(NETWORK_DIR, "raw", "{data}", "edge_table.csv") # train
 
+# Benchmark
+DATASET_DIR = j(DERIVED_DIR, "datasets")
+LP_DATASET_FILE = j(DATASET_DIR, "{data}", f"{paramspace.wildcard_pattern}.csv")
+
+# ====================
+# Evaluation
+# ====================
+RESULT_DIR = j(DERIVED_DIR, "results")
+
+# AUC-ROC
+LP_SCORE_FILE = j(RESULT_DIR, "auc_roc", "{data}", f"result_{paramspace.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.csv")
+LP_ALL_SCORE_FILE = j(RESULT_DIR, "result_auc_roc.csv")
+
+# ====================
+# Output
+# ====================
+
+#
+#
+# RULES
+#
+#
 rule all:
     input:
-        PAPER, SUPP
+        expand(LP_ALL_SCORE_FILE, data = DATA_LIST, **params_emb, **params_negative_edge_sampler),
 
-rule paper:
+
+# ============================
+# Generating benchmark dataset
+# ============================
+rule generate_link_prediction_dataset:
     input:
-        PAPER_SRC, SUPP_SRC
+        edge_table_file = EDGE_TABLE_FILE,
     params:
-        paper_dir = PAPER_DIR
+        parameters=paramspace_negative_edge_sampler.instance,
     output:
-        PAPER, SUPP
-    shell:
-        "cd {params.paper_dir}; make"
+        output_file = LP_DATASET_FILE
+    script:
+        "workflow/generate-link-prediction-dataset.py"
 
 
-# rule some_data_processing:
-    # input:
-        # "data/some_data.csv"
-    # output:
-        # "data/derived/some_derived_data.csv"
-    # script:
-        # "workflow/scripts/process_some_data.py"
+# =====================
+# Evaluation
+# =====================
+rule eval_link_prediction:
+    input:
+        input_file = LP_DATASET_FILE,
+    params:
+        emb_file = lambda wildcards: "{root}/{data}/{data}_{sampleId}/{data}".format(root=SRC_DATA_ROOT, data=wildcards.data, sampleId=wildcards.sampleId)+MODEL2EMBFILE_POSTFIX[wildcards.model] # not ideal but since the file names are different, I generate the file name in the script and load the corresponding file.
+    output:
+        output_file = LP_SCORE_FILE
+    script:
+        "workflow/evaluate-lp-performance.py"
+
+rule concatenate_results:
+    input:
+        input_file_list = expand(LP_SCORE_FILE, **lp_benchmark_params, data = DATA_LIST),
+    output:
+        output_file = LP_ALL_SCORE_FILE
+    script:
+        "workflow/concat-results.py"

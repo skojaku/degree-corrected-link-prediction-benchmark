@@ -3,9 +3,9 @@
 
 from distutils.core import setup
 
-setup(name='project_package_name', 
-      version='0.1', 
-      description = 'project description', 
+setup(name='linkpred', 
+      version='0.0', 
+      description = 'link prediction', 
       author = '...', 
-      packages = ['project_package_name'],
+      packages = ['linkpred'],
 )

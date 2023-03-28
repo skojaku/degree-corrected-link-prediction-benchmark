@@ -32,3 +32,12 @@ and run
 snakemake --cores 5 figs
 ```
 which should produce a figure in `figs` folder.
+
+## How to add network data
+
+1. Prepare the edge list table and put it under "data/derived/networks/raw/{name}", where `{name}` is the code of the network
+2. Add the `{name}` to Snakefile
+```bash 
+DATA_LIST
+```
+See the test_data/derived/raw for the format

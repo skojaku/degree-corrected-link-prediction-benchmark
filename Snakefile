@@ -3,6 +3,7 @@ from os.path import join as j
 import itertools
 import pandas as pd
 from snakemake.utils import Paramspace
+import os
 
 
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
@@ -17,10 +18,12 @@ DATA_DIR = "data" # set test_data for testing
 
 DERIVED_DIR = j(DATA_DIR, "derived")
 NETWORK_DIR = j(DERIVED_DIR, "networks")
+RAW_UNPROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"raw_unprocessed")
+RAW_PROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"raw")
 EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 
-DATA_LIST = ["airport", "polblog"]
+DATA_LIST = [f.split("_")[1].split('.')[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)]
 N_ITERATION = 5
 
 # ====================
@@ -144,6 +147,20 @@ rule all:
 rule figs:
     input:
         FIG_AUCROC
+
+# ============================
+# Cleaning networks
+# Gets edge list of GCC as csv
+# ============================
+rule clean_networks:
+    input:
+        raw_unprocessed_networks_dir = RAW_UNPROCESSED_NETWORKS_DIR,
+        raw_processed_networks_dir = RAW_PROCESSED_NETWORKS_DIR,
+    output:
+        edge_table_file = EDGE_TABLE_FILE,
+    script:
+        "workflow/clean_networks.py"
+
 
 # ============================
 # Generating benchmark dataset

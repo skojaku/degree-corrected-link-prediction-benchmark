@@ -15,7 +15,20 @@ mamba install -c conda-forge numpy==1.23.5
 ```
 
 Install the in-house packages:
-```bash 
+```bash
 cd libs/linkpred && pip install -e .
 cd libs/embcom && pip install -e .
 ```
+
+
+## Test run
+
+Open Snakefile and change the "DATA_DIR" folder to "test_data":
+ ```python
+DATA_DIR = "test_data"
+```
+and run
+```bash
+snakemake --cores 5 figs
+```
+which should produce a figure in `figs` folder.

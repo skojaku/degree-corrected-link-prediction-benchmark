@@ -18,8 +18,8 @@ DATA_DIR = "data" # set test_data for testing
 
 DERIVED_DIR = j(DATA_DIR, "derived")
 NETWORK_DIR = j(DERIVED_DIR, "networks")
-RAW_UNPROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"raw_unprocessed")
-RAW_PROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"raw")
+RAW_UNPROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"raw")
+RAW_PROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"preprocessed")
 EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 
@@ -66,7 +66,7 @@ paramspace_net_linkpred = to_paramspace(params_net_linkpred)
 # =============================
 
 # Edge table
-EDGE_TABLE_FILE = j(NETWORK_DIR, "raw", "{data}", "edge_table.csv")  # train
+EDGE_TABLE_FILE = j(NETWORK_DIR, "preprocessed", "{data}", "edge_table.csv")  # train
 
 # Benchmark
 DATASET_DIR = j(DERIVED_DIR, "datasets")

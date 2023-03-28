@@ -13,7 +13,9 @@ include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemak
 # ====================
 
 # network file
-DERIVED_DIR = j("data", "derived")
+DATA_DIR = "data" # set test_data for testing
+
+DERIVED_DIR = j(DATA_DIR, "derived")
 NETWORK_DIR = j(DERIVED_DIR, "networks")
 EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")

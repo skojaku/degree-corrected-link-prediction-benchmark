@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-27 18:39:11
+# @Last Modified time: 2023-03-28 10:22:30
 """Module for embedding."""
 # %%
 import gensim
@@ -137,7 +137,7 @@ class DeepWalk(Node2Vec):
     def __init__(self, **params):
         Node2Vec.__init__(self, **params)
         self.w2vparams = {
-            "sg": 0,
+            "sg": 1,
             "hs": 1,
             "min_count": 0,
             "workers": 4,

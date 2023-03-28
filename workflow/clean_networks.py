@@ -11,6 +11,7 @@ import networkx as nx
 import os
 import sys
 import csv
+import pandas as pd
 
 if "snakemake" in sys.modules:
     raw_unprocessed_dir = snakemake.input["raw_unprocessed_networks_dir"]
@@ -26,7 +27,7 @@ for f in os.listdir(raw_unprocessed_dir):
     if name_of_network in f:
         # read as a undirected, unweighted graph. No self loops?
         G = nx.read_edgelist(
-            os.path.join(raw_unprocessed_dir, f), create_using=nx.Graph
+            os.path.join(raw_unprocessed_dir, f), create_using=nx.Graph, nodetype=int
         )
 
         gcc = sorted(nx.connected_components(G), key=len, reverse=True)
@@ -36,8 +37,9 @@ for f in os.listdir(raw_unprocessed_dir):
 
 os.makedirs(raw_processed_networks_dir + "/" + name_of_network, exist_ok=True)
 
-with open(edge_table_file, "w", newline="") as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(["src", "trg"])
-    for edge in Gcc.edges():
-        writer.writerow(edge)
+# node labels are integers starting from 0
+Gcc = nx.convert_node_labels_to_integers(Gcc, first_label=0)
+src_trg_list = list(map(list, zip(*Gcc.edges())))
+src, trg = src_trg_list[0],src_trg_list[1]
+
+pd.DataFrame({"src":src, "trg":trg}).to_csv(edge_table_file, index=False)

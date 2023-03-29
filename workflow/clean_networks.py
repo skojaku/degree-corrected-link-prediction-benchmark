@@ -35,7 +35,7 @@ for f in os.listdir(raw_unprocessed_dir):
         G = nx.read_edgelist(
             os.path.join(raw_unprocessed_dir, f), create_using=nx.Graph, nodetype=int
         )
-        
+
         A = nx.to_scipy_sparse_array(G)
         A = csr_matrix(A)
 
@@ -50,7 +50,6 @@ for f in os.listdir(raw_unprocessed_dir):
         unique_labels, counts = np.unique(labels, return_counts=True)
         largest_component_label = unique_labels[np.argmax(counts)]
         index = np.argwhere(labels == largest_component_label).ravel()
-        print(index)
         Gcc_A = A[index, :]
         Gcc_A = (Gcc_A.tocsc()[:, index]).tocsr()
 

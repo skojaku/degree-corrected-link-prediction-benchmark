@@ -143,6 +143,18 @@ rule all:
             **params_emb,
             **params_negative_edge_sampler
         ),
+        expand(
+            LP_SCORE_EMB_FILE,
+            data=DATA_LIST,
+            **params_emb,
+            **params_negative_edge_sampler
+        ),
+        expand(
+            LP_SCORE_NET_FILE,
+            data=DATA_LIST,
+            **params_net_linkpred,
+            **params_negative_edge_sampler
+        ),
 
 rule figs:
     input:

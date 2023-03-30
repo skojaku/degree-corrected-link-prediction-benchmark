@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-17 04:25:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-28 10:48:23
+# @Last Modified time: 2023-03-30 10:35:18
 # %%
 from scipy import sparse
 import numpy as np
@@ -24,6 +24,10 @@ else:
 edge_table = pd.read_csv(input_file)
 net = sparse.load_npz(net_file)
 model = params["model"]
+
+# To ensure that the network is undirected and unweighted.
+net = net + net.T
+net.data = net.data * 0.0 + 1.0
 
 # ========================
 # Preprocess

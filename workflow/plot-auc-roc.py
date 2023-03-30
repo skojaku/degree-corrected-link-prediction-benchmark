@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:06:41
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-28 11:19:06
+# @Last Modified time: 2023-03-30 10:44:04
 import numpy as np
 import pandas as pd
 import sys
@@ -51,6 +51,7 @@ g = sns.catplot(
     col="data",
     row="testEdgeFraction",
     kind="bar",
+    col_wrap=5,
     palette=palette,
 )
 

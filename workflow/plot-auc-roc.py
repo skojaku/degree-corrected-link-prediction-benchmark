@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:06:41
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-30 11:00:00
+# @Last Modified time: 2023-03-30 11:02:54
 import numpy as np
 import pandas as pd
 import sys
@@ -53,6 +53,7 @@ g = sns.catplot(
     kind="bar",
     col_wrap=5,
     palette=palette,
+    sharex=False,
 )
 
 g.set_xlabels("AUC-ROC")

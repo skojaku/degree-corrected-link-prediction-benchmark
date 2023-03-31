@@ -21,7 +21,7 @@ NETWORK_DIR = j(DERIVED_DIR, "networks")
 RAW_UNPROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"raw")
 RAW_PROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"preprocessed")
 EMB_DIR = j(DERIVED_DIR, "embedding")
-PRED_DIR = j(DERIVED_DIR, "link-prediction")
+PRED_DIR = j(DERIVED_DIR, "link-prediction") 
 
 DATA_LIST = [f.split("_")[1].split('.')[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)]
 N_ITERATION = 5
@@ -128,7 +128,9 @@ LP_ALL_SCORE_FILE = j(RESULT_DIR, "result_auc_roc.csv")
 # ====================
 # Output
 # ====================
-FIG_AUCROC = j("figs", "aucroc.pdf")
+FIG_AUCROC = j(RESULT_DIR, "figs", "aucroc.pdf")
+FIG_DEGSKEW_AUCDIFF = j(RESULT_DIR, "figs", "corr_degskew_aucdiff.pdf")
+FIG_NODES_AUCDIFF = j(RESULT_DIR, "figs", "corr_nodes_aucdiff.pdf")
 
 #
 #
@@ -158,7 +160,9 @@ rule all:
 
 rule figs:
     input:
-        FIG_AUCROC
+        FIG_AUCROC,
+        FIG_DEGSKEW_AUCDIFF,
+        FIG_NODES_AUCDIFF
 
 # ============================
 # Cleaning networks
@@ -284,3 +288,14 @@ rule plot_aucroc:
         output_file=FIG_AUCROC
     script:
         "workflow/plot-auc-roc.py"
+
+rule plot_aucdiff: 
+    input: 
+        auc_results_file = LP_ALL_SCORE_FILE,
+        networks_dir = RAW_PROCESSED_NETWORKS_DIR,
+    output:
+        degskew_outputfile = FIG_DEGSKEW_AUCDIFF,
+        nodes_outputfile = FIG_NODES_AUCDIFF 
+    script:
+        "workflow/plot-NetProp-AucDiff.py"
+

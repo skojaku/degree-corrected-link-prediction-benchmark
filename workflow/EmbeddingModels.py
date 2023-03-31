@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-31 17:30:44
+# @Last Modified time: 2023-03-31 17:44:39
 import embcom
 
 embedding_models = {}
@@ -37,8 +37,8 @@ def modspec(network, dim):
     return model.transform(dim=dim)
 
 
-@embedding_model
-def nonbacktracking(network, dim):
-    model = embcom.embeddings.NonBacktrackingSpectralEmbedding()
-    model.fit(network)
-    return model.transform(dim=dim)
+# @embedding_model
+# def nonbacktracking(network, dim):
+#    model = embcom.embeddings.NonBacktrackingSpectralEmbedding()
+#    model.fit(network)
+#    return model.transform(dim=dim)

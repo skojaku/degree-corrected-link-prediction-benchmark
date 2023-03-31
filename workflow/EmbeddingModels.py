@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-31 17:19:52
+# @Last Modified time: 2023-03-31 17:30:44
 import embcom
 
 embedding_models = {}

@@ -4,7 +4,8 @@ import itertools
 import pandas as pd
 from snakemake.utils import Paramspace
 import os
-
+from workflow.EmbeddingModels import *
+from workflow.NetworkTopologyPredictionModels import *
 
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
 
@@ -45,7 +46,8 @@ paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 #
 # Network embedding
 #
-params_emb = {"model": ["node2vec", "deepwalk", "modspec", "leigenmap"], "dim": [64]}
+params_emb = {"model": list(embedding_models.keys()), "dim": [64]}
+#params_emb = {"model": ["node2vec", "deepwalk", "modspec", "leigenmap"], "dim": [64]}
 paramspace_emb = to_paramspace(params_emb)
 
 
@@ -53,13 +55,7 @@ paramspace_emb = to_paramspace(params_emb)
 # Network-based link prediction
 #
 params_net_linkpred = {
-    "model": [
-        "preferentialAttachment",
-        "commonNeighbors",
-        "jaccardIndex",
-        "resourceAllocation",
-        "adamicAdar",
-    ],
+    "model": list(topology_models.keys())
 }
 paramspace_net_linkpred = to_paramspace(params_net_linkpred)
 

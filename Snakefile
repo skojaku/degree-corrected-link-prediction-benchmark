@@ -4,7 +4,8 @@ import itertools
 import pandas as pd
 from snakemake.utils import Paramspace
 import os
-
+from workflow.EmbeddingModels import *
+from workflow.NetworkTopologyPredictionModels import *
 
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
 
@@ -14,16 +15,18 @@ include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemak
 # ====================
 
 # network file
-DATA_DIR = "data" # set test_data for testing
+DATA_DIR = "data"  # set test_data for testing
 
 DERIVED_DIR = j(DATA_DIR, "derived")
 NETWORK_DIR = j(DERIVED_DIR, "networks")
-RAW_UNPROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"raw")
-RAW_PROCESSED_NETWORKS_DIR = j(NETWORK_DIR,"preprocessed")
+RAW_UNPROCESSED_NETWORKS_DIR = j(NETWORK_DIR, "raw")
+RAW_PROCESSED_NETWORKS_DIR = j(NETWORK_DIR, "preprocessed")
 EMB_DIR = j(DERIVED_DIR, "embedding")
-PRED_DIR = j(DERIVED_DIR, "link-prediction") 
+PRED_DIR = j(DERIVED_DIR, "link-prediction")
 
-DATA_LIST = [f.split("_")[1].split('.')[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)]
+DATA_LIST = [
+    f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
+]
 N_ITERATION = 5
 
 # ====================
@@ -43,7 +46,8 @@ paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 #
 # Network embedding
 #
-params_emb = {"model": ["node2vec", "deepwalk", "modspec", "leigenmap"], "dim": [64]}
+params_emb = {"model": list(embedding_models.keys()), "dim": [64]}
+#params_emb = {"model": ["node2vec", "deepwalk", "modspec", "leigenmap"], "dim": [64]}
 paramspace_emb = to_paramspace(params_emb)
 
 
@@ -51,13 +55,7 @@ paramspace_emb = to_paramspace(params_emb)
 # Network-based link prediction
 #
 params_net_linkpred = {
-    "model": [
-        "preferentialAttachment",
-        "commonNeighbors",
-        "jaccardIndex",
-        "resourceAllocation",
-        "adamicAdar",
-    ],
+    "model": list(topology_models.keys())
 }
 paramspace_net_linkpred = to_paramspace(params_net_linkpred)
 
@@ -132,6 +130,7 @@ FIG_AUCROC = j(RESULT_DIR, "figs", "aucroc.pdf")
 FIG_DEGSKEW_AUCDIFF = j(RESULT_DIR, "figs", "corr_degskew_aucdiff.pdf")
 FIG_NODES_AUCDIFF = j(RESULT_DIR, "figs", "corr_nodes_aucdiff.pdf")
 
+
 #
 #
 # RULES
@@ -158,11 +157,13 @@ rule all:
             **params_negative_edge_sampler
         ),
 
+
 rule figs:
     input:
         FIG_AUCROC,
         FIG_DEGSKEW_AUCDIFF,
-        FIG_NODES_AUCDIFF
+        FIG_NODES_AUCDIFF,
+
 
 # ============================
 # Cleaning networks
@@ -170,10 +171,10 @@ rule figs:
 # ============================
 rule clean_networks:
     input:
-        raw_unprocessed_networks_dir = RAW_UNPROCESSED_NETWORKS_DIR,
-        raw_processed_networks_dir = RAW_PROCESSED_NETWORKS_DIR,
+        raw_unprocessed_networks_dir=RAW_UNPROCESSED_NETWORKS_DIR,
+        raw_processed_networks_dir=RAW_PROCESSED_NETWORKS_DIR,
     output:
-        edge_table_file = EDGE_TABLE_FILE,
+        edge_table_file=EDGE_TABLE_FILE,
     script:
         "workflow/clean_networks.py"
 
@@ -278,6 +279,7 @@ rule concatenate_results:
     script:
         "workflow/concat-results.py"
 
+
 # =====================
 # Plot
 # =====================
@@ -285,17 +287,17 @@ rule plot_aucroc:
     input:
         input_file=LP_ALL_SCORE_FILE,
     output:
-        output_file=FIG_AUCROC
+        output_file=FIG_AUCROC,
     script:
         "workflow/plot-auc-roc.py"
 
-rule plot_aucdiff: 
-    input: 
-        auc_results_file = LP_ALL_SCORE_FILE,
-        networks_dir = RAW_PROCESSED_NETWORKS_DIR,
+
+rule plot_aucdiff:
+    input:
+        auc_results_file=LP_ALL_SCORE_FILE,
+        networks_dir=RAW_PROCESSED_NETWORKS_DIR,
     output:
-        degskew_outputfile = FIG_DEGSKEW_AUCDIFF,
-        nodes_outputfile = FIG_NODES_AUCDIFF 
+        degskew_outputfile=FIG_DEGSKEW_AUCDIFF,
+        nodes_outputfile=FIG_NODES_AUCDIFF,
     script:
         "workflow/plot-NetProp-AucDiff.py"
-

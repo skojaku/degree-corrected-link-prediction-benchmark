@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-31 21:54:13
+# @Last Modified time: 2023-04-01 07:06:54
 from scipy import sparse
 import numpy as np
 import faiss
@@ -18,6 +18,10 @@ def ranking_by_topology(model_name, network, max_k, batch=1000):
     func = topology_models[model_name]
     deg = np.array(network.sum(axis=1)).reshape(-1)
     nodes_sorted_by_degree = np.argsort(-deg)
+
+    src, trg, _ = sparse.find(sparse.triu(network))
+    original_src_trg = np.maximum(src, trg) + 1j * np.minimum(src, trg)
+
     for focal_nodes in np.array_split(np.arange(n), L):
 
         # Generate the candidates in ranking
@@ -28,7 +32,6 @@ def ranking_by_topology(model_name, network, max_k, batch=1000):
                 np.ones(len(focal_nodes)),
                 nodes_sorted_by_degree[:max_k],
             ).astype(int)
-            print(src, trg)
         # check only those with at least common neighbors
         elif model_name in [
             "commonNeighbors",
@@ -43,6 +46,10 @@ def ranking_by_topology(model_name, network, max_k, batch=1000):
             n = network.shape[0]
             src = np.kron(focal_nodes, np.ones(n))
             trg = np.kron(np.ones(len(focal_nodes)), np.arange(n))
+
+        _src_trg = np.maximum(src, trg) + 1j * np.minimum(src, trg)
+        s = ~np.isin(_src_trg, original_src_trg)
+        src, trg = src[s], trg[s]
 
         _scores = func(network, src, trg)
         df = pd.DataFrame({"query_nodes": src, "value_nodes": trg, "score": _scores})

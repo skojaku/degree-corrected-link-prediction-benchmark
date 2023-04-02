@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-27 16:40:11
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-27 18:16:17
+# @Last Modified time: 2023-04-02 05:16:43
 # %%
 import numpy as np
 import pandas as pd
@@ -111,10 +111,7 @@ class LinkPredictionDataset:
         while n_sampled < n_test_edges:
 
             # Sample negative edges based on SBM sampler
-            _neg_src = np.random.choice(
-                src, size=n_test_edges - n_sampled, replace=True
-            )
-            _neg_trg = neg_edge_sampler.sampling(_neg_src, _neg_src, n_nodes + 1)
+            _neg_src, _neg_trg = neg_edge_sampler.sampling(n_test_edges - n_sampled)
 
             #
             # The sampled node pairs contain self loops, positive edges, and duplicates, which we remove here

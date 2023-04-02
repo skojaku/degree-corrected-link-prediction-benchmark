@@ -167,7 +167,7 @@ LP_ALL_RANKING_SCORE_FILE = j(RESULT_DIR, "result_ranking.csv")
 FIG_AUCROC = j(RESULT_DIR, "figs", "aucroc.pdf")
 FIG_DEGSKEW_AUCDIFF = j(RESULT_DIR, "figs", "corr_degskew_aucdiff.pdf")
 FIG_NODES_AUCDIFF = j(RESULT_DIR, "figs", "corr_nodes_aucdiff.pdf")
-
+FIG_PREC_RECAL_F1 =j(RESULT_DIR, "figs", "prec-recall-f1.pdf")
 
 #
 #
@@ -218,7 +218,7 @@ rule figs:
         FIG_AUCROC,
         FIG_DEGSKEW_AUCDIFF,
         FIG_NODES_AUCDIFF,
-
+        FIG_PREC_RECAL_F1
 
 # ============================
 # Cleaning networks
@@ -441,3 +441,12 @@ rule plot_aucdiff:
         nodes_outputfile=FIG_NODES_AUCDIFF,
     script:
         "workflow/plot-NetProp-AucDiff.py"
+
+
+rule plot_prec_recal_f1:
+    input:
+        input_file=LP_ALL_RANKING_SCORE_FILE,
+    output:
+        output_file=FIG_PREC_RECAL_F1,
+    script:
+        "workflow/plot-prec-recall-f1.py"

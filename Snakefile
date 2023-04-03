@@ -23,9 +23,13 @@ RAW_UNPROCESSED_NETWORKS_DIR = j(NETWORK_DIR, "raw")
 RAW_PROCESSED_NETWORKS_DIR = j(NETWORK_DIR, "preprocessed")
 EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
+OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
 
+# DATA_LIST = [
+#     f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
+# ]
 DATA_LIST = [
-    f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
+    "airport-rach"
 ]
 N_ITERATION = 5
 
@@ -59,6 +63,16 @@ params_net_linkpred = {
 }
 paramspace_net_linkpred = to_paramspace(params_net_linkpred)
 
+params_cv_files = {
+    "xtrain" : "X_trainE_cv",
+    "fold" : list(range(1,6)),
+    "negativeEdgeSampler": ["uniform", "degreeBiased"],
+    "testEdgeFraction": [0.5],
+    "sampleId": list(range(N_ITERATION)),
+}
+
+params_cv_files = to_paramspace(params_cv_files)
+
 # =============================
 # Networks & Benchmark Datasets
 # =============================
@@ -79,6 +93,20 @@ TARGET_EDGE_TABLE_FILE = j(
     f"targetEdgeTable_{paramspace_negative_edge_sampler.wildcard_pattern}.csv",
 )
 
+OPT_TRAIN_DATASET_DIR = j(OPT_STACK_DIR, "train_datasets")
+OPT_HELDOUT_DATASET_DIR = j(OPT_STACK_DIR, "heldout_datasets")
+
+HELDOUT_NET_FILE_OPTIMAL_STACKING = j(
+    OPT_HELDOUT_DATASET_DIR,
+    "{data}",
+    f"heldout-net_{paramspace_negative_edge_sampler.wildcard_pattern}.npz",
+)
+
+TRAIN_NET_FILE_OPTIMAL_STACKING = j(
+    OPT_TRAIN_DATASET_DIR,
+    "{data}",
+    f"train-net_{paramspace_negative_edge_sampler.wildcard_pattern}.npz",
+)
 
 # ====================
 # Intermediate files
@@ -102,6 +130,51 @@ PRED_SCORE_NET_FILE = j(
     "{data}",
     f"score_basedOn~net_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
 )
+
+TRAIN_FEATURE_MATRIX = j(
+    OPT_STACK_DIR,
+    "{data}",
+    "feature_matrices",
+    f"train-feature_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+)
+
+HELDOUT_FEATURE_MATRIX = j(
+    OPT_STACK_DIR,
+    "{data}",
+    "feature_matrices",
+    f"heldout-feature_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+)
+
+CV_DIR = j(OPT_STACK_DIR,
+    "{data}",
+    "cv")
+
+CV_FILES = j(
+    CV_DIR,
+    f"{params_cv_files.wildcard_pattern}.npy",
+)
+
+CV_X_SEEN_FILES = j(
+    CV_DIR,
+    f"X_Eseen_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+)
+
+CV_Y_SEEN_FILES = j(
+    CV_DIR,
+    f"y_Eseen_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+)
+
+CV_X_UNSEEN_FILES = j(
+    CV_DIR,
+    f"X_Eunseen_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+)
+
+CV_Y_UNSEEN_FILES = j(
+    CV_DIR,
+    f"y_Eunseen_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+)
+
+
 
 # ====================
 # Evaluation
@@ -135,7 +208,7 @@ FIG_NODES_AUCDIFF = j(RESULT_DIR, "figs", "corr_nodes_aucdiff.pdf")
 #
 # RULES
 #
-#
+
 rule all:
     input:
         expand(
@@ -164,7 +237,6 @@ rule figs:
         FIG_DEGSKEW_AUCDIFF,
         FIG_NODES_AUCDIFF,
 
-
 # ============================
 # Cleaning networks
 # Gets edge list of GCC as csv
@@ -178,6 +250,65 @@ rule clean_networks:
     script:
         "workflow/clean_networks.py"
 
+# ============================
+# Optimal stacking 
+# ============================
+rule optimal_stacking_all:
+    input:
+        expand(
+            HELDOUT_FEATURE_MATRIX,
+            data=DATA_LIST,
+            **params_negative_edge_sampler
+        ),
+        expand(
+            TRAIN_FEATURE_MATRIX,
+            data=DATA_LIST,
+            **params_negative_edge_sampler
+        ),
+
+rule optimal_stacking_train_heldout_dataset:
+    input:
+        edge_table_file=EDGE_TABLE_FILE,
+    params:
+        parameters=paramspace_negative_edge_sampler.instance
+    output:
+        output_heldout_net_file=HELDOUT_NET_FILE_OPTIMAL_STACKING,
+        output_train_net_file=TRAIN_NET_FILE_OPTIMAL_STACKING,
+    script:
+        "workflow/generate-optimal-stacking-train-heldout-networks.py"
+
+rule optimal_stacking_generate_features:
+    input:
+        input_original_edge_table_file=EDGE_TABLE_FILE,
+        input_heldout_net_file=HELDOUT_NET_FILE_OPTIMAL_STACKING,
+        input_train_net_file=TRAIN_NET_FILE_OPTIMAL_STACKING,
+    output:
+        output_heldout_feature=HELDOUT_FEATURE_MATRIX,
+        output_train_feature=TRAIN_FEATURE_MATRIX
+    script:
+        "workflow/optimal-stacking-topological-features.py"
+
+rule optimal_stacking_generate_cv_files:
+    input:
+        input_heldout_feature=HELDOUT_FEATURE_MATRIX,
+        input_train_feature=TRAIN_FEATURE_MATRIX
+    output:
+        output_cv_dir = CV_DIR,
+        output_cv_x_seen_files = CV_X_SEEN_FILES,
+        output_cv_y_seen_files = CV_Y_SEEN_FILES,
+        output_cv_x_unseen_files = CV_X_UNSEEN_FILES,
+        output_cv_y_unseen_files = CV_Y_UNSEEN_FILES
+    script:
+        "workflow/optimal-stacking-generate-cv.py"
+
+rule optimal_stacking_model_selection:
+    input:
+        input_heldout_feature=HELDOUT_FEATURE_MATRIX,
+    output:
+        output_heldout_feature=HELDOUT_FEATURE_MATRIX,
+        output_train_feature=TRAIN_FEATURE_MATRIX
+    script:
+        "workflow/optimal-stacking-topological-features.py"
 
 # ============================
 # Generating benchmark dataset

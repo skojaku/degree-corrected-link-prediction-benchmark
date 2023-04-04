@@ -63,15 +63,15 @@ params_net_linkpred = {
 }
 paramspace_net_linkpred = to_paramspace(params_net_linkpred)
 
-params_cv_files = {
-    "xtrain" : "X_trainE_cv",
-    "fold" : list(range(1,6)),
-    "negativeEdgeSampler": ["uniform", "degreeBiased"],
-    "testEdgeFraction": [0.5],
-    "sampleId": list(range(N_ITERATION)),
-}
+# params_cv_files = {
+#     "xtrain" : "X_trainE_cv",
+#     "fold" : list(range(1,6)),
+#     "negativeEdgeSampler": ["uniform", "degreeBiased"],
+#     "testEdgeFraction": [0.5],
+#     "sampleId": list(range(N_ITERATION)),
+# }
 
-params_cv_files = to_paramspace(params_cv_files)
+# params_cv_files = to_paramspace(params_cv_files)
 
 # =============================
 # Networks & Benchmark Datasets
@@ -147,31 +147,28 @@ HELDOUT_FEATURE_MATRIX = j(
 
 CV_DIR = j(OPT_STACK_DIR,
     "{data}",
-    "cv")
-
-CV_FILES = j(
-    CV_DIR,
-    f"{params_cv_files.wildcard_pattern}.npy",
+    "cv",
+    f"condition_{paramspace_negative_edge_sampler.wildcard_pattern}",
 )
 
 CV_X_SEEN_FILES = j(
     CV_DIR,
-    f"X_Eseen_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+    "X_Eseen.npy",
 )
 
 CV_Y_SEEN_FILES = j(
     CV_DIR,
-    f"y_Eseen_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+    f"y_Eseen.npy",
 )
 
 CV_X_UNSEEN_FILES = j(
     CV_DIR,
-    f"X_Eunseen_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+    f"X_Eunseen.npy",
 )
 
 CV_Y_UNSEEN_FILES = j(
     CV_DIR,
-    f"y_Eunseen_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+    f"y_Eunseen.npy",
 )
 
 
@@ -256,15 +253,10 @@ rule clean_networks:
 rule optimal_stacking_all:
     input:
         expand(
-            HELDOUT_FEATURE_MATRIX,
+            CV_DIR,
             data=DATA_LIST,
             **params_negative_edge_sampler
-        ),
-        expand(
-            TRAIN_FEATURE_MATRIX,
-            data=DATA_LIST,
-            **params_negative_edge_sampler
-        ),
+        )
 
 rule optimal_stacking_train_heldout_dataset:
     input:
@@ -291,9 +283,9 @@ rule optimal_stacking_generate_features:
 rule optimal_stacking_generate_cv_files:
     input:
         input_heldout_feature=HELDOUT_FEATURE_MATRIX,
-        input_train_feature=TRAIN_FEATURE_MATRIX
+        input_train_feature=TRAIN_FEATURE_MATRIX,
     output:
-        output_cv_dir = CV_DIR,
+        output_cv_dir = directory(CV_DIR),
         output_cv_x_seen_files = CV_X_SEEN_FILES,
         output_cv_y_seen_files = CV_Y_SEEN_FILES,
         output_cv_x_unseen_files = CV_X_UNSEEN_FILES,
@@ -301,14 +293,14 @@ rule optimal_stacking_generate_cv_files:
     script:
         "workflow/optimal-stacking-generate-cv.py"
 
-rule optimal_stacking_model_selection:
-    input:
-        input_heldout_feature=HELDOUT_FEATURE_MATRIX,
-    output:
-        output_heldout_feature=HELDOUT_FEATURE_MATRIX,
-        output_train_feature=TRAIN_FEATURE_MATRIX
-    script:
-        "workflow/optimal-stacking-topological-features.py"
+# rule optimal_stacking_model_selection:
+#     input:
+#         input_heldout_feature=HELDOUT_FEATURE_MATRIX,
+#     output:
+#         output_heldout_feature=HELDOUT_FEATURE_MATRIX,
+#         output_train_feature=TRAIN_FEATURE_MATRIX
+#     script:
+#         "workflow/optimal-stacking-topological-features.py"
 
 # ============================
 # Generating benchmark dataset

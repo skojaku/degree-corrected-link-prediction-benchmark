@@ -93,6 +93,7 @@ TARGET_EDGE_TABLE_FILE = j(
     f"targetEdgeTable_{paramspace_negative_edge_sampler.wildcard_pattern}.csv",
 )
 
+# Optimal stacking training and heldout dataset
 OPT_TRAIN_DATASET_DIR = j(OPT_STACK_DIR, "train_datasets")
 OPT_HELDOUT_DATASET_DIR = j(OPT_STACK_DIR, "heldout_datasets")
 
@@ -131,6 +132,9 @@ PRED_SCORE_NET_FILE = j(
     f"score_basedOn~net_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
 )
 
+#
+# Optimal Stacking
+#
 TRAIN_FEATURE_MATRIX = j(
     OPT_STACK_DIR,
     "{data}",
@@ -176,6 +180,13 @@ LP_SCORE_NET_FILE = j(
     f"result_basedOn~net_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
 )
 LP_ALL_SCORE_FILE = j(RESULT_DIR, "result_auc_roc.csv")
+
+LP_SCORE_OPT_STACK_FILE = j(
+    OPT_STACK_DIR,
+    "auc-roc",
+    "{data}",
+    f"result_basedOn~optstack_{paramspace_negative_edge_sampler.wildcard_pattern}.csv"
+)
 
 # ====================
 # Output
@@ -237,7 +248,7 @@ rule clean_networks:
 rule optimal_stacking_all:
     input:
         expand(
-            OUT_BEST_RF_PARAMS,
+            LP_SCORE_OPT_STACK_FILE,
             data=DATA_LIST,
             **params_negative_edge_sampler
         )
@@ -280,6 +291,17 @@ rule optimal_stacking_model_selection:
         output_best_rf_params=OUT_BEST_RF_PARAMS,   
     script:
         "workflow/optimal-stacking-modelselection.py"
+
+rule optimal_stacking_performance:
+    input:
+        input_best_rf_params=OUT_BEST_RF_PARAMS,
+        input_seen_unseen_data_dir=CV_DIR,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=LP_SCORE_OPT_STACK_FILE
+    script:
+        "workflow/optimal-stacking-performance.py"
 
 # ============================
 # Generating benchmark dataset

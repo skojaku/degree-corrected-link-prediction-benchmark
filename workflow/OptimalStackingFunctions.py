@@ -544,8 +544,8 @@ def creat_numpy_files(
     skf = StratifiedKFold(n_splits=5, shuffle=True)
     skf.get_n_splits(X_train_orig, y_train_orig)
 
-    if not os.path.isdir(dir_results+'/'):
-        os.mkdir(dir_results+'/')
+    if not os.path.isdir(dir_results + "/"):
+        os.mkdir(dir_results + "/")
 
     nFold = 1
     for train_index, test_index in skf.split(X_train_orig, y_train_orig):
@@ -587,8 +587,8 @@ def creat_numpy_files(
     sm = RandomOverSampler(random_state=n)
     X_seen, y_seen = sm.fit_resample(X_seen, y_seen)
 
-    np.save(dir_results+'/X_Eseen', X_seen)
-    np.save(dir_results+'/y_Eseen', y_seen)
+    np.save(dir_results + "/X_Eseen", X_seen)
+    np.save(dir_results + "/y_Eseen", y_seen)
     # np.save(output_cv_x_seen_files, X_seen)
     # np.save(output_cv_y_seen_files, y_seen)
     print("created train set ...")
@@ -598,8 +598,8 @@ def creat_numpy_files(
     X_unseen = unseen.loc[:, feature_set]
     X_unseen.fillna(X_unseen.mean(), inplace=True)
 
-    np.save(dir_results+'/X_Eunseen', X_unseen)
-    np.save(dir_results+'/y_Eunseen', y_unseen)
+    np.save(dir_results + "/X_Eunseen", X_unseen)
+    np.save(dir_results + "/y_Eunseen", y_unseen)
     # np.save(output_cv_x_unseen_files, X_unseen)
     # np.save(output_cv_y_unseen_files, y_unseen)
     print("created holdout set ...")
@@ -734,3 +734,73 @@ def model_selection(path_to_data, path_to_results, n_depths, n_ests):
     ne_est = n_ests[j]
     # print("best parameters for random forest are: n_depth: "+str(n_depth)+", and n_estimators: "+str(ne_est))
     return n_depth, ne_est
+
+
+def heldout_performance(path_to_data, n_depth,n_est):
+
+    """
+    This function trains a random forest model on seen data and performs prediction on heldout.
+    Input and Parameters:
+    -------
+    path_to_data: path to held out featute matrices
+    path_to_results: path to save model performance ast txt file
+    n_depth: max_depth for random forest parameter
+    n_est: n_estimators for random forest parameter
+    Returns:
+    -------
+    auc_measure: auc on heldout
+    precision_total: precision of positive class on heldout
+    recall_total: recall of positive class on heldout
+    Examples:
+    -------
+    auc , precision, recall = heldout_performance(path_to_data, path_to_results, n_depth, n_est)
+    """
+
+    # if not os.path.isdir(path_to_results):
+    #     os.mkdir(path_to_results)
+    # f = open(path_to_results + "/RF_Best_metrics.txt", "w")
+    # path_to_data = "./feature_metrices"
+
+    # read data
+    X_train = np.load(path_to_data + "/X_Eseen.npy")
+    y_train = np.load(path_to_data + "/y_Eseen.npy")
+    X_test = np.load(path_to_data + "/X_Eunseen.npy")
+    y_test = np.load(path_to_data + "/y_Eunseen.npy")
+
+    col_mean = np.nanmean(X_train, axis=0)
+    inds = np.where(np.isnan(X_train))
+    X_train[inds] = np.take(col_mean, inds[1])
+
+    col_mean = np.nanmean(X_test, axis=0)
+    inds = np.where(np.isnan(X_test))
+    X_test[inds] = np.take(col_mean, inds[1])
+
+    # train the model
+    dtree_model = RandomForestClassifier(n_estimators=n_est, max_depth=n_depth).fit(
+        X_train, y_train
+    )
+
+    # feature importance and prediction on test set
+    feature_importance = dtree_model.feature_importances_
+    dtree_predictions = dtree_model.predict(X_test)
+    dtree_proba = dtree_model.predict_proba(X_test)
+
+    # calculate performance metrics
+    cm_dt4 = confusion_matrix(y_test, dtree_predictions)
+    auc_measure = roc_auc_score(y_test, dtree_proba[:, 1])
+
+    precision_total, recall_total, f_measure_total, _ = precision_recall_fscore_support(
+        y_test, dtree_predictions, average=None
+    )
+
+    # f.write("heldout_AUC = " + str(auc_measure) + "\n")
+    # f.write("heldout_precision = " + str(precision_total) + "\n")
+    # f.write("heldout_recall = " + str(recall_total) + "\n")
+    # f.write("heldout_f_measure = " + str(f_measure_total) + "\n")
+    # f.write("feature_importance = " + str(list(feature_importance)) + "\n")
+    # f.close()
+
+    # print("AUC: " + str(np.round(auc_measure, 2)))
+    # print("precision: " + str(np.round(precision_total[0], 2)))
+    # print("recall: " + str(np.round(recall_total[0], 2)))
+    return auc_measure, precision_total[0], recall_total[0]

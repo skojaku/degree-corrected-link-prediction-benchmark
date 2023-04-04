@@ -1,3 +1,10 @@
+# /*
+#  * @Author: Rachith Aiyappa
+#  * @Date: 2023-04-04 12:37:45
+#  * @Last Modified by:   Rachith
+#  * @Last Modified time: 2023-04-04 12:37:45
+#  */
+
 import networkx as nx
 from scipy import linalg
 import numpy as np
@@ -13,7 +20,35 @@ from imblearn.over_sampling import RandomOverSampler
 import random
 
 
+"""
+useful functions for the optimal stacking link prediction model 
+Taken from https://github.com/Aghasemian/OptimalLinkPrediction/blob/master/Code/OLP.py
+"""
+
+
 def get_true_and_false_edges(Nsamples, true_candidates, false_candidates):
+
+    """
+    Creates a sample of true and false edges
+
+    Parameters
+    ----------
+    Nsamples : int
+        Number of edges in the  true and false sample
+    true_candidates : tuple of arrays ((I,J),V)
+        I,J, and V contain the row indices, column indices, and values of the nonzero matrix entries
+        Length of walks
+    false_candidates : tuple of arrays ((I,J),V)
+        I,J, and V contain the row indices, column indices, and values of the nonzero matrix entries
+
+    Returns
+    ----------
+    edge_t : list
+        list of true edges
+    edge_f : list
+        list of false edges
+    """
+
     edge_t = []  # list of true edges (positive samples)
     edge_f = []  # list of false edges (negative samples)
     for ll in range(Nsamples):
@@ -25,12 +60,23 @@ def get_true_and_false_edges(Nsamples, true_candidates, false_candidates):
         edge_f.append(
             (false_candidates[0][edge_f_idx_aux], false_candidates[1][edge_f_idx_aux])
         )
-
     return edge_t, edge_f
 
 
 def lot_to_2dmatrix(lot):
-    "list of tuples to 2D matrix"
+
+    """
+    Converts list of tuples to 2d matrix
+
+    Parameters
+    ----------
+    lot : list of tuples
+
+    Returns
+    ----------
+    2D matrix
+    """
+
     lot = np.array(lot)
     lot = lot.reshape(-1, len(lot[0]))
 
@@ -40,17 +86,19 @@ def lot_to_2dmatrix(lot):
 def adj_to_nodes_edges(A):
 
     """
-    This function change adjacency matrix to list of nodes and edges.
-    Input and Parameters:
-    -------
-    A: the adjacency matrix
-    Returns:
-    -------
-    nodes: node list of the given network
-    edges: edge list of the given network
-    Examples:
-    -------
-    >>> nodes, edges = adj_to_nodes_edges(A)
+    Converts adjacency matrix to list of nodes and edges.
+
+    Parameters
+    ----------
+    A: numpy matrix
+        Adjacency matrix
+
+    Returns
+    ----------
+    nodes : list
+        list of nodes
+    edges : list
+        list of edges
     """
 
     num_nodes = A.shape[0]
@@ -65,19 +113,18 @@ def adj_to_nodes_edges(A):
 def gen_topol_feats(A_orig, A, edge_s):
 
     """
-    This function generates the topological features for matrix A (A_tr or A_ho) over edge samples edge_s (edge_tr or edge_ho).
-    Input and Parameters:
-    -------
-    A: the training or holdout adjacency matrix that the topological features are going to be computed over
-    A_orig: the original adjacency matrix
-    edge_s: the sample set of training or holdout edges that the topological features are going to be computed over
-    Returns:
-    -------
-    df_feat: data frame of features
-    Examples:
-    -------
-    >>> gen_topol_feats(A_orig, A_tr, edge_tr)
-    >>> gen_topol_feats(A_orig, A_ho, edge_ho)
+    Gets the topological topological features for matrix A (A_tr or A_ho) over edge samples edge_s (edge_tr or edge_ho).
+
+    Parameters
+    ----------
+    A : numpy matrix
+        Adjacency matrix
+
+    edge_s : list
+        the sample set of training or holdout edges that the topological features are going to be computed over
+    ----------
+    df_feat: pandas dataframe
+        data frame of features
     """
 
     _, edges = adj_to_nodes_edges(A)
@@ -440,16 +487,18 @@ def creat_full_set(df_t, df_f):
 
     """
     This reads dataframes created for positive and negative class, join them with their associated label.
-    Input and Parameters:
-    -------
-    df_t: datafram of features for true edges
-    df_f: datafram of features for true non-edges
+
+    Parameters
+    ----------
+    df_t: pandas dataframe
+        dataframe of features for true edges
+    df_f: pandas dataframe
+        dataframe of features for true non-edges
+
     Returns
-    -------
-    df_all: a data frames with columns of features and ground truth
-    Examples:
-    -------
-    df_all = creat_full_set(df_t,df_f)
+    ----------
+    df_all: pandas dataframe
+        a data frame with columns of features and ground truth
     """
 
     df_t = df_t.drop_duplicates(subset=["i", "j"], keep="first")
@@ -477,17 +526,23 @@ def creat_numpy_files(
 ):
 
     """
-    This function reads dataframes created for positive and negative classes, join them with their associated label.
-    Input and Parameters:
-    -------
-    df_tr: datafram of features/ground truth for positive and negative class for model selection
-    df_ho: datafram of features/ground truth for positive and negative class for held out model performance
-    Returns:
-    -------
-    save numpy files of X_train_i and y_train_i for 5 folds, also X_Eseen/X_Eunseen, y_Eseen/y_Eunseen in dir_results
-    Example:
-    -------
-    creat_numpy_files(dir_results, df_ho, df_tr)
+    Creates and saves numpy files of
+    (1) cross validation samples (5 in number), and
+    (2) files of
+        (1) seen
+        (2) unseen data
+
+    Parameters
+    ----------
+    direc_results: string
+        directory to store the results
+    df_ho: pandas dataframe
+        heldout data (features and ground truth).
+        dataframe of features/ground truth for positive and negative class for held out model performance
+    df_tr: pandas dataframe
+        training data (features and ground truth)
+        dataframe of features/ground truth for positive and negative class for model selection
+
     """
 
     feature_set = [
@@ -608,20 +663,24 @@ def creat_numpy_files(
 def model_selection(path_to_data, path_to_results, n_depths, n_ests):
 
     """
-    This function runs cross validation on train set and finds the random forest model parameters which yeilds to best fmeasure.
-    Input and Parameters:
-    -------
-    path_to_data: path to held out feature matrices
-    path_to_results: path to save model performance ast txt file
-    n_depth: a list of max_depths for random forest parameter
-    n_est: a list of n_estimators for random forest parameter
-    Returns:
-    -------
-    n_depth: n_depth which yeild to maximum fmeasure
-    n_est: n_est which yeild to maximum fmeasure
-    Examples:
-    -------
-    n_depth, ne_est = model_selection(path_to_data, path_to_results, n_depths, n_ests)
+    Runs cross validation on train set and finds the random forest model parameters which yeilds to best fmeasure.
+    Parameters
+    ----------
+    path_to_data: string
+        path to directory with cross validation files
+    path_to_results: string
+        path to directory to store intermediate results, if needed
+    n_depths: list
+        list of depths to try with RF classifier
+    n_ests: list
+        list of trees (estimators) to trees with RF classifier
+
+    Returns
+    ----------
+    n_depth: int
+        depth which yeild to maximum fmeasure
+    n_est: int
+        number of trees which yeild to maximum fmeasure
     """
 
     fmeasure_matrix = np.zeros((len(n_depths), len(n_ests)))
@@ -736,24 +795,27 @@ def model_selection(path_to_data, path_to_results, n_depths, n_ests):
     return n_depth, ne_est
 
 
-def heldout_performance(path_to_data, n_depth,n_est):
+def heldout_performance(path_to_data, n_depth, n_est):
 
     """
     This function trains a random forest model on seen data and performs prediction on heldout.
-    Input and Parameters:
-    -------
-    path_to_data: path to held out featute matrices
-    path_to_results: path to save model performance ast txt file
-    n_depth: max_depth for random forest parameter
-    n_est: n_estimators for random forest parameter
-    Returns:
-    -------
-    auc_measure: auc on heldout
-    precision_total: precision of positive class on heldout
-    recall_total: recall of positive class on heldout
-    Examples:
-    -------
-    auc , precision, recall = heldout_performance(path_to_data, path_to_results, n_depth, n_est)
+    Parameters
+    ----------
+    path_to_data: string
+        path to directory with data to infer on
+    n_depth: int
+        max_depth for random forest parameter
+    n_est: int
+        n_estimators for random forest parameter
+        
+    Returns
+    ----------
+    auc_measure: float
+        auc on heldout
+    precision_total: float
+        precision of positive class on heldout
+    recall_total: float
+        recall of positive class on heldout
     """
 
     # if not os.path.isdir(path_to_results):

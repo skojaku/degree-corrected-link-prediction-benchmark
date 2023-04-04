@@ -544,8 +544,8 @@ def creat_numpy_files(
     skf = StratifiedKFold(n_splits=5, shuffle=True)
     skf.get_n_splits(X_train_orig, y_train_orig)
 
-    # if not os.path.isdir(dir_results+'/'):
-    #     os.mkdir(dir_results+'/')
+    if not os.path.isdir(dir_results+'/'):
+        os.mkdir(dir_results+'/')
 
     nFold = 1
     for train_index, test_index in skf.split(X_train_orig, y_train_orig):
@@ -626,8 +626,8 @@ def model_selection(path_to_data, path_to_results, n_depths, n_ests):
 
     fmeasure_matrix = np.zeros((len(n_depths), len(n_ests)))
 
-    if not os.path.isdir(path_to_results):
-        os.mkdir(path_to_results)
+    # if not os.path.isdir(path_to_results):
+    #     os.mkdir(path_to_results)
 
     # load train and validation set for each fold
     X_train = {}
@@ -717,12 +717,12 @@ def model_selection(path_to_data, path_to_results, n_depths, n_ests):
             mean_f_measure = np.mean(f_measure_total, axis=0)
 
             # write the result in text file
-            f = open(path_to_results + "/RF_Best_metrics.txt", "w")
-            f.write("mean_AUC = " + str(mean_auc) + "\n")
-            f.write("mean_precision = " + str(mean_precision) + "\n")
-            f.write("mean_recall = " + str(mean_recall) + "\n")
-            f.write("mean_f_measure = " + str(mean_f_measure) + "\n")
-            f.close()
+            # f = open(path_to_results + "/RF_Best_metrics.txt", "w")
+            # f.write("mean_AUC = " + str(mean_auc) + "\n")
+            # f.write("mean_precision = " + str(mean_precision) + "\n")
+            # f.write("mean_recall = " + str(mean_recall) + "\n")
+            # f.write("mean_f_measure = " + str(mean_f_measure) + "\n")
+            # f.close()
 
             # keep track of average fmeasure for each parameter set
 

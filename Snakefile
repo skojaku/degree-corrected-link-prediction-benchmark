@@ -151,27 +151,11 @@ CV_DIR = j(OPT_STACK_DIR,
     f"condition_{paramspace_negative_edge_sampler.wildcard_pattern}",
 )
 
-CV_X_SEEN_FILES = j(
-    CV_DIR,
-    "X_Eseen.npy",
+OUT_BEST_RF_PARAMS = j(
+    OPT_STACK_DIR,
+    "{data}",
+    f"bestparms-rf_{paramspace_negative_edge_sampler.wildcard_pattern}.csv",
 )
-
-CV_Y_SEEN_FILES = j(
-    CV_DIR,
-    f"y_Eseen.npy",
-)
-
-CV_X_UNSEEN_FILES = j(
-    CV_DIR,
-    f"X_Eunseen.npy",
-)
-
-CV_Y_UNSEEN_FILES = j(
-    CV_DIR,
-    f"y_Eunseen.npy",
-)
-
-
 
 # ====================
 # Evaluation
@@ -253,7 +237,7 @@ rule clean_networks:
 rule optimal_stacking_all:
     input:
         expand(
-            CV_DIR,
+            OUT_BEST_RF_PARAMS,
             data=DATA_LIST,
             **params_negative_edge_sampler
         )
@@ -285,22 +269,17 @@ rule optimal_stacking_generate_cv_files:
         input_heldout_feature=HELDOUT_FEATURE_MATRIX,
         input_train_feature=TRAIN_FEATURE_MATRIX,
     output:
-        output_cv_dir = directory(CV_DIR),
-        output_cv_x_seen_files = CV_X_SEEN_FILES,
-        output_cv_y_seen_files = CV_Y_SEEN_FILES,
-        output_cv_x_unseen_files = CV_X_UNSEEN_FILES,
-        output_cv_y_unseen_files = CV_Y_UNSEEN_FILES
+        output_cv_dir=directory(CV_DIR),
     script:
-        "workflow/optimal-stacking-generate-cv.py"
+        "workflow/generate-optimal-stacking-cv.py"
 
-# rule optimal_stacking_model_selection:
-#     input:
-#         input_heldout_feature=HELDOUT_FEATURE_MATRIX,
-#     output:
-#         output_heldout_feature=HELDOUT_FEATURE_MATRIX,
-#         output_train_feature=TRAIN_FEATURE_MATRIX
-#     script:
-#         "workflow/optimal-stacking-topological-features.py"
+rule optimal_stacking_model_selection:
+    input:
+        input_cv_dir=CV_DIR,
+    output:
+        output_best_rf_params=OUT_BEST_RF_PARAMS,   
+    script:
+        "workflow/optimal-stacking-modelselection.py"
 
 # ============================
 # Generating benchmark dataset
@@ -311,7 +290,7 @@ rule generate_link_prediction_dataset:
     params:
         parameters=paramspace_negative_edge_sampler.instance,
     output:
-        output_train_net_file=TRAIN_NET_FILE,
+        output_best_params=TRAIN_NET_FILE,
         output_target_edge_table_file=TARGET_EDGE_TABLE_FILE,
     script:
         "workflow/generate-link-prediction-dataset.py"

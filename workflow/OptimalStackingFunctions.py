@@ -471,10 +471,7 @@ def creat_full_set(df_t, df_f):
 
 
 def creat_numpy_files(
-    output_cv_x_seen_files,
-    output_cv_y_seen_files,
-    output_cv_x_unseen_files,
-    output_cv_y_unseen_files,
+    dir_results,
     df_ho,
     df_tr,
 ):
@@ -569,7 +566,7 @@ def creat_numpy_files(
         X_train.fillna(X_train.mean(), inplace=True)
 
         n = random.randint(0, 1e5)
-        # sm = RandomOverSampler(random_state=n)
+        sm = RandomOverSampler(random_state=n)
         X_train, y_train = sm.fit_resample(X_train, y_train)
 
         np.save(dir_results + "/X_trainE_" + "cv" + str(nFold), X_train)
@@ -590,8 +587,10 @@ def creat_numpy_files(
     sm = RandomOverSampler(random_state=n)
     X_seen, y_seen = sm.fit_resample(X_seen, y_seen)
 
-    np.save(output_cv_x_seen_files, X_seen)
-    np.save(output_cv_y_seen_files, y_seen)
+    np.save(dir_results+'/X_Eseen', X_seen)
+    np.save(dir_results+'/y_Eseen', y_seen)
+    # np.save(output_cv_x_seen_files, X_seen)
+    # np.save(output_cv_y_seen_files, y_seen)
     print("created train set ...")
 
     unseen = X_test_heldout
@@ -599,8 +598,10 @@ def creat_numpy_files(
     X_unseen = unseen.loc[:, feature_set]
     X_unseen.fillna(X_unseen.mean(), inplace=True)
 
-    np.save(output_cv_x_unseen_files, X_unseen)
-    np.save(output_cv_y_unseen_files, y_unseen)
+    np.save(dir_results+'/X_Eunseen', X_unseen)
+    np.save(dir_results+'/y_Eunseen', y_unseen)
+    # np.save(output_cv_x_unseen_files, X_unseen)
+    # np.save(output_cv_y_unseen_files, y_unseen)
     print("created holdout set ...")
 
 

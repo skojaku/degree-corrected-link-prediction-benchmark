@@ -1,3 +1,14 @@
+# /*
+#  * @Author: Rachith Aiyappa
+#  * @Date: 2023-04-04 12:34:56
+#  * @Last Modified by: Rachith
+#  * @Last Modified time: 2023-04-04 12:35:36
+#  */
+
+"""
+Get best parameters based on training data using cross-validation
+"""
+
 from scipy import sparse
 import numpy as np
 import sys
@@ -18,4 +29,4 @@ n_depth, n_est = model_selection(input_cv_dir, input_cv_dir, n_depths, n_ests)
 
 df = pd.DataFrame({"cv": [input_cv_dir], "depth": [n_depth], "trees": [n_est]})
 
-df.to_csv(output_best_rf_params,index=False)
+df.to_csv(output_best_rf_params, index=False)

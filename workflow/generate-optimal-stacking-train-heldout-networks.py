@@ -1,9 +1,13 @@
 # /*
-#  * @Author: Rachith Aiyappa 
-#  * @Date: 2023-04-03 09:43:13 
+#  * @Author: Rachith Aiyappa
+#  * @Date: 2023-04-03 09:43:13
 #  * @Last Modified by: Rachith
-#  * @Last Modified time: 2023-04-03 10:09:44
+#  * @Last Modified time: 2023-04-04 12:34:26
 #  */
+
+"""
+creating training and heldout network files
+"""
 
 import numpy as np
 import pandas as pd
@@ -43,10 +47,10 @@ A_ho, _ = model_ho.transform()
 
 # =====================================================================
 # Construct the training network (A_tr) from the heldout network (A_ho)
-# This training network is used to choose the 
+# This training network is used to choose the
 # hyperparmeters of the random forest classifier
 
-# These hyperparameters are then used to train on A_ho. 
+# These hyperparameters are then used to train on A_ho.
 # =====================================================================
 
 model_tr = LinkPredictionDataset(

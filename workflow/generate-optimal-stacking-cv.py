@@ -1,3 +1,13 @@
+# /*
+#  * @Author: Rachith Aiyappa
+#  * @Date: 2023-04-04 12:29:32
+#  * @Last Modified by:   Rachith
+#  * @Last Modified time: 2023-04-04 12:29:32
+#  */
+
+"""
+Generates cross validation data files for parameter extraction of Random forest classifiers
+"""
 from scipy import sparse
 import numpy as np
 import sys
@@ -16,10 +26,10 @@ else:
     input_file = "../data/"
     output_file = "../data/"
 
-with open(input_heldout_feature,"rb") as f:
+with open(input_heldout_feature, "rb") as f:
     df_ho = pkl.load(f)
 
-with open(input_train_feature,"rb") as f:
+with open(input_train_feature, "rb") as f:
     df_tr = pkl.load(f)
 
 creat_numpy_files(

@@ -2,8 +2,12 @@
 #  * @Author: Rachith Aiyappa
 #  * @Date: 2023-04-03 10:11:01
 #  * @Last Modified by: Rachith
-#  * @Last Modified time: 2023-04-03 10:25:19
+#  * @Last Modified time: 2023-04-04 12:31:39
 #  */
+
+"""
+extracts topological features of networks
+"""
 
 from scipy import sparse
 import numpy as np

@@ -18,4 +18,4 @@ n_depth, n_est = model_selection(input_cv_dir, input_cv_dir, n_depths, n_ests)
 
 df = pd.DataFrame({"cv": [input_cv_dir], "depth": [n_depth], "trees": [n_est]})
 
-df.to_csv(output_best_rf_params)
+df.to_csv(output_best_rf_params,index=False)

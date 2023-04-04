@@ -25,12 +25,12 @@ EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
 
-# DATA_LIST = [
-#     f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
-# ]
 DATA_LIST = [
-    "airport-rach"
+    f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
+# DATA_LIST = [
+#     "airport-rach"
+# ]
 N_ITERATION = 5
 
 # ====================

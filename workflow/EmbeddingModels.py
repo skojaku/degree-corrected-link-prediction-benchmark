@@ -42,3 +42,10 @@ def modspec(network, dim):
 #    model = embcom.embeddings.NonBacktrackingSpectralEmbedding()
 #    model.fit(network)
 #    return model.transform(dim=dim)
+
+@embedding_model
+def graphsage(network, num_walks=1, walk_length=5, dim=10):
+    model = embcom.embeddings.graphSAGE(num_walks=num_walks, walk_length=walk_length, dim=dim)
+    model.fit(network)
+    model.train_GraphSAGE()
+    return model.get_embeddings()

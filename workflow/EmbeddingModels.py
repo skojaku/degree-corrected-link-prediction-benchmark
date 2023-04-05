@@ -42,6 +42,18 @@ def modspec(network, dim):
 
 @embedding_model
 def GCN(network,feature_dim,device,dim_h,dim):
+    
+    """
+    Parameters
+    ----------
+    network: adjacency matrix
+    feature_dim: dimension of features
+    dim: dimension of embedding vectors
+    dim_h : dimension of hidden layer
+    device : device
+
+    """
+    
     model = embcom.embeddings.LaplacianEigenMap()
     model.fit(network)
     features = model.transform(dim=feature_dim)

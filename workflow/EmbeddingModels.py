@@ -3,7 +3,10 @@
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
 # @Last Modified time: 2023-03-31 17:44:39
+
 import embcom
+import torch
+import numpy as np
 
 embedding_models = {}
 embedding_model = lambda f: embedding_models.setdefault(f.__name__, f)
@@ -41,7 +44,7 @@ def modspec(network, dim):
 
 
 @embedding_model
-def GCN(network,feature_dim,device,dim_h,dim):
+def GCN(network,dim,feature_dim=10,device='cpu',dim_h=128):
     
     """
     Parameters

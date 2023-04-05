@@ -10,6 +10,19 @@ import networkx as nx
 import numpy as np
 from scipy import sparse
 from sklearn.decomposition import TruncatedSVD
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.utils.data as data
+import torch.optim as optim
+
+from torch_geometric.utils import negative_sampling
+from torch_geometric.datasets import Planetoid
+import torch_geometric.transforms as T
+from torch_geometric.nn import GCNConv
+
+from torch_geometric.utils import train_test_split_edges
+
 
 from embcom import rsvd, samplers, utils
 
@@ -22,7 +35,42 @@ except ImportError:
 
 
 # Base class
-#
+    
+    
+    
+class GCN(torch.nn.Module):
+    """A python class for the GCN.
+    
+    Parameters
+    ----------
+    dim_in: dimension of in vector
+    dim_out: dimension of out vector
+    dim_h : dimension of hidden layer
+
+    """
+    
+    def __init__(self, dim_in, dim_h, dim_out):
+        super(GCN, self).__init__()
+        self.conv1 = GCNConv(dim_in, dim_h)
+        self.conv2 = GCNConv(dim_h,dim_out)
+    
+    
+    def forward(self, x, positive_edge_index):
+        h = self.conv1(x, positive_edge_index)
+        h = h.relu()
+        h = self.conv2(h, positive_edge_index)
+        return h
+    
+    def decode(self, z, pos_edge_index, neg_edge_index): # only pos and neg edges
+        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) # concatenate pos and neg edges
+        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product 
+        return logits
+    
+        
+    
+    
+    
+
 class NodeEmbeddings:
     """Super class for node embedding class."""
 
@@ -49,6 +97,10 @@ class NodeEmbeddings:
     def update_embedding(self, dim):
         """Update embedding."""
         pass
+    
+    
+      
+    
 
 
 class Node2Vec(NodeEmbeddings):

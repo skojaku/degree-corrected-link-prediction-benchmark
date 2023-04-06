@@ -29,7 +29,7 @@ DATA_LIST = [
     f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
 # DATA_LIST = [
-#     "airport-rach"
+#     "polblogs-rachith"
 # ]
 N_ITERATION = 5
 
@@ -273,7 +273,7 @@ rule optimal_stacking_generate_features:
         output_heldout_feature=HELDOUT_FEATURE_MATRIX,
         output_train_feature=TRAIN_FEATURE_MATRIX
     script:
-        "workflow/optimal-stacking-topological-features.py"
+        "workflow/generate-optimal-stacking-topological-features.py"
 
 rule optimal_stacking_generate_cv_files:
     input:
@@ -312,7 +312,7 @@ rule generate_link_prediction_dataset:
     params:
         parameters=paramspace_negative_edge_sampler.instance,
     output:
-        output_best_params=TRAIN_NET_FILE,
+        output_train_net_file=TRAIN_NET_FILE,
         output_target_edge_table_file=TARGET_EDGE_TABLE_FILE,
     script:
         "workflow/generate-link-prediction-dataset.py"

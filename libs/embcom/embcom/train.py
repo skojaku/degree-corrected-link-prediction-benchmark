@@ -18,9 +18,6 @@ from tqdm import tqdm
 
 
 def get_link_labels(pos_edge_index, neg_edge_index,device):
-    # returns a tensor:
-    # [1,1,1,1,...,0,0,0,0,0,..] with the number of ones is equel to the lenght of pos_edge_index
-    # and the number of zeros is equal to the length of neg_edge_index
     E = pos_edge_index.size(1) + neg_edge_index.size(1)
     link_labels = torch.zeros(E, dtype=torch.float, device=device)
     link_labels[:pos_edge_index.size(1)] = 1.

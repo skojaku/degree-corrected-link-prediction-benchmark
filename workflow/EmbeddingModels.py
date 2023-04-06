@@ -76,6 +76,38 @@ def GCN(network,dim,feature_dim=10,device='cpu',dim_h=128):
     return embeddings
 
 
+def GAN(network,dim,feature_dim=10,device='cpu',dim_h=128):
+    
+    """
+    Parameters
+    ----------
+    network: adjacency matrix
+    feature_dim: dimension of features
+    dim: dimension of embedding vectors
+    dim_h : dimension of hidden layer
+    device : device
+
+    """
+    
+    model = embcom.embeddings.LaplacianEigenMap()
+    model.fit(network)
+    features = model.transform(dim=feature_dim)
+
+    
+    model_GAN, data = embcom.embeddings.GAN(feature_dim,dim_h,dim).to(device), torch.from_numpy(features).to(dtype=torch.float,device = device)
+    model_trained = embcom.train(model_GAN,data,network,device)
+
+    network_c = network.tocoo()
+    
+    edge_list_gan = torch.from_numpy(np.array([network_c.row, network_c.col])).to(device)
+    
+    
+
+    embeddings = model_trained(data,edge_list_gan)
+    
+    return embeddings
+
+
 
 # @embedding_model
 # def nonbacktracking(network, dim):

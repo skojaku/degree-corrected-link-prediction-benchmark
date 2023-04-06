@@ -19,12 +19,13 @@ import torch.optim as optim
 from torch_geometric.utils import negative_sampling
 from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
-from torch_geometric.nn import GCNConv
+from torch_geometric.nn import GCNConv, GATv2Conv
 
 from torch_geometric.utils import train_test_split_edges
 
 
 from embcom import rsvd, samplers, utils
+
 
 try:
     import glove
@@ -35,7 +36,36 @@ except ImportError:
 
 
 # Base class
+
+
+
+class GAN(torch.nn.Module):
+    """A python class for the GAN.
     
+    Parameters
+    ----------
+    dim_in: dimension of in vector
+    dim_out: dimension of out vector
+    dim_h : dimension of hidden layer
+
+    """
+    
+    def __init__(self, dim_in, dim_h, dim_out):
+        super(GAN, self).__init__()
+        self.conv1 = GATv2Conv(dim_in, dim_h)
+        self.conv2 = GATv2Conv(dim_h,dim_out)
+    
+    
+    def forward(self, x, positive_edge_index):
+        h = self.conv1(x, positive_edge_index)
+        h = h.relu()
+        h = self.conv2(h, positive_edge_index)
+        return h
+    
+    def decode(self, z, pos_edge_index, neg_edge_index): # only pos and neg edges
+        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) # concatenate pos and neg edges
+        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product 
+        return logits
     
     
 class GCN(torch.nn.Module):

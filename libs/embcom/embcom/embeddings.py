@@ -245,7 +245,6 @@ class ModularitySpectralEmbedding(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
-
         s, u = sparse.linalg.eigs(self.A, k=dim + 1, which="LR")
         s, u = np.real(s), np.real(u)
         s = s[1:]
@@ -308,7 +307,6 @@ class LinearizedNode2Vec(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
-
         # Calculate the normalized transition matrix
         Dinvsqrt = sparse.diags(1 / np.sqrt(np.maximum(1, self.deg)))
         Psym = Dinvsqrt @ self.A @ Dinvsqrt
@@ -350,7 +348,6 @@ class NonBacktrackingSpectralEmbedding(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
-
         N = self.A.shape[0]
         Z = sparse.csr_matrix((N, N))
         I = sparse.identity(N, format="csr")
@@ -405,7 +402,6 @@ class Node2VecMatrixFactorization(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
-
         P = utils.to_trans_mat(self.A)
         Ppow = utils.matrix_sum_power(P, self.window_length) / self.window_length
         stationary_prob = self.deg / np.sum(self.deg)
@@ -503,11 +499,12 @@ class graphSAGE:
         num_walks=1,
         walk_length=5,
         dim=10,
-        layer_sizes = [50, 10],
-        num_samples = [10,5],
+        layer_sizes=[50, 10],
+        num_samples=[10, 5],
         batch_size=50,
-        epochs = 4,
+        epochs=4,
         verbose=False,
+        feature_dim=50,
     ):
         self.in_vec = None  # In-vector
         self.out_vec = None  # Out-vector
@@ -516,19 +513,20 @@ class graphSAGE:
         self.generator = None
         self.train_gen = None
         self.G = None
-        
+
         self.num_walks = num_walks
         self.walk_length = walk_length
         self.layer_sizes = layer_sizes
         self.num_samples = num_samples
         self.batch_size = batch_size
         self.epochs = 4
-        
+
         self.verbose = verbose
 
-        
+        self.feature_dim = feature_dim
+
     def fit(self, net):
-        """Takes a network as an input, transforms it into an adjacency matrix, and generates 
+        """Takes a network as an input, transforms it into an adjacency matrix, and generates
         feature vectors for nodes and creates a StellarGraph object"""
 
         # transform into an adjacency matrix
@@ -542,41 +540,48 @@ class graphSAGE:
         nodes = [*self.G.nodes()]
 
         # transform it into a StellarGraph
-        self.G = stellargraph.StellarGraph.from_networkx(graph=self.G, node_features=zip(nodes,self.feature_vector))
-        
-        # Create the UnsupervisedSampler instance with the relevant parameters passed to it
-        unsupervised_samples = UnsupervisedSampler(self.G, 
-                                                   nodes=nodes, 
-                                                   length=self.walk_length, 
-                                                   number_of_walks=self.num_walks)
+        self.G = stellargraph.StellarGraph.from_networkx(
+            graph=self.G, node_features=zip(nodes, self.feature_vector)
+        )
 
-        self.generator = GraphSAGELinkGenerator(self.G, self.batch_size, self.num_samples)
+        # Create the UnsupervisedSampler instance with the relevant parameters passed to it
+        unsupervised_samples = UnsupervisedSampler(
+            self.G, nodes=nodes, length=self.walk_length, number_of_walks=self.num_walks
+        )
+
+        self.generator = GraphSAGELinkGenerator(
+            self.G, self.batch_size, self.num_samples
+        )
         self.train_gen = self.generator.flow(unsupervised_samples)
-        
+
         return self
-    
-    def create_feature_vector(self, A, feature_dim=50):
-        """Takes an adjacency matrix and generates feature vectors using 
+
+    def create_feature_vector(self, A):
+        """Takes an adjacency matrix and generates feature vectors using
         Laplacian Eigen Map"""
 
         lapeigen = embcom.LaplacianEigenMap(p=100, q=40)
         lapeigen.fit(A)
-        self.feature_vector = lapeigen.transform(feature_dim, return_out_vector=False)
-        
+        self.feature_vector = lapeigen.transform(
+            self.feature_dim, return_out_vector=False
+        )
+
         return self
 
     def train_GraphSAGE(self):
         graphsage = GraphSAGE(
-            layer_sizes=self.layer_sizes, generator=self.generator, bias=True, dropout=0.0, normalize="l2"
+            layer_sizes=self.layer_sizes,
+            generator=self.generator,
+            bias=True,
+            dropout=0.0,
+            normalize="l2",
         )
 
         self.in_vec, self.out_vec = graphsage.in_out_tensors()
-        
 
         prediction = link_classification(
             output_dim=1, output_act="sigmoid", edge_embedding_method="ip"
         )(self.out_vec)
-
 
         self.model = keras.Model(inputs=self.in_vec, outputs=prediction)
 
@@ -587,22 +592,23 @@ class graphSAGE:
         )
 
         history = self.model.fit(
-                            self.train_gen,
-                            epochs=self.epochs,
-                            verbose=self.verbose,
-                            use_multiprocessing=False,
-                            workers=4,
-                            shuffle=True,
-                    )
+            self.train_gen,
+            epochs=self.epochs,
+            verbose=self.verbose,
+            use_multiprocessing=False,
+            workers=4,
+            shuffle=True,
+        )
 
     def get_embeddings(self):
-
         x_inp_src = self.in_vec[0::2]
         x_out_src = self.out_vec[0]
         embedding_model = keras.Model(inputs=x_inp_src, outputs=x_out_src)
 
         node_ids = [*self.G.nodes()]
-        node_gen = GraphSAGENodeGenerator(self.G, self.batch_size, self.num_samples).flow(node_ids)
+        node_gen = GraphSAGENodeGenerator(
+            self.G, self.batch_size, self.num_samples
+        ).flow(node_ids)
 
         node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=0)
 

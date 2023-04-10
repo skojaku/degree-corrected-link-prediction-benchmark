@@ -1,25 +1,28 @@
-name: linkpred 
+name: base
 channels:
-  - bioconda
-  - pytorch
-  - conda-forge
-  - pyg 
   - defaults
 dependencies:
   - python=3.9
-  - pytorch 
-  - graph-tool 
-  - scikit-learn 
-  - numpy 
-  - numba 
-  - scipy 
-  - pandas 
-  - networkx 
-  - gensim 
-  - umap-learn 
-  - faiss-gpu 
-  - umap-learn 
-  - pyg 
-  - pytorch 
-  - torchvision 
-  - torchaudio 
+  - mamba
+  - pytorch
+  - torchvision
+  - torchaudio
+  - cudatoolkit=11.6
+  - ca-certificates
+  - certifi
+  - openssl
+  - snakemake
+  - graph-tool
+  - scikit-learn
+  - numpy==1.23.5
+  - numba
+  - scipy
+  - pandas
+  - networkx
+  - seaborn
+  - matplotlib
+  - gensim
+  - ipykernel
+  - tqdm
+  - black
+  - stellargraph

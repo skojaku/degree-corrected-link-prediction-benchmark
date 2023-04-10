@@ -15,54 +15,37 @@ import numpy as np
 from tqdm import tqdm
 
 
-
-
-def get_link_labels(pos_edge_index, neg_edge_index,device):
+def get_link_labels(pos_edge_index, neg_edge_index, device):
     E = pos_edge_index.size(1) + neg_edge_index.size(1)
     link_labels = torch.zeros(E, dtype=torch.float, device=device)
-    link_labels[:pos_edge_index.size(1)] = 1.
+    link_labels[: pos_edge_index.size(1)] = 1.0
     return link_labels
 
 
-
-
-
-
-def train(model,data,adjacency,device):
-    
-    
-    optimizer = torch.optim.Adam(model.parameters(),lr=0.01)
+def train(model, data, adjacency, device, epochs):
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
     model.train()
-    
-    epochs = 2000
-    
+
     adj_c = adjacency.tocoo()
-    
+
     edge_list_torch = torch.from_numpy(np.array([adj_c.row, adj_c.col])).to(device)
-    
-    
-    
-    for epoch in tqdm(range(epochs+1)):
-   
+
+    for epoch in tqdm(range(epochs + 1)):
         neg_edge_index = negative_sampling(
-            
-        edge_index=  edge_list_torch, #positive edges
-        num_nodes = data.shape[0], # number of nodes
-        num_neg_samples= edge_list_torch.size(1))
-        
+            edge_index=edge_list_torch,  # positive edges
+            num_nodes=data.shape[0],  # number of nodes
+            num_neg_samples=edge_list_torch.size(1),
+        )
+
         optimizer.zero_grad()
-        
-        z = model(data,edge_list_torch)
-        
-        link_logits = model.decode(z, edge_list_torch, neg_edge_index) # decode
-        link_labels = get_link_labels(edge_list_torch, neg_edge_index,device)
+
+        z = model(data, edge_list_torch)
+
+        link_logits = model.decode(z, edge_list_torch, neg_edge_index)  # decode
+        link_labels = get_link_labels(edge_list_torch, neg_edge_index, device)
         loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
         loss.backward()
         optimizer.step()
-       
 
-        
     return model
-        
-        

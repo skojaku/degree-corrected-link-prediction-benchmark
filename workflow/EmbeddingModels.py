@@ -25,10 +25,6 @@ def deepwalk(network, dim, window_length=10, num_walks=40):
     model.fit(network)
     return model.transform(dim=dim)
 
-
-##Laplacian Eigen map ==> make a feature 
-## 
-
 @embedding_model
 def leigenmap(network, dim):
     model = embcom.embeddings.LaplacianEigenMap()
@@ -44,8 +40,7 @@ def modspec(network, dim):
 
 
 @embedding_model
-def GCN(network,dim,feature_dim=10,device='cpu',dim_h=128):
-    
+def GCN(network, dim, feature_dim=10, device="cpu", dim_h=128, epochs=2000):
     """
     Parameters
     ----------
@@ -54,30 +49,17 @@ def GCN(network,dim,feature_dim=10,device='cpu',dim_h=128):
     dim: dimension of embedding vectors
     dim_h : dimension of hidden layer
     device : device
-
+    epochs : the number of epoch in training
     """
-    
-    model = embcom.embeddings.LaplacianEigenMap()
+    model = embcom.embeddings.GCN_model(
+        feature_dim=feature_dim, dim_h=dim_h, device=device, epochs=epochs
+    )
     model.fit(network)
-    features = model.transform(dim=feature_dim)
-
-    
-    model_GCN, data = embcom.embeddings.GCN(feature_dim,dim_h,dim).to(device), torch.from_numpy(features).to(dtype=torch.float,device = device)
-    model_trained = embcom.train(model_GCN,data,network,device)
-
-    network_c = network.tocoo()
-    
-    edge_list_gcn = torch.from_numpy(np.array([network_c.row, network_c.col])).to(device)
-    
-    
-
-    embeddings = model_trained(data,edge_list_gcn)
-    
-    return embeddings
+    return model.transform(dim=dim)
 
 
-def GAN(network,dim,feature_dim=10,device='cpu',dim_h=128):
-    
+@embedding_model
+def GAT(network, dim, feature_dim=10, device="cpu", dim_h=128, epochs=2000):
     """
     Parameters
     ----------
@@ -86,31 +68,12 @@ def GAN(network,dim,feature_dim=10,device='cpu',dim_h=128):
     dim: dimension of embedding vectors
     dim_h : dimension of hidden layer
     device : device
-
+    epochs : the number of epoch in training
     """
-    
-    model = embcom.embeddings.LaplacianEigenMap()
+    model = embcom.embeddings.GAT_model(
+        feature_dim=feature_dim, dim_h=dim_h, device=device, epochs=epochs
+    )
     model.fit(network)
-    features = model.transform(dim=feature_dim)
-
-    
-    model_GAN, data = embcom.embeddings.GAN(feature_dim,dim_h,dim).to(device), torch.from_numpy(features).to(dtype=torch.float,device = device)
-    model_trained = embcom.train(model_GAN,data,network,device)
-
-    network_c = network.tocoo()
-    
-    edge_list_gan = torch.from_numpy(np.array([network_c.row, network_c.col])).to(device)
-    
-    
-
-    embeddings = model_trained(data,edge_list_gan)
-    
-    return embeddings
+    return model.transform(dim=dim)
 
 
-
-# @embedding_model
-# def nonbacktracking(network, dim):
-#    model = embcom.embeddings.NonBacktrackingSpectralEmbedding()
-#    model.fit(network)
-#    return model.transform(dim=dim)

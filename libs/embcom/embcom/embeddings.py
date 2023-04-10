@@ -24,7 +24,7 @@ from torch_geometric.nn import GCNConv, GATv2Conv
 from torch_geometric.utils import train_test_split_edges
 
 
-from embcom import rsvd, samplers, utils
+from embcom import rsvd, samplers, utils, train
 
 
 try:
@@ -37,69 +37,6 @@ except ImportError:
 
 # Base class
 
-
-
-class GAN(torch.nn.Module):
-    """A python class for the GAN.
-    
-    Parameters
-    ----------
-    dim_in: dimension of in vector
-    dim_out: dimension of out vector
-    dim_h : dimension of hidden layer
-
-    """
-    
-    def __init__(self, dim_in, dim_h, dim_out):
-        super(GAN, self).__init__()
-        self.conv1 = GATv2Conv(dim_in, dim_h)
-        self.conv2 = GATv2Conv(dim_h,dim_out)
-    
-    
-    def forward(self, x, positive_edge_index):
-        h = self.conv1(x, positive_edge_index)
-        h = h.relu()
-        h = self.conv2(h, positive_edge_index)
-        return h
-    
-    def decode(self, z, pos_edge_index, neg_edge_index): # only pos and neg edges
-        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) # concatenate pos and neg edges
-        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product 
-        return logits
-    
-    
-class GCN(torch.nn.Module):
-    """A python class for the GCN.
-    
-    Parameters
-    ----------
-    dim_in: dimension of in vector
-    dim_out: dimension of out vector
-    dim_h : dimension of hidden layer
-
-    """
-    
-    def __init__(self, dim_in, dim_h, dim_out):
-        super(GCN, self).__init__()
-        self.conv1 = GCNConv(dim_in, dim_h)
-        self.conv2 = GCNConv(dim_h,dim_out)
-    
-    
-    def forward(self, x, positive_edge_index):
-        h = self.conv1(x, positive_edge_index)
-        h = h.relu()
-        h = self.conv2(h, positive_edge_index)
-        return h
-    
-    def decode(self, z, pos_edge_index, neg_edge_index): # only pos and neg edges
-        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) # concatenate pos and neg edges
-        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product 
-        return logits
-    
-        
-    
-    
-    
 
 class NodeEmbeddings:
     """Super class for node embedding class."""
@@ -127,10 +64,6 @@ class NodeEmbeddings:
     def update_embedding(self, dim):
         """Update embedding."""
         pass
-    
-    
-      
-    
 
 
 class Node2Vec(NodeEmbeddings):
@@ -321,7 +254,6 @@ class ModularitySpectralEmbedding(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
-
         s, u = sparse.linalg.eigs(self.A, k=dim + 1, which="LR")
         s, u = np.real(s), np.real(u)
         s = s[1:]
@@ -384,7 +316,6 @@ class LinearizedNode2Vec(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
-
         # Calculate the normalized transition matrix
         Dinvsqrt = sparse.diags(1 / np.sqrt(np.maximum(1, self.deg)))
         Psym = Dinvsqrt @ self.A @ Dinvsqrt
@@ -426,7 +357,6 @@ class NonBacktrackingSpectralEmbedding(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
-
         N = self.A.shape[0]
         Z = sparse.csr_matrix((N, N))
         I = sparse.identity(N, format="csr")
@@ -481,7 +411,6 @@ class Node2VecMatrixFactorization(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
-
         P = utils.to_trans_mat(self.A)
         Ppow = utils.matrix_sum_power(P, self.window_length) / self.window_length
         stationary_prob = self.deg / np.sum(self.deg)
@@ -562,3 +491,123 @@ class DegreeEmbedding:
         emb = np.zeros((len(self.degree), dim))
         emb[:, 0] = self.degree
         return emb
+
+
+class GAT(torch.nn.Module):
+    """A python class for the GAT.
+
+    Parameters
+    ----------
+    dim_in: dimension of in vector
+    dim_out: dimension of out vector
+    dim_h : dimension of hidden layer
+
+    """
+
+    def __init__(self, dim_in, dim_h, dim_out):
+        super(GAT, self).__init__()
+        self.conv1 = GATv2Conv(dim_in, dim_h)
+        self.conv2 = GATv2Conv(dim_h, dim_out)
+
+    def forward(self, x, positive_edge_index):
+        h = self.conv1(x, positive_edge_index)
+        h = h.relu()
+        h = self.conv2(h, positive_edge_index)
+        return h
+
+    def decode(self, z, pos_edge_index, neg_edge_index):  # only pos and neg edges
+        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1)
+        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
+        return logits
+
+
+class GAT_model(torch.nn.Module):
+    def __init__(self, feature_dim, dim_h, device, epochs):
+        self.feature_dim = feature_dim
+        self.dim_h = dim_h
+        self.device = device
+        self.epochs = epochs
+
+    def fit(self, net):
+        self.network = net
+        model = LaplacianEigenMap()
+        model.fit(self.network)
+        self.features = model.transform(dim=self.feature_dim)
+
+    def transform(self, dim):
+        model_GAT, data = GAT(self.feature_dim, self.dim_h, dim).to(
+            self.device
+        ), torch.from_numpy(self.features).to(dtype=torch.float, device=self.device)
+        model_trained = train.train(
+            model_GAT, data, self.network, self.device, self.epochs
+        )
+
+        network_c = self.network.tocoo()
+
+        edge_list_gat = torch.from_numpy(np.array([network_c.row, network_c.col])).to(
+            self.device
+        )
+
+        embeddings = model_trained(data, edge_list_gat)
+
+        return embeddings
+
+
+class GCN(torch.nn.Module):
+    """A python class for the GCN.
+
+    Parameters
+    ----------
+    dim_in: dimension of in vector
+    dim_out: dimension of out vector
+    dim_h : dimension of hidden layer
+
+    """
+
+    def __init__(self, dim_in, dim_h, dim_out):
+        super(GCN, self).__init__()
+        self.conv1 = GCNConv(dim_in, dim_h)
+        self.conv2 = GCNConv(dim_h, dim_out)
+
+    def forward(self, x, positive_edge_index):
+        h = self.conv1(x, positive_edge_index)
+        h = h.relu()
+        h = self.conv2(h, positive_edge_index)
+        return h
+
+    def decode(self, z, pos_edge_index, neg_edge_index):  # only pos and neg edges
+        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1)
+        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
+        return logits
+
+
+class GCN_model(torch.nn.Module):
+    def __init__(self, feature_dim, dim_h, device, epochs):
+        self.feature_dim = feature_dim
+        self.dim_h = dim_h
+        self.device = device
+        self.epochs = epochs
+
+    def fit(self, net):
+        self.network = net
+        model = LaplacianEigenMap()
+        model.fit(self.network)
+        self.features = model.transform(dim=self.feature_dim)
+
+    def transform(self, dim):
+        model_GCN, data = GCN(self.feature_dim, self.dim_h, dim).to(
+            self.device
+        ), torch.from_numpy(self.features).to(dtype=torch.float, device=self.device)
+        model_trained = train.train(
+            model_GCN, data, self.network, self.device, self.epochs
+        )
+
+        network_c = self.network.tocoo()
+
+        edge_list_gcn = torch.from_numpy(np.array([network_c.row, network_c.col])).to(
+            self.device
+        )
+
+        embeddings = model_trained(data, edge_list_gcn)
+
+        return embeddings

@@ -1,7 +1,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-04-11 10:05:26
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-11 13:41:49
+# @Last Modified time: 2023-04-11 14:00:08
 name: embcom
 
 on: push
@@ -28,21 +28,25 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Installing packages for testing
       run: |
+        conda init bash
         conda activate linkpred
         python -m pip install --upgrade pip wheel setuptools
         pip install networkx
     - name: Installing embcom
       working-directory: ./libs/embcom
       run: |
+        conda init bash
         conda activate linkpred
         pip install .
     - name: Installing linkpred
       working-directory: ./libs/linkpred
       run: |
+        conda init bash
         conda activate linkpred
         pip install .
     - name: Testing embcom
       working-directory: ./libs/embcom
       run: |
+        conda init bash
         conda activate linkpred
         python -m unittest tests/test.py

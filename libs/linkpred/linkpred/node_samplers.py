@@ -2,11 +2,12 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-16 17:34:35
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-02 05:16:05
+# @Last Modified time: 2023-04-11 15:17:19
 
 """Graph module to store a network and generate random walks from it."""
 import numpy as np
 from scipy import sparse
+from numba import njit
 
 
 class NodeSampler:
@@ -105,13 +106,17 @@ class SBMNodeSampler(NodeSampler):
         self.p0 = np.maximum(indeg, 1) / np.sum(np.maximum(indeg, 1))
         return self
 
-    def sampling(self, size):
-        center_nodes = np.random.choice(
-            self.n_nodes, size=size, p=self.p0, replace=True
-        )
+    def sampling(self, size=None, center_nodes=None):
+        if center_nodes is None:
+            center_nodes = np.random.choice(
+                self.n_nodes, size=size, p=self.p0, replace=True
+            )
         block_ids = csr_sampling(self.group_membership[center_nodes], self.block2block)
         context_nodes = csr_sampling(block_ids, self.block2node)
         return center_nodes.astype(np.int64), context_nodes.astype(np.int64)
+
+    def sampling_source_nodes(self, size):
+        return np.random.choice(self.n_nodes, size=size, p=self.p0, replace=True)
 
 
 class ConfigModelNodeSampler(SBMNodeSampler):
@@ -122,14 +127,6 @@ class ConfigModelNodeSampler(SBMNodeSampler):
 class ErdosRenyiNodeSampler(SBMNodeSampler):
     def __init__(self):
         super(ErdosRenyiNodeSampler, self).__init__(window_length=1, dcsbm=False)
-
-
-#
-# Utils
-#
-import numpy as np
-from numba import njit
-from scipy import sparse
 
 
 #

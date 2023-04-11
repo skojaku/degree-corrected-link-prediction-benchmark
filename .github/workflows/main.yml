@@ -1,7 +1,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-04-11 10:05:26
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-11 12:38:13
+# @Last Modified time: 2023-04-11 13:41:49
 name: embcom
 
 on: push
@@ -21,8 +21,10 @@ jobs:
       with:
         mamba-version: "*"
         environment-file: ./environment.yml
+        channels: conda-forge,bioconda,defaults
         activate-environment: "linkpred"
         auto-update-conda: true
+        auto-activate-base: false
         python-version: ${{ matrix.python-version }}
     - name: Installing packages for testing
       run: |

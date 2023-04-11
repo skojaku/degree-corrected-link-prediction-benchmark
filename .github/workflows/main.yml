@@ -1,7 +1,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-04-11 10:05:26
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-11 10:12:01
+# @Last Modified time: 2023-04-11 11:02:50
 name: embcom
 
 on: push
@@ -19,10 +19,10 @@ jobs:
       run: sudo apt-get update
     - uses: conda-incubator/setup-miniconda@v2
       with:
-        environment-file: environment.yml
-        auto-activate-base: false
+        mamba-version: "*"
+        environment-file: ./environment.yml
+        activate-environment: "linkpred"
         auto-update-conda: true
-        use-only-tar-bz2: true
         python-version: ${{ matrix.python-version }}
     - name: Installing packages for testing
       run: |

@@ -1,52 +1,33 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-04-11 10:05:26
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-11 14:00:08
-name: embcom
+# @Last Modified time: 2023-04-11 14:16:10
+name: Python Package Using Anaconda
 
-on: push
+on: [push]
 
 jobs:
-  conda-env-create-on-linux:
+  build-linux:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1
-      matrix:
-        python-version: [3.9]
+
     steps:
     - uses: actions/checkout@v2
-    - name: Update list of packages ${{ matrix.python-version }}
-      run: sudo apt-get update
-    - uses: conda-incubator/setup-miniconda@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
       with:
-        mamba-version: "*"
-        environment-file: ./environment.yml
-        channels: conda-forge,bioconda,defaults
-        activate-environment: "linkpred"
-        auto-update-conda: true
-        auto-activate-base: false
-        python-version: ${{ matrix.python-version }}
-    - name: Installing packages for testing
+        python-version: 3.9
+    - name: Install dependencies
       run: |
-        conda init bash
-        conda activate linkpred
-        python -m pip install --upgrade pip wheel setuptools
-        pip install networkx
-    - name: Installing embcom
-      working-directory: ./libs/embcom
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        $CONDA/bin/conda env update --file environment.yml --name base
+    - name: Lint with flake8
       run: |
-        conda init bash
-        conda activate linkpred
-        pip install .
-    - name: Installing linkpred
-      working-directory: ./libs/linkpred
+        $CONDA/bin/conda install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        $CONDA/bin/flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        $CONDA/bin/flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test with pytest
       run: |
-        conda init bash
-        conda activate linkpred
-        pip install .
-    - name: Testing embcom
-      working-directory: ./libs/embcom
-      run: |
-        conda init bash
-        conda activate linkpred
-        python -m unittest tests/test.py
+        conda install pytest
+        $CONDA/bin/pytest

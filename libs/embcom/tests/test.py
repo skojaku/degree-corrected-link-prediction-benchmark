@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# @Author: Sadamori Kojaku
+# @Date:   2023-03-30 09:38:48
+# @Last Modified by:   Sadamori Kojaku
+# @Last Modified time: 2023-04-11 09:28:38
 import unittest
 
 import networkx as nx
@@ -6,76 +11,36 @@ from scipy import sparse
 
 import embcom
 
+import networkx as nx
+import numpy as np
+from scipy import sparse
+import embcom 
+import unittest
 
-class TestCalc(unittest.TestCase):
+
+def inheritors(klass):
+    subclasses = set()
+    work = [klass]
+    while work:
+        parent = work.pop()
+        for child in parent.__subclasses__():
+            if child not in subclasses:
+                subclasses.add(child)
+                work.append(child)
+    return subclasses
+
+
+class TestingEmbeddingMethods(unittest.TestCase):
     def setUp(self):
-        self.G = nx.karate_club_graph()
-        self.A = nx.adjacency_matrix(self.G)
+        G = nx.karate_club_graph()
+        self.A = nx.adjacency_matrix(G)
+        self.labels = np.unique(
+            [d[1]["club"] for d in G.nodes(data=True)], return_inverse=True
+        )[1]
 
-    def test_mod_spectral(self):
-        model = embcom.embeddings.ModularitySpectralEmbedding()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_adj_spectral(self):
-        model = embcom.embeddings.AdjacencySpectralEmbedding()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_leigenmap(self):
-        model = embcom.embeddings.LaplacianEigenMap()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_node2vec(self):
-        model = embcom.embeddings.Node2Vec()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_deepwalk(self):
-        model = embcom.embeddings.DeepWalk()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_nonbacktracking(self):
-        model = embcom.embeddings.NonBacktrackingSpectralEmbedding()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_node2vec_matrix_factorization(self):
-        model = embcom.embeddings.Node2VecMatrixFactorization()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_highorder_modularity_spec_embedding(self):
-        model = embcom.embeddings.HighOrderModularitySpectralEmbedding()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_normalized_trans_matrix_spec_embedding(self):
-        model = embcom.embeddings.LinearizedNode2Vec()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_non_backtracking_node2vec(self):
-        model = embcom.embeddings.NonBacktrackingNode2Vec()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_non_backtracking_deepwalk(self):
-        model = embcom.embeddings.NonBacktrackingDeepWalk()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_torch_node2vec(self):
-        model = embcom.TorchNode2Vec()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-    def test_torch_node2vec_linear(self):
-        model = embcom.TorchModularityFactorization()
-        model.fit(self.A)
-        vec = model.transform(dim=32)
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_embedding(self):
+        for model in inheritors(embcom.NodeEmbeddings):
+            instance = model()
+            instance.fit(self.A)
+            instance.transform(dim=8)
+            print(model)

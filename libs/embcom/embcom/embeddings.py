@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-28 10:22:30
+# @Last Modified time: 2023-04-11 09:48:59
 """Module for embedding."""
 # %%
 import gensim
@@ -11,22 +11,12 @@ import numpy as np
 from scipy import sparse
 from sklearn.decomposition import TruncatedSVD
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.utils.data as data
-import torch.optim as optim
-
-from torch_geometric.utils import negative_sampling
-from torch_geometric.datasets import Planetoid
-import torch_geometric.transforms as T
-from torch_geometric.nn import GCNConv, GATv2Conv
-
-from torch_geometric.utils import train_test_split_edges
-
-
 from embcom import rsvd, samplers, utils, train
 
+# Pytorch Geometric
+from torch_geometric.nn import GCNConv, GATv2Conv
 
+# Stellar Graph
 import stellargraph
 from tensorflow import keras
 from stellargraph.data import UnsupervisedSampler
@@ -208,7 +198,9 @@ class LaplacianEigenMap(NodeEmbeddings):
             self.in_vec = u[:, order]
             self.out_vec = u[:, order]
         else:
-            s, u = sparse.linalg.eigs(self.L, k=dim + 1, which="LR")
+            s, u = sparse.linalg.eigs(
+                self.L, k=np.minimum(dim + 1, self.L.shape[0] - 2), which="LR"
+            )
             s, u = np.real(s), np.real(u)
             order = np.argsort(-s)[1:]
             s, u = s[order], u[:, order]
@@ -255,12 +247,14 @@ class ModularitySpectralEmbedding(NodeEmbeddings):
 
     def fit(self, net):
         A = utils.to_adjacency_matrix(net)
-        self.A = A
+        self.A = A.asfptype()
         self.deg = np.array(A.sum(axis=1)).reshape(-1)
         return self
 
     def update_embedding(self, dim):
-        s, u = sparse.linalg.eigs(self.A, k=dim + 1, which="LR")
+        s, u = sparse.linalg.eigs(
+            self.A, k=np.minimum(dim + 1, self.A.shape[0] - 1), which="LR"
+        )
         s, u = np.real(s), np.real(u)
         s = s[1:]
         u = u[:, 1:]
@@ -499,7 +493,7 @@ class DegreeEmbedding:
         return emb
 
 
-class GAT(torch.nn.Module):
+class GAT(NodeEmbeddings):
     """A python class for the GAT.
 
     Parameters
@@ -510,25 +504,34 @@ class GAT(torch.nn.Module):
 
     """
 
-    def __init__(self, dim_in, dim_h, dim_out):
-        super(GAT, self).__init__()
-        self.conv1 = GATv2Conv(dim_in, dim_h)
-        self.conv2 = GATv2Conv(dim_h, dim_out)
+    class _GAT(torch.nn.Module):
+        """A python class for the GAT.
 
-    def forward(self, x, positive_edge_index):
-        h = self.conv1(x, positive_edge_index)
-        h = h.relu()
-        h = self.conv2(h, positive_edge_index)
-        return h
+        Parameters
+        ----------
+        dim_in: dimension of in vector
+        dim_out: dimension of out vector
+        dim_h : dimension of hidden layer
 
-    def decode(self, z, pos_edge_index, neg_edge_index):  # only pos and neg edges
-        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1)
-        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
-        return logits
+        """
 
+        def __init__(self, dim_in, dim_h, dim_out):
+            super(self.__class__, self).__init__()
+            self.conv1 = GATv2Conv(dim_in, dim_h)
+            self.conv2 = GATv2Conv(dim_h, dim_out)
 
-class GAT_model(torch.nn.Module):
-    def __init__(self, feature_dim, dim_h, device, epochs):
+        def forward(self, x, positive_edge_index):
+            h = self.conv1(x, positive_edge_index)
+            h = h.relu()
+            h = self.conv2(h, positive_edge_index)
+            return h
+
+        def decode(self, z, pos_edge_index, neg_edge_index):  # only pos and neg edges
+            edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1)
+            logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
+            return logits
+
+    def __init__(self, feature_dim=64, dim_h=64, device="cpu", epochs=10):
         self.feature_dim = feature_dim
         self.dim_h = dim_h
         self.device = device
@@ -536,12 +539,14 @@ class GAT_model(torch.nn.Module):
 
     def fit(self, net):
         self.network = net
+        self.feature_dim = np.minimum(self.feature_dim, net.shape[0] - 2)
         model = LaplacianEigenMap()
         model.fit(self.network)
         self.features = model.transform(dim=self.feature_dim)
 
     def transform(self, dim):
-        model_GAT, data = GAT(self.feature_dim, self.dim_h, dim).to(
+        print(self.feature_dim)
+        model_GAT, data = self._GAT(self.feature_dim, self.dim_h, dim).to(
             self.device
         ), torch.from_numpy(self.features).to(dtype=torch.float, device=self.device)
         model_trained = train.train(
@@ -559,7 +564,7 @@ class GAT_model(torch.nn.Module):
         return embeddings
 
 
-class GCN(torch.nn.Module):
+class GCN(NodeEmbeddings):
     """A python class for the GCN.
 
     Parameters
@@ -570,25 +575,34 @@ class GCN(torch.nn.Module):
 
     """
 
-    def __init__(self, dim_in, dim_h, dim_out):
-        super(GCN, self).__init__()
-        self.conv1 = GCNConv(dim_in, dim_h)
-        self.conv2 = GCNConv(dim_h, dim_out)
+    class _GCN(torch.nn.Module):
+        """A python class for the GCN.
 
-    def forward(self, x, positive_edge_index):
-        h = self.conv1(x, positive_edge_index)
-        h = h.relu()
-        h = self.conv2(h, positive_edge_index)
-        return h
+        Parameters
+        ----------
+        dim_in: dimension of in vector
+        dim_out: dimension of out vector
+        dim_h : dimension of hidden layer
 
-    def decode(self, z, pos_edge_index, neg_edge_index):  # only pos and neg edges
-        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1)
-        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
-        return logits
+        """
 
+        def __init__(self, dim_in, dim_h, dim_out):
+            super(self.__class__, self).__init__()
+            self.conv1 = GCNConv(dim_in, dim_h)
+            self.conv2 = GCNConv(dim_h, dim_out)
 
-class GCN_model(torch.nn.Module):
-    def __init__(self, feature_dim, dim_h, device, epochs):
+        def forward(self, x, positive_edge_index):
+            h = self.conv1(x, positive_edge_index)
+            h = h.relu()
+            h = self.conv2(h, positive_edge_index)
+            return h
+
+        def decode(self, z, pos_edge_index, neg_edge_index):  # only pos and neg edges
+            edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1)
+            logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
+            return logits
+
+    def __init__(self, feature_dim=64, dim_h=64, device="cpu", epochs=10):
         self.feature_dim = feature_dim
         self.dim_h = dim_h
         self.device = device
@@ -598,10 +612,11 @@ class GCN_model(torch.nn.Module):
         self.network = net
         model = LaplacianEigenMap()
         model.fit(self.network)
+        self.feature_dim = np.minimum(self.feature_dim, net.shape[0] - 1)
         self.features = model.transform(dim=self.feature_dim)
 
     def transform(self, dim):
-        model_GCN, data = GCN(self.feature_dim, self.dim_h, dim).to(
+        model_GCN, data = self._GCN(self.feature_dim, self.dim_h, dim).to(
             self.device
         ), torch.from_numpy(self.features).to(dtype=torch.float, device=self.device)
         model_trained = train.train(
@@ -618,7 +633,8 @@ class GCN_model(torch.nn.Module):
 
         return embeddings
 
-class graphSAGE:
+
+class graphSAGE(NodeEmbeddings):
     """A python class for the GraphSAGE.
     Parameters
     ----------
@@ -633,10 +649,10 @@ class graphSAGE:
         num_walks=1,
         walk_length=5,
         dim=10,
-        layer_sizes = [50, 10],
-        num_samples = [10,5],
+        layer_sizes=[50, 10],
+        num_samples=[10, 5],
         batch_size=50,
-        epochs = 4,
+        epochs=4,
         verbose=False,
     ):
         self.in_vec = None  # In-vector
@@ -646,19 +662,18 @@ class graphSAGE:
         self.generator = None
         self.train_gen = None
         self.G = None
-        
+
         self.num_walks = num_walks
         self.walk_length = walk_length
         self.layer_sizes = layer_sizes
         self.num_samples = num_samples
         self.batch_size = batch_size
         self.epochs = 4
-        
+
         self.verbose = verbose
 
-        
     def fit(self, net):
-        """Takes a network as an input, transforms it into an adjacency matrix, and generates 
+        """Takes a network as an input, transforms it into an adjacency matrix, and generates
         feature vectors for nodes and creates a StellarGraph object"""
 
         # transform into an adjacency matrix
@@ -672,41 +687,46 @@ class graphSAGE:
         nodes = [*self.G.nodes()]
 
         # transform it into a StellarGraph
-        self.G = stellargraph.StellarGraph.from_networkx(graph=self.G, node_features=zip(nodes,self.feature_vector))
-        
-        # Create the UnsupervisedSampler instance with the relevant parameters passed to it
-        unsupervised_samples = UnsupervisedSampler(self.G, 
-                                                   nodes=nodes, 
-                                                   length=self.walk_length, 
-                                                   number_of_walks=self.num_walks)
+        self.G = stellargraph.StellarGraph.from_networkx(
+            graph=self.G, node_features=zip(nodes, self.feature_vector)
+        )
 
-        self.generator = GraphSAGELinkGenerator(self.G, self.batch_size, self.num_samples)
+        # Create the UnsupervisedSampler instance with the relevant parameters passed to it
+        unsupervised_samples = UnsupervisedSampler(
+            self.G, nodes=nodes, length=self.walk_length, number_of_walks=self.num_walks
+        )
+
+        self.generator = GraphSAGELinkGenerator(
+            self.G, self.batch_size, self.num_samples
+        )
         self.train_gen = self.generator.flow(unsupervised_samples)
-        
+
         return self
-    
+
     def create_feature_vector(self, A, feature_dim=50):
-        """Takes an adjacency matrix and generates feature vectors using 
+        """Takes an adjacency matrix and generates feature vectors using
         Laplacian Eigen Map"""
 
-        lapeigen = embcom.LaplacianEigenMap(p=100, q=40)
+        lapeigen = LaplacianEigenMap(p=100, q=40)
         lapeigen.fit(A)
         self.feature_vector = lapeigen.transform(feature_dim, return_out_vector=False)
-        
+
         return self
 
     def train_GraphSAGE(self):
         graphsage = GraphSAGE(
-            layer_sizes=self.layer_sizes, generator=self.generator, bias=True, dropout=0.0, normalize="l2"
+            layer_sizes=self.layer_sizes,
+            generator=self.generator,
+            bias=True,
+            dropout=0.0,
+            normalize="l2",
         )
 
         self.in_vec, self.out_vec = graphsage.in_out_tensors()
-        
 
         prediction = link_classification(
             output_dim=1, output_act="sigmoid", edge_embedding_method="ip"
         )(self.out_vec)
-
 
         self.model = keras.Model(inputs=self.in_vec, outputs=prediction)
 
@@ -717,24 +737,24 @@ class graphSAGE:
         )
 
         history = self.model.fit(
-                            self.train_gen,
-                            epochs=self.epochs,
-                            verbose=self.verbose,
-                            use_multiprocessing=False,
-                            workers=4,
-                            shuffle=True,
-                    )
+            self.train_gen,
+            epochs=self.epochs,
+            verbose=self.verbose,
+            use_multiprocessing=False,
+            workers=4,
+            shuffle=True,
+        )
 
     def get_embeddings(self):
-
         x_inp_src = self.in_vec[0::2]
         x_out_src = self.out_vec[0]
         embedding_model = keras.Model(inputs=x_inp_src, outputs=x_out_src)
 
         node_ids = [*self.G.nodes()]
-        node_gen = GraphSAGENodeGenerator(self.G, self.batch_size, self.num_samples).flow(node_ids)
+        node_gen = GraphSAGENodeGenerator(
+            self.G, self.batch_size, self.num_samples
+        ).flow(node_ids)
 
         node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=0)
 
         return node_embeddings
-

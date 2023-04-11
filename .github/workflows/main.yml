@@ -1,7 +1,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-04-11 10:05:26
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-11 14:39:14
+# @Last Modified time: 2023-04-11 14:57:49
 name: Use Setup-Miniconda From Marketplace
 on: [push]
 
@@ -24,14 +24,18 @@ jobs:
         run: |
           conda info
           conda list
-      - name: Lint
+      - name: Installing embcom
         shell: bash -l {0}
+        working-directory: libs/embcom
         run: |
-            conda install flake8
-            python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-            python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-      - name: Run pytest
+          pip install -e .
+      - name: Installing linkpred
         shell: bash -l {0}
+        working-directory: libs/linkpred
         run: |
-            conda install pytest
-            pytest
+          pip install -e .
+      - name: Run unittests (embcom)
+        shell: bash -l {0}
+        working-directory: libs/embcom
+        run: |
+          python -m unittest tests/test.py

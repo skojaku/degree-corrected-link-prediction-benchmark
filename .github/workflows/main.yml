@@ -1,7 +1,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-04-11 10:05:26
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-11 10:09:21
+# @Last Modified time: 2023-04-11 10:12:01
 name: embcom
 
 on: push
@@ -16,7 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Update list of packages ${{ matrix.python-version }}
-       run: sudo apt-get update
+      run: sudo apt-get update
     - uses: conda-incubator/setup-miniconda@v2
       with:
         environment-file: environment.yml

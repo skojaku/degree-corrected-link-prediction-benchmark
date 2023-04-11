@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-27 16:40:11
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-07 05:51:41
+# @Last Modified time: 2023-04-07 06:57:49
 # %%
 import numpy as np
 import pandas as pd
@@ -21,7 +21,9 @@ class LinkPredictionDataset:
 
     """
 
-    def __init__(self, testEdgeFraction, negative_edge_sampler):
+    def __init__(
+        self, testEdgeFraction, negative_edge_sampler, negatives_per_positive=1
+    ):
         """Initializer
 
         :param testEdgeFraction: fraction of edges to be removed from the given network
@@ -34,6 +36,7 @@ class LinkPredictionDataset:
             "degreeBiased": ConfigModelNodeSampler(),
         }[negative_edge_sampler]
         self.testEdgeFraction = testEdgeFraction
+        self.negatives_per_positive = negatives_per_positive
 
         self.splitter = NetworkTrainTestSplitterWithMST(fraction=testEdgeFraction)
 
@@ -48,8 +51,15 @@ class LinkPredictionDataset:
 
         # Sampling negative edges
         self.sampler.fit(net)
+        n_test_edges = np.int(len(test_src) * self.negatives_per_positive)
         pos_edges, neg_edges = self.generate_positive_negative_edges(
-            src, trg, test_src, test_trg, n_nodes, self.sampler
+            src=src,
+            trg=trg,
+            test_src=test_src,
+            test_trg=test_trg,
+            n_nodes=n_nodes,
+            n_test_edges=n_test_edges,
+            neg_edge_sampler=self.sampler,
         )
 
         self.train_net = sparse.csr_matrix(
@@ -74,7 +84,7 @@ class LinkPredictionDataset:
         return self.train_net, self.target_edge_table
 
     def generate_positive_negative_edges(
-        self, src, trg, test_src, test_trg, n_nodes, neg_edge_sampler
+        self, src, trg, test_src, test_trg, n_nodes, n_test_edges, neg_edge_sampler
     ):
         """Generate dataset for the link prediction.
 
@@ -90,13 +100,6 @@ class LinkPredictionDataset:
         :return: pos_edges, neg_edges
         :rtype: pos_edges: tuple of node indices for positive edges, and neg_edges for the negative edges
         """
-
-        #
-        # Sampling positive edges
-        #
-        n_test_edges = len(test_src)
-
-        # We represent a pair of integers by a complex number for computational ease.
 
         # Represent the subscript pairs into complex numbers
         src_trg = pairing(src, trg)

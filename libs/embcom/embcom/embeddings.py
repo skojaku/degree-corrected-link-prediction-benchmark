@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-28 10:22:30
+# @Last Modified time: 2023-04-06 21:17:00
 """Module for embedding."""
 # %%
 import gensim
@@ -16,12 +16,12 @@ import torch.nn.functional as F
 import torch.utils.data as data
 import torch.optim as optim
 
-from torch_geometric.utils import negative_sampling
-from torch_geometric.datasets import Planetoid
+# from torch_geometric.utils import negative_sampling
+# from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
 from torch_geometric.nn import GCNConv
 
-from torch_geometric.utils import train_test_split_edges
+# from torch_geometric.utils import train_test_split_edges
 
 
 from embcom import rsvd, samplers, utils
@@ -35,12 +35,11 @@ except ImportError:
 
 
 # Base class
-    
-    
-    
+
+
 class GCN(torch.nn.Module):
     """A python class for the GCN.
-    
+
     Parameters
     ----------
     dim_in: dimension of in vector
@@ -48,28 +47,25 @@ class GCN(torch.nn.Module):
     dim_h : dimension of hidden layer
 
     """
-    
+
     def __init__(self, dim_in, dim_h, dim_out):
         super(GCN, self).__init__()
         self.conv1 = GCNConv(dim_in, dim_h)
-        self.conv2 = GCNConv(dim_h,dim_out)
-    
-    
+        self.conv2 = GCNConv(dim_h, dim_out)
+
     def forward(self, x, positive_edge_index):
         h = self.conv1(x, positive_edge_index)
         h = h.relu()
         h = self.conv2(h, positive_edge_index)
         return h
-    
-    def decode(self, z, pos_edge_index, neg_edge_index): # only pos and neg edges
-        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) # concatenate pos and neg edges
-        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product 
+
+    def decode(self, z, pos_edge_index, neg_edge_index):  # only pos and neg edges
+        edge_index = torch.cat(
+            [pos_edge_index, neg_edge_index], dim=-1
+        )  # concatenate pos and neg edges
+        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
         return logits
-    
-        
-    
-    
-    
+
 
 class NodeEmbeddings:
     """Super class for node embedding class."""
@@ -97,10 +93,6 @@ class NodeEmbeddings:
     def update_embedding(self, dim):
         """Update embedding."""
         pass
-    
-    
-      
-    
 
 
 class Node2Vec(NodeEmbeddings):

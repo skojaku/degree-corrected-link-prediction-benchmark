@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-28 10:22:30
+# @Last Modified time: 2023-04-12 06:25:57
 """Module for embedding."""
 # %%
 import gensim
@@ -41,12 +41,11 @@ except ImportError:
 
 
 # Base class
-    
-    
-    
+
+
 class GCN(torch.nn.Module):
     """A python class for the GCN.
-    
+
     Parameters
     ----------
     dim_in: dimension of in vector
@@ -54,28 +53,25 @@ class GCN(torch.nn.Module):
     dim_h : dimension of hidden layer
 
     """
-    
+
     def __init__(self, dim_in, dim_h, dim_out):
         super(GCN, self).__init__()
         self.conv1 = GCNConv(dim_in, dim_h)
-        self.conv2 = GCNConv(dim_h,dim_out)
-    
-    
+        self.conv2 = GCNConv(dim_h, dim_out)
+
     def forward(self, x, positive_edge_index):
         h = self.conv1(x, positive_edge_index)
         h = h.relu()
         h = self.conv2(h, positive_edge_index)
         return h
-    
-    def decode(self, z, pos_edge_index, neg_edge_index): # only pos and neg edges
-        edge_index = torch.cat([pos_edge_index, neg_edge_index], dim=-1) # concatenate pos and neg edges
-        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product 
+
+    def decode(self, z, pos_edge_index, neg_edge_index):  # only pos and neg edges
+        edge_index = torch.cat(
+            [pos_edge_index, neg_edge_index], dim=-1
+        )  # concatenate pos and neg edges
+        logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
         return logits
-    
-        
-    
-    
-    
+
 
 class NodeEmbeddings:
     """Super class for node embedding class."""
@@ -103,10 +99,6 @@ class NodeEmbeddings:
     def update_embedding(self, dim):
         """Update embedding."""
         pass
-    
-    
-      
-    
 
 
 class Node2Vec(NodeEmbeddings):
@@ -574,7 +566,6 @@ class graphSAGE:
         self.epochs = 4
 
         self.verbose = verbose
-
         self.feature_dim = feature_dim
 
     def fit(self, net):
@@ -585,7 +576,9 @@ class graphSAGE:
         A = utils.to_adjacency_matrix(net)
 
         # create node features
-        self.create_feature_vector(A, feature_dim=50)
+        self.feature_vector = self.create_feature_vector(
+            A, feature_dim=self.feature_dim
+        )
 
         # transform the adjacency matrix into a networkx Graph object
         self.G = nx.Graph(A)
@@ -608,12 +601,12 @@ class graphSAGE:
 
         return self
 
-    def create_feature_vector(self, A):
+    def create_feature_vector(self, A, feature_dim):
         """Takes an adjacency matrix and generates feature vectors using
         Laplacian Eigen Map"""
-
-        lapeigen = embcom.LaplacianEigenMap(p=100, q=40)
+        lapeigen = LaplacianEigenMap(p=100, q=40)
         lapeigen.fit(A)
+        return lapeigen.transform(feature_dim, return_out_vector=False)
         self.feature_vector = lapeigen.transform(
             self.feature_dim, return_out_vector=False
         )

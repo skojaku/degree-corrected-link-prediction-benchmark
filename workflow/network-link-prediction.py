@@ -2,12 +2,12 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-17 04:25:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-31 17:27:00
+# @Last Modified time: 2023-04-11 17:47:04
 from scipy import sparse
 import numpy as np
 import pandas as pd
 import sys
-from workflow.NetworkTopologyPredictionModels import *
+from NetworkTopologyPredictionModels import *
 
 if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
@@ -33,7 +33,7 @@ src, trg, y = (
 )
 
 
-ypred = topology_models[model](src, trg, net)
+ypred = topology_models[model](net, src, trg)
 
 # ========================
 # Save

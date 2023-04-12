@@ -30,4 +30,7 @@ dependencies:
   - ipykernel
   - tqdm
   - black
+  - faiss-gpu
+  - pyg
+  - umap-learn
   - stellargraph

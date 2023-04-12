@@ -4,7 +4,7 @@ channels:
   - pytorch
   - conda-forge
   - stellargraph
-  - pyg
+  - pyg 
   - defaults
 dependencies:
   - python=3.9
@@ -12,6 +12,7 @@ dependencies:
   - pytorch
   - torchvision
   - torchaudio
+  - cudatoolkit=11.6
   - ca-certificates
   - certifi
   - openssl
@@ -29,7 +30,7 @@ dependencies:
   - ipykernel
   - tqdm
   - black
-  - faiss
+  - faiss-gpu
   - pyg
   - umap-learn
   - stellargraph

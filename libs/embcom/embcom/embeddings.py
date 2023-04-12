@@ -607,6 +607,11 @@ class graphSAGE:
         lapeigen = LaplacianEigenMap(p=100, q=40)
         lapeigen.fit(A)
         return lapeigen.transform(feature_dim, return_out_vector=False)
+        self.feature_vector = lapeigen.transform(
+            self.feature_dim, return_out_vector=False
+        )
+
+        return self
 
     def train_GraphSAGE(self):
         graphsage = GraphSAGE(

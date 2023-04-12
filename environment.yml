@@ -3,6 +3,7 @@ channels:
   - bioconda
   - pytorch
   - conda-forge
+  - stellargraph
   - pyg 
   - defaults
 dependencies:
@@ -23,3 +24,4 @@ dependencies:
   - pytorch 
   - torchvision 
   - torchaudio 
+  - stellargraph

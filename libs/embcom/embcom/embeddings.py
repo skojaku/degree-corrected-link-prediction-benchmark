@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-11 17:37:19
+# @Last Modified time: 2023-04-12 06:14:41
 """Module for embedding."""
 # %%
 import gensim

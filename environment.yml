@@ -19,7 +19,7 @@ dependencies:
   - snakemake
   - graph-tool
   - scikit-learn
-  - numpy==1.23.5
+  - numpy=1.23.5
   - numba
   - scipy
   - pandas

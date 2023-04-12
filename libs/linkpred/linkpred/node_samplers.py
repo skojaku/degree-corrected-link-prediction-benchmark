@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-16 17:34:35
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-01-17 03:32:22
+# @Last Modified time: 2023-04-07 05:49:30
 
 """Graph module to store a network and generate random walks from it."""
 import numpy as np
@@ -102,12 +102,20 @@ class SBMNodeSampler(NodeSampler):
         self.block2node.data = _csr_row_cumsum(
             self.block2node.indptr, self.block2node.data
         )
+
+        if self.dcsbm:
+            self.p0 = np.maximum(indeg, 1) / np.sum(np.maximum(indeg, 1))
+        else:
+            self.p0 = np.ones_like(indeg, dtype="float32") / len(indeg)
         return self
 
-    def sampling(self, center_nodes, context_nodes, padding_id):
+    def sampling(self, size):
+        center_nodes = np.random.choice(
+            self.n_nodes, size=size, p=self.p0, replace=True
+        )
         block_ids = csr_sampling(self.group_membership[center_nodes], self.block2block)
-        context = csr_sampling(block_ids, self.block2node)
-        return context.astype(np.int64)
+        context_nodes = csr_sampling(block_ids, self.block2node)
+        return center_nodes.astype(np.int64), context_nodes.astype(np.int64)
 
 
 class ConfigModelNodeSampler(SBMNodeSampler):

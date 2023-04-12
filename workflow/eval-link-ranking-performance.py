@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:34:47
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-01 07:20:04
+# @Last Modified time: 2023-04-12 17:38:37
 # %%
 from scipy import sparse
 import numpy as np
@@ -41,12 +41,10 @@ assert np.max(Y.data) == 1
 n_nodes = Y.shape[0]
 results = []
 for n_prediction in [3, 5, 10, 50]:
-
     # Compute the micro F1
     Ypred = []
     prec, reca, f1 = np.zeros(n_nodes), np.zeros(n_nodes), np.zeros(n_nodes)
     for i in range(Y.shape[0]):
-
         y = Y.indices[Y.indptr[i] : Y.indptr[i + 1]]
         if len(y) == 0:
             continue

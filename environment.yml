@@ -17,7 +17,6 @@ dependencies:
   - pandas 
   - networkx 
   - gensim 
-  - umap-learn 
   - faiss-gpu 
   - umap-learn 
   - pyg 

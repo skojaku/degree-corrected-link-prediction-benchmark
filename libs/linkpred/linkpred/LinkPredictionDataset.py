@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-27 16:40:11
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-02 05:16:43
+# @Last Modified time: 2023-04-07 05:51:41
 # %%
 import numpy as np
 import pandas as pd
@@ -38,7 +38,6 @@ class LinkPredictionDataset:
         self.splitter = NetworkTrainTestSplitterWithMST(fraction=testEdgeFraction)
 
     def fit(self, net):
-
         src, trg, _ = sparse.find(sparse.triu(net))
         n_nodes = net.shape[0]
 
@@ -109,7 +108,6 @@ class LinkPredictionDataset:
 
         # Repeat until n_test_edges number of negative edges are sampled.
         while n_sampled < n_test_edges:
-
             # Sample negative edges based on SBM sampler
             _neg_src, _neg_trg = neg_edge_sampler.sampling(n_test_edges - n_sampled)
 

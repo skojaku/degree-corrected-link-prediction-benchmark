@@ -602,7 +602,7 @@ class graphSAGE:
     def create_feature_vector(self, A, feature_dim):
         """Takes an adjacency matrix and generates feature vectors using
         Laplacian Eigen Map"""
-        lapeigen = embcom.LaplacianEigenMap(p=100, q=40)
+        lapeigen = LaplacianEigenMap(p=100, q=40)
         lapeigen.fit(A)
         return lapeigen.transform(feature_dim, return_out_vector=False)
         self.feature_vector = lapeigen.transform(

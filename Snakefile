@@ -25,12 +25,15 @@ EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
 
-DATA_LIST = [
-    f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
-]
 # DATA_LIST = [
-#     "polblogs-rachith"
+#     f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 # ]
+# DATA_LIST = [
+#     'polbooks', 'football', 'netscience', 'highschool', 'foodweb-baywet', 'foodweb-baydry', 'celegans', 'maayan-foodweb', 'jazz', 'sociopatterns-infectious', 'airport-rach', 'radoslaw-email-email', 'email', 'YeastS', 'japanesebookinter-st', 'moreno-health', 'petster', 'ca-GrQc', 'hep-th', 'opsahl-ucsocial', 'bitcoinalpha', 'opsahl-openflights', 'Caltech36', 'polblogs-rachith', 'ht09-contact-list', 'Reed98', 'p2p-Gnutella08', 'bitcoinotc', 'frenchbookinter-st', 'PGPgiantcompo', 'ca-HepTh', 'p2p-Gnutella09', 'p2p-Gnutella06', 'p2p-Gnutella05', 'Simmons81', 'p2p-Gnutella04', 'spanishbookinter-st', 'darwinbookinter-st',
+#     ]
+DATA_LIST = [
+    'polbooks', 'football', 'netscience'
+    ]
 N_ITERATION = 5
 
 # ====================
@@ -42,7 +45,7 @@ N_ITERATION = 5
 #
 params_negative_edge_sampler = {
     "negativeEdgeSampler": ["uniform", "degreeBiased"],
-    "testEdgeFraction": [0.5],
+    "testEdgeFraction": [0.2],
     "sampleId": list(range(N_ITERATION)),
 }
 paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
@@ -188,6 +191,15 @@ LP_SCORE_OPT_STACK_FILE = j(
     f"result_basedOn~optstack_{paramspace_negative_edge_sampler.wildcard_pattern}.csv"
 )
 
+BEST_RF_FEATURES = j(
+    OPT_STACK_DIR,
+    "feature-importance",
+    "{data}",
+    f"bestfeatures-rf_basedOn~optstack_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+)
+
+LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
+
 # ====================
 # Output
 # ====================
@@ -248,10 +260,15 @@ rule clean_networks:
 rule optimal_stacking_all:
     input:
         expand(
-            LP_SCORE_OPT_STACK_FILE,
+            LP_ALL_SCORE_OPT_STACK_FILE,
             data=DATA_LIST,
             **params_negative_edge_sampler
-        )
+        ),
+        expand(
+            BEST_RF_FEATURES,
+            data=DATA_LIST,
+            **params_negative_edge_sampler
+        ),
 
 rule optimal_stacking_train_heldout_dataset:
     input:
@@ -299,9 +316,23 @@ rule optimal_stacking_performance:
     params:
         data_name=lambda wildcards: wildcards.data,
     output:
-        output_file=LP_SCORE_OPT_STACK_FILE
+        output_file=LP_SCORE_OPT_STACK_FILE,
+        feature_importance_file=BEST_RF_FEATURES
     script:
         "workflow/optimal-stacking-performance.py"
+
+
+rule optimal_stacking_concatenate_results:
+    input:
+        input_file_list=expand(
+            LP_SCORE_OPT_STACK_FILE,
+            data=DATA_LIST,
+            **params_negative_edge_sampler
+        )
+    output:
+        output_file=LP_ALL_SCORE_OPT_STACK_FILE,
+    script:
+        "workflow/concat-results.py"
 
 # ============================
 # Generating benchmark dataset

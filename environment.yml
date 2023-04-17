@@ -1,25 +1,23 @@
-name: linkpred 
+name: linkpred
 channels:
-  - bioconda
-  - pytorch
   - conda-forge
-  - pyg 
   - defaults
 dependencies:
   - python=3.9
-  - pytorch 
-  - graph-tool 
-  - scikit-learn 
-  - numpy 
-  - numba 
-  - scipy 
-  - pandas 
-  - networkx 
-  - gensim 
-  - umap-learn 
-  - faiss-gpu 
-  - umap-learn 
-  - pyg 
-  - pytorch 
-  - torchvision 
-  - torchaudio 
+  - pytorch
+  - matplotlib
+  - mamba
+  - stellargraph
+  - torchvision
+  - cuda-toolkit
+  - torchaudio
+  - snakemake
+  - graph-tool
+  - numpy=1.23.5
+  - numba
+  - seaborn
+  - black
+  - faiss-gpu
+  - pyg
+  - umap-learn
+prefix: /home/munjkim/bin/envs/linkpred

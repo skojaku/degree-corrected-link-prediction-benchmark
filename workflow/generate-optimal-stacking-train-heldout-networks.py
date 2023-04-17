@@ -39,7 +39,7 @@ A_orig = sparse.csr_matrix((np.ones_like(src), (src, trg)), shape=(n_nodes, n_no
 
 model_ho = LinkPredictionDataset(
     testEdgeFraction=parameters["testEdgeFraction"],
-    negative_edge_sampler=parameters["negativeEdgeSampler"],
+    negative_edge_sampler="uniform",
 )
 
 model_ho.fit(A_orig)

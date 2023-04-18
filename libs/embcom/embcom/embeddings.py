@@ -527,7 +527,6 @@ class DegreeEmbedding:
         emb[:, 0] = self.degree
         return emb
 
-
 class graphSAGE:
     """A python class for the GraphSAGE.
     Parameters
@@ -542,8 +541,7 @@ class graphSAGE:
         self,
         num_walks=1,
         walk_length=5,
-        dim=10,
-        layer_sizes=[50, 10],
+        emb_dim=50,
         num_samples=[10, 5],
         batch_size=50,
         epochs=4,
@@ -560,10 +558,10 @@ class graphSAGE:
 
         self.num_walks = num_walks
         self.walk_length = walk_length
-        self.layer_sizes = layer_sizes
+        self.layer_sizes = [50,emb_dim]
         self.num_samples = num_samples
         self.batch_size = batch_size
-        self.epochs = 4
+        self.epochs = epochs
 
         self.verbose = verbose
         self.feature_dim = feature_dim

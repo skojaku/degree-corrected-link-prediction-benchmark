@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-31 17:44:39
+# @Last Modified time: 2023-04-11 17:45:07
 
 import embcom
 import torch
@@ -26,8 +26,9 @@ def deepwalk(network, dim, window_length=10, num_walks=40):
     return model.transform(dim=dim)
 
 
-##Laplacian Eigen map ==> make a feature 
-## 
+##Laplacian Eigen map ==> make a feature
+##
+
 
 @embedding_model
 def leigenmap(network, dim):
@@ -43,38 +44,37 @@ def modspec(network, dim):
     return model.transform(dim=dim)
 
 
-@embedding_model
-def GCN(network,dim,feature_dim=10,device='cpu',dim_h=128):
-    
-    """
-    Parameters
-    ----------
-    network: adjacency matrix
-    feature_dim: dimension of features
-    dim: dimension of embedding vectors
-    dim_h : dimension of hidden layer
-    device : device
-
-    """
-    
-    model = embcom.embeddings.LaplacianEigenMap()
-    model.fit(network)
-    features = model.transform(dim=feature_dim)
-
-    
-    model_GCN, data = embcom.embeddings.GCN(feature_dim,dim_h,dim).to(device), torch.from_numpy(features).to(dtype=torch.float,device = device)
-    model_trained = embcom.train(model_GCN,data,network,device)
-
-    network_c = network.tocoo()
-    
-    edge_list_gcn = torch.from_numpy(np.array([network_c.row, network_c.col])).to(device)
-    
-    
-
-    embeddings = model_trained(data,edge_list_gcn)
-    
-    return embeddings
-
+# @embedding_model
+# def GCN(network,dim,feature_dim=10,device='cpu',dim_h=128):
+#
+#    """
+#    Parameters
+#    ----------
+#    network: adjacency matrix
+#    feature_dim: dimension of features
+#    dim: dimension of embedding vectors
+#    dim_h : dimension of hidden layer
+#    device : device
+#
+#    """
+#
+#    model = embcom.embeddings.LaplacianEigenMap()
+#    model.fit(network)
+#    features = model.transform(dim=feature_dim)
+#
+#
+#    model_GCN, data = embcom.embeddings.GCN(feature_dim,dim_h,dim).to(device), torch.from_numpy(features).to(dtype=torch.float,device = device)
+#    model_trained = embcom.train(model_GCN,data,network,device)
+#
+#    network_c = network.tocoo()
+#
+#    edge_list_gcn = torch.from_numpy(np.array([network_c.row, network_c.col])).to(device)
+#
+#
+#
+#    embeddings = model_trained(data,edge_list_gcn)
+#
+#    return embeddings
 
 
 # @embedding_model
@@ -83,9 +83,10 @@ def GCN(network,dim,feature_dim=10,device='cpu',dim_h=128):
 #    model.fit(network)
 #    return model.transform(dim=dim)
 
+
 @embedding_model
-def graphsage(network, num_walks=1, walk_length=5, emb_dim=10):
-    model = embcom.embeddings.graphSAGE(num_walks=num_walks, walk_length=walk_length, emb_dim=emb_dim)
+def graphsage(network, num_walks=1, walk_length=5, dim=10):
+    model = embcom.embeddings.graphSAGE(num_walks=num_walks, walk_length=walk_length, emb_dim=dim)
     model.fit(network)
     model.train_GraphSAGE()
     return model.get_embeddings()

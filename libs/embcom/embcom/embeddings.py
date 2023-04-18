@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-12 06:25:57
+# @Last Modified time: 2023-04-12 16:50:23
 """Module for embedding."""
 # %%
 import gensim
@@ -604,12 +604,7 @@ class graphSAGE:
         Laplacian Eigen Map"""
         lapeigen = LaplacianEigenMap(p=100, q=40)
         lapeigen.fit(A)
-        return lapeigen.transform(feature_dim, return_out_vector=False)
-        self.feature_vector = lapeigen.transform(
-            self.feature_dim, return_out_vector=False
-        )
-
-        return self
+        return lapeigen.transform(self.feature_dim, return_out_vector=False)
 
     def train_GraphSAGE(self):
         graphsage = GraphSAGE(

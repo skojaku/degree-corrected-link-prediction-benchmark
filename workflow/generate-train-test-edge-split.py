@@ -46,5 +46,5 @@ train_net = utils.edgeList2adjacencyMatrix(train_src, train_trg, n_nodes)
 # ===============
 sparse.save_npz(output_train_net_file, train_net)
 pd.DataFrame(
-    {"src": test_src, "trg": test_trg, "isPositive": np.ones_like(test_src)}
+    {"src": test_src, "trg": test_trg, "isPositiveEdge": np.ones_like(test_src)}
 ).to_csv(output_test_edge_file, index=False)

@@ -165,14 +165,14 @@ TRAIN_FEATURE_MATRIX = j(
     OPT_STACK_DIR,
     "{data}",
     "feature_matrices",
-    f"train-feature_{paramspace_train_test_split}.pkl",
+    f"train-feature_{paramspace_train_test_split.wildcard_pattern}.pkl",
 )
 
 HELDOUT_FEATURE_MATRIX = j(
     OPT_STACK_DIR,
     "{data}",
     "feature_matrices",
-    f"heldout-feature_{paramspace_train_test_split}.pkl",
+    f"heldout-feature_{paramspace_train_test_split.wildcard_pattern}.pkl",
 )
 
 CV_DIR = j(OPT_STACK_DIR,
@@ -184,7 +184,7 @@ CV_DIR = j(OPT_STACK_DIR,
 OUT_BEST_RF_PARAMS = j(
     OPT_STACK_DIR,
     "{data}",
-    f"bestparms-rf_{paramspace_train_test_split}.csv",
+    f"bestparms-rf_{paramspace_train_test_split.wildcard_pattern}.csv",
 )
 
 # ====================

@@ -419,6 +419,7 @@ rule embedding_link_prediction:
     input:
         input_file=TARGET_EDGE_TABLE_FILE,
         emb_file=EMB_FILE,
+        net_file = TRAIN_NET_FILE,
     params:
         parameters=paramspace_emb.instance,
     output:
@@ -436,7 +437,7 @@ rule embedding_link_ranking:
         emb_file=EMB_FILE,
     params:
         parameters=paramspace_emb.instance,
-        topK = 50
+        topK = 150
     output:
         output_file=PRED_RANK_EMB_FILE,
     script:
@@ -469,7 +470,7 @@ rule network_link_ranking:
         net_file=TRAIN_NET_FILE,
     params:
         parameters=paramspace_net_linkpred.instance,
-        topK = 50
+        topK = 150
     output:
         output_file=PRED_RANK_NET_FILE,
     script:

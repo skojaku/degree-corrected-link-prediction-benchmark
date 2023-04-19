@@ -2,7 +2,7 @@
 #  * @Author: Rachith Aiyappa
 #  * @Date: 2023-04-03 09:43:13
 #  * @Last Modified by: Rachith
-#  * @Last Modified time: 2023-04-04 12:34:26
+#  * @Last Modified time: 2023-04-19 12:44:02 
 #  */
 
 """
@@ -51,8 +51,10 @@ A_ho, test_edge_table = model_ho.transform()
 # Construct the training network (A_tr) from the heldout network (A_ho)
 # This training network is used to choose the
 # hyperparmeters of the random forest classifier
+# via 5-fold cross validation on train_edge_table
 
-# These hyperparameters are then used to train on A_ho.
+# These hyperparameters are then used to train a random forest classifier
+# on the entire train_edge_table.
 # =====================================================================
 
 model_tr = LinkPredictionDataset(

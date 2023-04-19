@@ -13,8 +13,8 @@ if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/derived/results/result_auc_roc.csv"
-    output_file = "../data/"
+    input_file = "../data/derived/results/result_opt_stack_auc_roc.csv"
+    output_file = "../data/opt_stack_auc_roc.png"
 
 # ========================
 # Load
@@ -42,6 +42,9 @@ palette = {
 sns.set_style("white")
 sns.set(font_scale=1)
 sns.set_style("ticks")
+
+if ~('model' in plot_data.columns):
+    plot_data["model"] = "Optimal Stacking" 
 
 g = sns.catplot(
     data=plot_data,

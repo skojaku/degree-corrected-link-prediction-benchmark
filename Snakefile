@@ -25,12 +25,16 @@ EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
 
+# All networks
 DATA_LIST = [
     f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
-# DATA_LIST = [
-#     "polblogs-rachith"
-# ]
+
+# Small networks
+# Comment out if you want to run for all networks
+with open("workflow/small-networks.json", "r") as f:
+    DATA_LIST = json.load(f)
+
 N_ITERATION = 5
 
 # ====================

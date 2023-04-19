@@ -110,7 +110,7 @@ def adj_to_nodes_edges(A):
     return nodes, edges
 
 
-def gen_topol_feats(A_orig, A, edge_s):
+def gen_topol_feats(Nsamples,A_orig, A, edge_s):
 
     """
     Gets the topological topological features for matrix A (A_tr or A_ho) over edge samples edge_s (edge_tr or edge_ho).
@@ -311,12 +311,12 @@ def gen_topol_feats(A_orig, A, edge_s):
     except:
         diam_net = np.inf
 
-    ave_deg_net = [ave_deg_net for ii in range(10000)]
-    var_deg_net = [var_deg_net for ii in range(10000)]
-    ave_clust_net = [ave_clust_net for ii in range(10000)]
-    deg_ass_net = [deg_ass_net for ii in range(10000)]
-    transit_net = [transit_net for ii in range(10000)]
-    diam_net = [diam_net for ii in range(10000)]
+    ave_deg_net = [ave_deg_net for ii in range(Nsamples)]
+    var_deg_net = [var_deg_net for ii in range(Nsamples)]
+    ave_clust_net = [ave_clust_net for ii in range(Nsamples)]
+    deg_ass_net = [deg_ass_net for ii in range(Nsamples)]
+    transit_net = [transit_net for ii in range(Nsamples)]
+    diam_net = [diam_net for ii in range(Nsamples)]
     com_ne = []
     for ee in range(len(edge_s)):
         com_ne.append(len(sorted(nx.common_neighbors(G, edge_s[ee][0], edge_s[ee][1]))))

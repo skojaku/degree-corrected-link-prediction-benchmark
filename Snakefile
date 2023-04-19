@@ -9,13 +9,14 @@ from workflow.NetworkTopologyPredictionModels import *
 
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
 
+configfile: "workflow/config.yaml"
 
 # ====================
 # Root folder path setting
 # ====================
 
 # network file
-DATA_DIR = "data"  # set test_data for testing
+DATA_DIR = config["data_dir"]  # set test_data for testing
 
 DERIVED_DIR = j(DATA_DIR, "derived")
 NETWORK_DIR = j(DERIVED_DIR, "networks")
@@ -32,8 +33,9 @@ DATA_LIST = [
 
 # Small networks
 # Comment out if you want to run for all networks
-with open("workflow/small-networks.json", "r") as f:
-    DATA_LIST = json.load(f)
+if config["small_networks"]:
+    with open("workflow/small-networks.json", "r") as f:
+        DATA_LIST = json.load(f)
 
 N_ITERATION = 5
 

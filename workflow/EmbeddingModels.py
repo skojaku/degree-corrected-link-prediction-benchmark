@@ -2,8 +2,9 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-19 20:59:32
+# @Last Modified time: 2023-04-19 21:44:26
 
+from sklearn.decomposition import PCA
 import embcom
 import torch
 import numpy as np
@@ -114,3 +115,11 @@ def graphsage(network, dim, num_walks=1, walk_length=5):
     model.fit(network)
     model.train_GraphSAGE()
     return model.get_embeddings()
+
+
+@embedding_model
+def fastrp(network, dim, window_length=5, inner_dim=2048):
+    model = embcom.embeddings.FastRP(window_size=5)
+    model.fit(network)
+    emb = model.transform(dim=inner_dim)
+    return PCA(n_components=dim).fit_transform(emb)

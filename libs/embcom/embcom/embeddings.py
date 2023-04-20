@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-12 16:50:23
+# @Last Modified time: 2023-04-19 21:40:49
 """Module for embedding."""
 # %%
 import gensim
@@ -11,26 +11,15 @@ import numpy as np
 from scipy import sparse
 from sklearn.decomposition import TruncatedSVD
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.utils.data as data
-import torch.optim as optim
-
+import pandas as pd
 from torch_geometric.utils import negative_sampling
-from torch_geometric.datasets import Planetoid
 import torch_geometric.transforms as T
 from torch_geometric.nn import GCNConv
-
-from torch_geometric.utils import train_test_split_edges
-
-
 from embcom import rsvd, samplers, utils
-
 import stellargraph
 from tensorflow import keras
 from stellargraph.data import UnsupervisedSampler
 from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator
-from stellargraph.layer import GraphSAGE, link_classification
 
 try:
     import glove
@@ -527,6 +516,7 @@ class DegreeEmbedding:
         emb[:, 0] = self.degree
         return emb
 
+
 class graphSAGE:
     """A python class for the GraphSAGE.
     Parameters
@@ -558,7 +548,7 @@ class graphSAGE:
 
         self.num_walks = num_walks
         self.walk_length = walk_length
-        self.layer_sizes = [50,emb_dim]
+        self.layer_sizes = [50, emb_dim]
         self.num_samples = num_samples
         self.batch_size = batch_size
         self.epochs = epochs
@@ -651,3 +641,62 @@ class graphSAGE:
         node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=0)
 
         return node_embeddings
+
+
+class FastRP:
+    """
+    Fast Random Projection embedding
+    See https://arxiv.org/abs/1908.11512.
+    """
+
+    def __init__(self, window_size, beta=-1, s=1.0):
+        self.window_size = window_size
+        self.beta = beta
+        self.s = s
+
+    def fit(self, net):
+        self.net = net
+
+    def transform(self, dim):
+        n_nodes = self.net.shape[0]
+        # Generate random matrix for random projection
+        if np.isclose(self.s, 1):
+            X = np.random.randn(n_nodes, dim)
+        else:
+            X = sparse.random(
+                n_nodes,
+                dim,
+                density=1 / self.s,
+                data_rvs=lambda x: np.sqrt(self.s)
+                * (2 * np.random.randint(2, size=x) - 1),
+            ).toarray()
+
+        emb = self._fastRP(self.net, dim, self.window_size, beta=self.beta, X=X.copy())
+
+        return emb
+
+    def _fastRP(self, net, dim, window_size, X, beta=-1):
+        # Get stats
+        n_nodes = net.shape[0]
+        outdeg = np.array(net.sum(axis=1)).reshape(-1)
+        indeg = np.array(net.sum(axis=0)).reshape(-1)
+
+        # Construct the transition matrix
+        P = sparse.diags(1 / np.maximum(1, outdeg)) @ net  # Transition matrix
+        L = sparse.diags(np.power(np.maximum(indeg.astype(float), 1.0), beta))
+
+        # First random projection
+        X0 = (P @ L) @ X.copy()  # to include the self-loops
+
+        # h is an array for normalization
+        h = np.ones((n_nodes, 1))
+        h0 = h.copy()
+
+        # Iterative projection
+        for _ in range(window_size):
+            X = P @ X + X0
+            h = P @ h + h0
+
+        # Normalization
+        X = sparse.diags(1.0 / np.maximum(np.array(h).reshape(-1), 1e-8)) @ X
+        return X

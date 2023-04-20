@@ -4,7 +4,7 @@ import itertools
 import pandas as pd
 from snakemake.utils import Paramspace
 import os
-# from workflow.EmbeddingModels import *
+from workflow.EmbeddingModels import *
 from workflow.NetworkTopologyPredictionModels import *
 
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues

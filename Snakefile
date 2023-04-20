@@ -4,7 +4,7 @@ import itertools
 import pandas as pd
 from snakemake.utils import Paramspace
 import os
-from workflow.EmbeddingModels import *
+# from workflow.EmbeddingModels import *
 from workflow.NetworkTopologyPredictionModels import *
 
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
@@ -27,21 +27,18 @@ PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
 
 # DATA_LIST = [
-#     f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
-# ]
-# DATA_LIST = [
 #     'polbooks', 'football', 'netscience', 'highschool', 'foodweb-baywet', 'foodweb-baydry', 'celegans', 'maayan-foodweb', 'jazz', 'sociopatterns-infectious', 'airport-rach', 'radoslaw-email-email', 'email', 'YeastS', 'japanesebookinter-st', 'moreno-health', 'petster', 'ca-GrQc', 'hep-th', 'opsahl-ucsocial', 'bitcoinalpha', 'opsahl-openflights', 'Caltech36', 'polblogs-rachith', 'ht09-contact-list', 'Reed98', 'p2p-Gnutella08', 'bitcoinotc', 'frenchbookinter-st', 'PGPgiantcompo', 'ca-HepTh', 'p2p-Gnutella09', 'p2p-Gnutella06', 'p2p-Gnutella05', 'Simmons81', 'p2p-Gnutella04', 'spanishbookinter-st', 'darwinbookinter-st',
 #     ]
-DATA_LIST = [
-    'polbooks', 'football', 'netscience', 'highschool', 'foodweb-baywet', 'foodweb-baydry',
-    ]
 # DATA_LIST = [
-#     'polbooks'
+#     'polbooks', 'football', 'netscience', 'highschool', 'foodweb-baywet', 'foodweb-baydry',
 #     ]
-# All networks
 DATA_LIST = [
-    f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
-]
+    'polbooks'
+    ]
+# All networks
+# DATA_LIST = [
+#     f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
+# ]
 
 # Small networks
 # Comment out if you want to run for all networks
@@ -128,13 +125,13 @@ OPT_HELDOUT_DATASET_DIR = j(OPT_STACK_DIR, "heldout_datasets")
 HELDOUT_NET_FILE_OPTIMAL_STACKING = j(
     OPT_HELDOUT_DATASET_DIR,
     "{data}",
-    f"heldout-net_{paramspace_negative_edge_sampler.wildcard_pattern}.npz",
+    f"heldout-net{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.npz",
 )
 
 TRAIN_NET_FILE_OPTIMAL_STACKING = j(
     OPT_TRAIN_DATASET_DIR,
     "{data}",
-    f"train-net_{paramspace_negative_edge_sampler.wildcard_pattern}.npz",
+    f"train-net_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.npz",
 )
 
 # ====================
@@ -183,32 +180,32 @@ TRAIN_FEATURE_MATRIX = j(
     OPT_STACK_DIR,
     "{data}",
     "feature_matrices",
-    f"train-feature_{paramspace_train_test_split.wildcard_pattern}.pkl",
+    f"train-feature_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}_.pkl",
 )
 
 HELDOUT_FEATURE_MATRIX = j(
     OPT_STACK_DIR,
     "{data}",
     "feature_matrices",
-    f"heldout-feature_{paramspace_train_test_split.wildcard_pattern}.pkl",
+    f"heldout-feature_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.pkl",
 )
 
 CV_DIR = j(OPT_STACK_DIR,
     "{data}",
     "cv",
-    f"condition_{paramspace_train_test_split}",
+    f"condition_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}",
 )
 
 OUT_BEST_RF_PARAMS = j(
     OPT_STACK_DIR,
     "{data}",
-    f"bestparms-rf_{paramspace_train_test_split.wildcard_pattern}.csv",
+    f"bestparms-rf_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.csv",
 )
 
 EDGE_CANDIDATES_FILE_OPTIMAL_STACKING = j(
     OPT_STACK_DIR,
     "{data}",
-    f"edge_candidates_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+    f"edge_candidates_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.pkl",
 )
 
 # ====================
@@ -258,7 +255,7 @@ BEST_RF_FEATURES = j(
     OPT_STACK_DIR,
     "feature-importance",
     "{data}",
-    f"bestfeatures-rf_basedOn~optstack_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
+    f"bestfeatures-rf_basedOn~optstack_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}.pkl",
 )
 
 LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
@@ -275,7 +272,6 @@ FIG_PREC_RECAL_F1 =j(RESULT_DIR, "figs", "prec-recall-f1.pdf")
 #
 # RULES
 #
-
 rule all:
     input:
         #
@@ -345,19 +341,22 @@ rule optimal_stacking_all:
         expand(
             LP_ALL_SCORE_OPT_STACK_FILE,
             data=DATA_LIST,
-            **params_negative_edge_sampler
+            **params_negative_edge_sampler,
+            **params_train_test_split,
         ),
         expand(
             BEST_RF_FEATURES,
             data=DATA_LIST,
-            **params_negative_edge_sampler
+            **params_negative_edge_sampler,
+            **params_train_test_split,
         ),
 
 rule optimal_stacking_train_heldout_dataset:
     input:
         edge_table_file=EDGE_TABLE_FILE,
     params:
-        parameters=paramspace_negative_edge_sampler.instance
+        edge_fraction_parameters=paramspace_train_test_split.instance,
+        edge_sampler_parameters=paramspace_negative_edge_sampler.instance,
     output:
         output_heldout_net_file=HELDOUT_NET_FILE_OPTIMAL_STACKING,
         output_train_net_file=TRAIN_NET_FILE_OPTIMAL_STACKING,
@@ -412,6 +411,7 @@ rule optimal_stacking_concatenate_results:
         input_file_list=expand(
             LP_SCORE_OPT_STACK_FILE,
             data=DATA_LIST,
+            **params_train_test_split,
             **params_negative_edge_sampler
         )
     output:

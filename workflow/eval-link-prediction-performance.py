@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:34:47
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-28 10:50:52
+# @Last Modified time: 2023-04-01 06:30:14
 # %%
 import numpy as np
 import pandas as pd
@@ -32,4 +32,6 @@ aucroc = roc_auc_score(y, ypred)
 # ========================
 # Save
 # ========================
-pd.DataFrame({"score": [aucroc], "data": data_name}).to_csv(output_file, index=False)
+pd.DataFrame({"score": [aucroc], "metric": "aucroc", "data": data_name}).to_csv(
+    output_file, index=False
+)

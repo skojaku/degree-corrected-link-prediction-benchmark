@@ -2,18 +2,17 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-17 04:25:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-19 17:58:33
+# @Last Modified time: 2023-04-19 18:00:08
 # %%
 import numpy as np
 import pandas as pd
 import sys
-from scipy import sparse
-from EmbeddingModels import calc_prob_i_j
+from RankingModels import *
 
 if "snakemake" in sys.modules:
-    input_file = snakemake.input["input_file"]
     emb_file = snakemake.input["emb_file"]
     net_file = snakemake.input["net_file"]
+    topK = int(snakemake.params["topK"])
     model_name = snakemake.params["parameters"]["model"]
     output_file = snakemake.output["output_file"]
 else:
@@ -23,25 +22,22 @@ else:
 # ========================
 # Load
 # ========================
-edge_table = pd.read_csv(input_file)
-net = sparse.load_npz(net_file)
 emb = np.load(emb_file)["emb"]
+net = sparse.load_npz(net_file)
 
 # ========================
 # Preprocess
 # ========================
+net = net + net.T
+net.data = net.data * 0.0 + 1.0
 
-emb[pd.isna(emb)] = 0
+R = ranking_by_embedding(emb, max_k=topK, net=net, model_name=model_name)
 
-src, trg, y = (
-    edge_table["src"].values.astype(int),
-    edge_table["trg"].values.astype(int),
-    edge_table["isPositiveEdge"].astype(int),
-)
-
-ypred = calc_prob_i_j(emb, src, trg, net, model_name)
+R = R - R.multiply(net)  # remove positive edges from the ranking
+R.eliminate_zeros()
+R.sort_indices()
 
 # ========================
 # Save
 # ========================
-pd.DataFrame({"y": y, "ypred": ypred}).to_csv(output_file)
+sparse.save_npz(output_file, R)

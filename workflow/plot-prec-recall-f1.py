@@ -2,7 +2,8 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:06:41
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-30 11:02:54
+# @Last Modified time: 2023-04-18 11:22:02
+# %%
 import numpy as np
 import pandas as pd
 import sys
@@ -13,8 +14,8 @@ if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/derived/results/result_opt_stack_auc_roc.csv"
-    output_file = "../data/opt_stack_auc_roc.png"
+    input_file = "../data/derived/results/result_ranking.csv"
+    output_file = "../data/"
 
 # ========================
 # Load
@@ -25,16 +26,14 @@ data_table = pd.read_csv(input_file)
 # Style
 # ========================
 plot_data = data_table.copy()
+plot_data = plot_data[plot_data["metric"].str.contains("@10")]
+plot_data = plot_data[plot_data["metric"].str.contains("micro")]
 plot_data = plot_data.rename(columns={"negativeEdgeSampler": "Sampling"})
 
-plot_data["Sampling"] = plot_data["Sampling"].map(
-    {"uniform": "Uniform", "degreeBiased": "Pref. Attach."}
-)
-
-palette = {
-    "Pref. Attach.": "red",
-    "Uniform": "#adadad",
-}
+# palette = {
+#    "Pref. Attach.": "red",
+#    "Uniform": "#adadad",
+# }
 # %%
 # ========================
 # Plot
@@ -43,23 +42,20 @@ sns.set_style("white")
 sns.set(font_scale=1)
 sns.set_style("ticks")
 
-if ~('model' in plot_data.columns):
-    plot_data["model"] = "Optimal Stacking" 
-
 g = sns.catplot(
     data=plot_data,
     x="score",
     y="model",
-    hue="Sampling",
+    hue="metric",
     col="data",
     # row="testEdgeFraction",
     kind="bar",
     col_wrap=5,
-    palette=palette,
+    # palette=palette,
     sharex=False,
 )
 
-g.set_xlabels("AUC-ROC")
+g.set_xlabels("Score")
 g.set_ylabels("Model")
 
 # ========================

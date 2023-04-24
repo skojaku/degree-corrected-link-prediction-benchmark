@@ -2,7 +2,8 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-11 09:48:59
+# @Last Modified time: 2023-04-12 16:50:23
+
 """Module for embedding."""
 # %%
 import gensim
@@ -32,7 +33,6 @@ except ImportError:
 
 
 # Base class
-
 
 class NodeEmbeddings:
     """Super class for node embedding class."""
@@ -252,9 +252,7 @@ class ModularitySpectralEmbedding(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
-        s, u = sparse.linalg.eigs(
-            self.A, k=np.minimum(dim + 1, self.A.shape[0] - 1), which="LR"
-        )
+        s, u = sparse.linalg.eigs(self.A, k=dim + 1, which="LR")
         s, u = np.real(s), np.real(u)
         s = s[1:]
         u = u[:, 1:]
@@ -493,6 +491,7 @@ class DegreeEmbedding:
         return emb
 
 
+
 class GAT(NodeEmbeddings):
     """A python class for the GAT.
 
@@ -634,7 +633,8 @@ class GCN(NodeEmbeddings):
         return embeddings
 
 
-class graphSAGE(NodeEmbeddings):
+
+class graphSAGE:
     """A python class for the GraphSAGE.
     Parameters
     ----------
@@ -648,12 +648,12 @@ class graphSAGE(NodeEmbeddings):
         self,
         num_walks=1,
         walk_length=5,
-        dim=10,
-        layer_sizes=[50, 10],
+        emb_dim=50,
         num_samples=[10, 5],
         batch_size=50,
         epochs=4,
         verbose=False,
+        feature_dim=50,
     ):
         self.in_vec = None  # In-vector
         self.out_vec = None  # Out-vector
@@ -665,12 +665,12 @@ class graphSAGE(NodeEmbeddings):
 
         self.num_walks = num_walks
         self.walk_length = walk_length
-        self.layer_sizes = layer_sizes
+        self.layer_sizes = [50,emb_dim]
         self.num_samples = num_samples
         self.batch_size = batch_size
-        self.epochs = 4
-
+        self.epochs = epochs
         self.verbose = verbose
+        self.feature_dim = feature_dim
 
     def fit(self, net):
         """Takes a network as an input, transforms it into an adjacency matrix, and generates
@@ -680,7 +680,9 @@ class graphSAGE(NodeEmbeddings):
         A = utils.to_adjacency_matrix(net)
 
         # create node features
-        self.create_feature_vector(A, feature_dim=50)
+        self.feature_vector = self.create_feature_vector(
+            A, feature_dim=self.feature_dim
+        )
 
         # transform the adjacency matrix into a networkx Graph object
         self.G = nx.Graph(A)
@@ -703,15 +705,13 @@ class graphSAGE(NodeEmbeddings):
 
         return self
 
-    def create_feature_vector(self, A, feature_dim=50):
+    def create_feature_vector(self, A, feature_dim):
         """Takes an adjacency matrix and generates feature vectors using
         Laplacian Eigen Map"""
-
         lapeigen = LaplacianEigenMap(p=100, q=40)
         lapeigen.fit(A)
-        self.feature_vector = lapeigen.transform(feature_dim, return_out_vector=False)
+        return lapeigen.transform(self.feature_dim, return_out_vector=False)
 
-        return self
 
     def train_GraphSAGE(self):
         graphsage = GraphSAGE(

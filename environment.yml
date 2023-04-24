@@ -1,23 +1,34 @@
 name: linkpred
 channels:
   - conda-forge
+  - stellargraph
+  - pyg 
   - defaults
 dependencies:
   - python=3.9
-  - pytorch
-  - matplotlib
   - mamba
-  - stellargraph
+  - pytorch
   - torchvision
-  - cuda-toolkit
   - torchaudio
+  - cudatoolkit=11.6
+  - ca-certificates
+  - certifi
+  - openssl
   - snakemake
   - graph-tool
+  - scikit-learn
   - numpy=1.23.5
   - numba
+  - scipy
+  - pandas
+  - networkx
   - seaborn
+  - matplotlib
+  - gensim
+  - ipykernel
+  - tqdm
   - black
   - faiss-gpu
   - pyg
   - umap-learn
-prefix: /home/munjkim/bin/envs/linkpred
+  - stellargraph

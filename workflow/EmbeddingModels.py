@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-31 17:44:39
+# @Last Modified time: 2023-04-11 17:45:07
 
 import embcom
 import torch
@@ -82,9 +82,10 @@ def GAT(network, dim, feature_dim=10, device="cpu", dim_h=128, epochs=2000):
 #    model.fit(network)
 #    return model.transform(dim=dim)
 
+
 @embedding_model
 def graphsage(network, num_walks=1, walk_length=5, dim=10):
-    model = embcom.embeddings.graphSAGE(num_walks=num_walks, walk_length=walk_length, dim=dim)
+    model = embcom.embeddings.graphSAGE(num_walks=num_walks, walk_length=walk_length, emb_dim=dim)
     model.fit(network)
     model.train_GraphSAGE()
     return model.get_embeddings()

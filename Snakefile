@@ -266,6 +266,7 @@ LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
 FIG_AUCROC = j(RESULT_DIR, "figs", "aucroc.pdf")
 FIG_DEGSKEW_AUCDIFF = j(RESULT_DIR, "figs", "corr_degskew_aucdiff.pdf")
 FIG_NODES_AUCDIFF = j(RESULT_DIR, "figs", "corr_nodes_aucdiff.pdf")
+FIG_DEGSKEW_AUCDIFF_NODESIZE = j(RESULT_DIR, "figs", "corr_degskew_aucdiff_nodesize.pdf")
 FIG_PREC_RECAL_F1 =j(RESULT_DIR, "figs", "prec-recall-f1.pdf")
 
 #
@@ -318,6 +319,7 @@ rule figs:
         FIG_AUCROC,
         FIG_DEGSKEW_AUCDIFF,
         FIG_NODES_AUCDIFF,
+        FIG_DEGSKEW_AUCDIFF_NODESIZE,
         FIG_PREC_RECAL_F1
 
 # ============================
@@ -639,6 +641,7 @@ rule plot_aucdiff:
     output:
         degskew_outputfile=FIG_DEGSKEW_AUCDIFF,
         nodes_outputfile=FIG_NODES_AUCDIFF,
+        degskew_nodesize_outputfile = FIG_DEGSKEW_AUCDIFF_NODESIZE,
     script:
         "workflow/plot-NetProp-AucDiff.py"
 

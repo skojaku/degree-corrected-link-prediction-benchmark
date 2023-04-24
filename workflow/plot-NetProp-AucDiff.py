@@ -23,6 +23,7 @@ if "snakemake" in sys.modules:
     networks = snakemake.input["networks_dir"]
     degskew_outputfile = snakemake.output["degskew_outputfile"]
     nodes_outputfile = snakemake.output["nodes_outputfile"]
+    degskew_nodesize_outputfile = snakemake.output["degskew_nodesize_outputfile"]
 
 else:
     print("executing in standalone manner")
@@ -125,7 +126,26 @@ ns_auc = sns.lmplot(
 ns_auc.map_dataframe(annotate, x="number_of_nodes", y="score_diff")
 ns_auc.set(xscale="log")
 
+# Degree skew vs auc diff with size of points indicating number of nodes
+ds_auc_nodesize = sns.lmplot(
+    x="degree_skews",
+    y="score_diff",
+    data=plot_data,
+    col="model",
+    col_wrap=4,
+    scatter_kws={"alpha": 0}, #hacky
+)
+ds_auc_nodesize.map_dataframe(annotate, x="degree_skews", y="score_diff")
+
+ds_auc_nodesize.map(
+    sns.scatterplot,
+    "degree_skews",
+    "score_diff",
+    size=plot_data["number_of_nodes"] * 100,
+)
+
 
 # Save
 ds_auc.fig.savefig(degskew_outputfile, bbox_inches="tight", dpi=300)
 ns_auc.fig.savefig(nodes_outputfile, bbox_inches="tight", dpi=300)
+ds_auc.fig.savefig(degskew_nodesize_outputfile, bbox_inches="tight", dpi=300)

@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-04-12 17:01:51
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-19 21:05:31
+# @Last Modified time: 2023-04-20 21:06:20
 import torch
 import torch.nn.functional as F
 from torch_geometric.utils import negative_sampling
@@ -20,23 +20,28 @@ def get_link_labels(pos_edge_index, neg_edge_index, device):
     return link_labels
 
 
-def train(model, data, adjacency, device):
+def train(model, data, adjacency, device, epochs=1000, negative_edge_sampler=None):
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
     model.train()
-
-    epochs = 1000
 
     adj_c = adjacency.tocoo()
 
     edge_list_torch = torch.from_numpy(np.array([adj_c.row, adj_c.col])).to(device)
 
     for epoch in tqdm(range(epochs + 1)):
-        neg_edge_index = negative_sampling(
-            edge_index=edge_list_torch,  # positive edges
-            num_nodes=data.shape[0],  # number of nodes
-            num_neg_samples=edge_list_torch.size(1),
-        )
+        if negative_edge_sampler is None:
+            neg_edge_index = negative_sampling(
+                edge_index=edge_list_torch,  # positive edges
+                num_nodes=data.shape[0],  # number of nodes
+                num_neg_samples=edge_list_torch.size(1),
+            )
+        else:
+            neg_edge_index = negative_edge_sampler(
+                edge_index=edge_list_torch,  # positive edges
+                num_nodes=data.shape[0],  # number of nodes
+                num_neg_samples=edge_list_torch.size(1),
+            )
 
         optimizer.zero_grad()
 

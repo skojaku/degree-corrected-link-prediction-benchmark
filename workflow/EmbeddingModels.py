@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-19 21:44:26
+# @Last Modified time: 2023-04-22 21:16:37
 
 from sklearn.decomposition import PCA
 import embcom
@@ -68,7 +68,7 @@ def modspec(network, dim):
 
 
 @embedding_model
-def GCN(network, dim, feature_dim=64, device="cpu", dim_h=128):
+def GCN(network, dim, feature_dim=64, device="cuda:0", dim_h=128):
     """
     Parameters
     ----------
@@ -97,7 +97,7 @@ def GCN(network, dim, feature_dim=64, device="cpu", dim_h=128):
 
     embeddings = model_trained(data, edge_list_gcn)
 
-    return embeddings.detach().numpy()
+    return embeddings.detach().cpu().numpy()
 
 
 @embedding_model

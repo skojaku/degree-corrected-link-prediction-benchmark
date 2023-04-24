@@ -19,7 +19,8 @@ import pickle as pkl
 
 if "snakemake" in sys.modules:
     edge_table_file = snakemake.input["edge_table_file"]
-    parameters = snakemake.params["parameters"]
+    edge_fraction_parameters = snakemake.params["edge_fraction_parameters"]
+    edge_sampler_parameters = snakemake.params["edge_sampler_parameters"]
     output_train_net_file = snakemake.output["output_train_net_file"]
     output_heldout_net_file = snakemake.output["output_heldout_net_file"]
     output_edge_candidates_file = snakemake.output["output_edge_candidates_file"]
@@ -40,8 +41,8 @@ n_nodes = int(np.maximum(np.max(src), np.max(trg)) + 1)
 A_orig = sparse.csr_matrix((np.ones_like(src), (src, trg)), shape=(n_nodes, n_nodes))
 
 model_ho = LinkPredictionDataset(
-    testEdgeFraction=parameters["testEdgeFraction"],
-    negative_edge_sampler=parameters["negativeEdgeSampler"],
+    testEdgeFraction=edge_fraction_parameters["testEdgeFraction"],
+    negative_edge_sampler=edge_sampler_parameters["negativeEdgeSampler"],
 )
 
 model_ho.fit(A_orig)
@@ -58,7 +59,7 @@ A_ho, test_edge_table = model_ho.transform()
 # =====================================================================
 
 model_tr = LinkPredictionDataset(
-    testEdgeFraction=parameters["testEdgeFraction"],
+    testEdgeFraction=edge_fraction_parameters["testEdgeFraction"],
     negative_edge_sampler="uniform",
 )
 model_tr.fit(A_ho)

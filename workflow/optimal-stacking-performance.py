@@ -22,6 +22,8 @@ if "snakemake" in sys.modules:
     data_name = snakemake.params["data_name"]
     output_file = snakemake.output["output_file"]
     feature_importance_file = snakemake.output["feature_importance_file"]
+    model_file = snakemake.output["model_file"]
+
 else:
     input_file = "../data/"
     output_file = "../data/"
@@ -75,7 +77,7 @@ feature_set = [
     "num_edges",
 ]
 
-feature_importances, auc_measure, _, _ = heldout_performance(input_seen_unseen_data_dir, n_depth, n_est)
+feature_importances, auc_measure, _, _,model = heldout_performance(input_seen_unseen_data_dir, n_depth, n_est)
 
 pd.DataFrame({"score": [auc_measure], "data": data_name}).to_csv(
     output_file, index=False
@@ -84,3 +86,6 @@ pd.DataFrame({"score": [auc_measure], "data": data_name}).to_csv(
 with open(feature_importance_file,"wb") as f:
     feature_importances = dict(zip(feature_set,feature_importances))
     pkl.dump(feature_importances,f)
+
+with open(model_file,"wb") as f:
+    pkl.dump(model,f)

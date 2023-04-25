@@ -865,4 +865,4 @@ def heldout_performance(path_to_data, n_depth, n_est):
     # print("AUC: " + str(np.round(auc_measure, 2)))
     # print("precision: " + str(np.round(precision_total[0], 2)))
     # print("recall: " + str(np.round(recall_total[0], 2)))
-    return feature_importance, auc_measure, precision_total[0], recall_total[0]
+    return feature_importance, auc_measure, precision_total[0], recall_total[0],dtree_model

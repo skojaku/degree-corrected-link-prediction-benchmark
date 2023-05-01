@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-27 16:40:11
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-12 16:49:19
+# @Last Modified time: 2023-04-22 22:05:57
 import numpy as np
 import pandas as pd
 from scipy import sparse
@@ -36,6 +36,7 @@ class LinkPredictionDataset:
         negative_edge_sampler,
         negatives_per_positive=1,
         conditionedOnSource=False,
+        all_negatives=False,
     ):
         """
         Initializer
@@ -54,6 +55,7 @@ class LinkPredictionDataset:
         self.testEdgeFraction = testEdgeFraction
         self.negatives_per_positive = negatives_per_positive
         self.conditionedOnSource = conditionedOnSource
+        self.all_negatives = all_negatives
 
     def fit(self, net):
         self.n_nodes = net.shape[0]
@@ -64,9 +66,37 @@ class LinkPredictionDataset:
         # Sampling negative edges
         self.sampler.fit(net)
 
+        self.net = net
+
     def transform(self):
         test_src, test_trg = self.splitter.test_edges_
         train_src, train_trg = self.splitter.train_edges_
+
+        # Ensure that the network is undirected and unweighted
+        self.train_net = sparse.csr_matrix(
+            (np.ones_like(train_src), (train_src, train_trg)),
+            shape=(self.n_nodes, self.n_nodes),
+        )
+        self.train_net = sparse.csr_matrix(self.train_net + self.train_net.T)
+        self.train_net.data = self.train_net.data * 0 + 1
+
+        if self.all_negatives:
+            # We evaluate the all positives and all negatives
+            neg_src, neg_trg = np.triu_indices(self.n_nodes, k=1)
+            y = np.array(self.net[(neg_src, neg_trg)]).reshape(-1)
+            s = y == 0
+            neg_src, neg_trg, y = neg_src[s], neg_trg[s], y[s]
+
+            self.target_edge_table = pd.DataFrame(
+                {
+                    "src": np.concatenate([test_src, neg_src]),
+                    "trg": np.concatenate([test_trg, neg_trg]),
+                    "isPositiveEdge": np.concatenate(
+                        [np.ones_like(test_src), np.zeros_like(neg_trg)]
+                    ),
+                }
+            )
+            return self.train_net, self.target_edge_table
 
         n_test_edges = np.int(len(test_src))
         neg_src, neg_trg = [], []
@@ -78,15 +108,6 @@ class LinkPredictionDataset:
             neg_src.append(_neg_src)
             neg_trg.append(_neg_trg)
         neg_src, neg_trg = np.concatenate(neg_src), np.concatenate(neg_trg)
-
-        self.train_net = sparse.csr_matrix(
-            (np.ones_like(train_src), (train_src, train_trg)),
-            shape=(self.n_nodes, self.n_nodes),
-        )
-
-        # Ensure that the network is undirected and unweighted
-        self.train_net = sparse.csr_matrix(self.train_net + self.train_net.T)
-        self.train_net.data = self.train_net.data * 0 + 1
 
         self.target_edge_table = pd.DataFrame(
             {

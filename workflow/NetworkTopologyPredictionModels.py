@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-31 17:24:55
+# @Last Modified time: 2023-04-19 21:56:17
 from scipy import sparse
 import numpy as np
 
@@ -52,3 +52,24 @@ def adamicAdar(network, src, trg):
             axis=1
         )
     ).reshape(-1)
+
+
+@topology_model
+def localRandomWalk(network, src, trg):
+    deg = np.array(network.sum(axis=1)).reshape(-1)
+    deg_inv = 1 / np.maximum(deg, 1)
+    P = sparse.diags(deg_inv) @ network
+    PP = P @ P
+    PPP = PP @ P
+    S = P + PP + PPP
+    S = sparse.diags(deg / np.sum(deg)) @ S
+    return np.array(S[(src, trg)]).reshape(-1)
+
+
+@topology_model
+def localPathIndex(network, src, trg, epsilon=1e-3):
+    A = network
+    AA = A @ A
+    AAA = AA @ A
+    S = AA + epsilon * AAA
+    return np.array(S[(src, trg)]).reshape(-1)

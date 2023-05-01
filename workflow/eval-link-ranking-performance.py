@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:34:47
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-12 17:38:37
+# @Last Modified time: 2023-04-19 14:58:13
 # %%
 from scipy import sparse
 import numpy as np
@@ -15,6 +15,9 @@ if "snakemake" in sys.modules:
     data_name = snakemake.params["data_name"]
     output_file = snakemake.output["output_file"]
 else:
+    ranking_score_file = "../mydata/derived/link-prediction/airport-rach/score_ranking_basedOn~emb_testEdgeFraction~0.5_sampleId~2_model~node2vec_dim~64.npz"
+    edge_table_file = "../mydata/derived/datasets/airport-rach/testEdgeTable_testEdgeFraction~0.5_sampleId~2.csv"
+    data_name = "test"
     input_file = "../data/"
     output_file = "../data/"
 
@@ -23,6 +26,7 @@ else:
 # ========================
 Ranking = sparse.load_npz(ranking_score_file)
 edge_table = pd.read_csv(edge_table_file)
+
 
 # ========================
 # Preprocess
@@ -40,10 +44,10 @@ assert np.max(Y.data) == 1
 
 n_nodes = Y.shape[0]
 results = []
+# Compute the micro F1
 for n_prediction in [3, 5, 10, 50]:
-    # Compute the micro F1
     Ypred = []
-    prec, reca, f1 = np.zeros(n_nodes), np.zeros(n_nodes), np.zeros(n_nodes)
+    prec, reca, f1 = [], [], []
     for i in range(Y.shape[0]):
         y = Y.indices[Y.indptr[i] : Y.indptr[i + 1]]
         if len(y) == 0:
@@ -51,56 +55,59 @@ for n_prediction in [3, 5, 10, 50]:
 
         pred = Ranking.indices[Ranking.indptr[i] : Ranking.indptr[i + 1]]
         scores = Ranking.data[Ranking.indptr[i] : Ranking.indptr[i + 1]]
-
         # Order by the prediction scores
         order = np.argsort(-scores)
         pred, scores = pred[order], scores[order]
 
+        _pred = pred.copy()
         # Remove low-ranked nodes
         if len(pred) > n_prediction:
-            pred = pred[:n_prediction]
+            _pred = _pred[:n_prediction]
 
         # Calc metric
-        tp = np.sum(np.isin(pred, y))
+        tp = np.sum(np.isin(_pred, y))
 
-        prec[i] = tp / np.maximum(len(pred), 1)
-        reca[i] = tp / np.maximum(len(y), 1)
-        f1[i] = 2 * prec[i] * reca[i] / np.maximum(prec[i] + reca[i], 1e-32)
+        _prec = tp / np.maximum(len(_pred), 1)
+        _reca = tp / np.maximum(len(y), 1)
+        _f1 = 2 * _prec * _reca / np.maximum(_prec + _reca, 1e-32)
+        prec.append(_prec)
+        reca.append(_reca)
+        f1.append(_f1)
 
         # Save the ranking for computing the macro F1
-        Ypred.append([np.ones_like(pred) * i, pred])
+        Ypred.append([np.ones_like(_pred) * i, _pred])
+
+    # macro
+    macro_prec, macro_reca, macro_f1 = np.mean(prec), np.mean(reca), np.mean(f1)
 
     # micro f1
-    micro_prec, micro_reca, micro_f1 = np.mean(prec), np.mean(reca), np.mean(f1)
-
-    # macro f1
     src, trg = np.concatenate([d[0] for d in Ypred]), np.concatenate(
         [d[1] for d in Ypred]
     )
     Ypred = sparse.csr_matrix((np.ones_like(src), (src, trg)), shape=Ranking.shape)
     assert np.max(Ypred.data) == 1
     tp = Ypred.multiply(Y).sum()
-    macro_prec = tp / Ypred.sum()
-    macro_reca = tp / Y.sum()
-    macro_f1 = 2 * macro_prec * macro_reca / np.maximum(macro_prec + macro_reca, 1e-32)
+    micro_prec = tp / Ypred.sum()
+    micro_reca = tp / Y.sum()
+    micro_f1 = 2 * micro_prec * micro_reca / np.maximum(micro_prec + micro_reca, 1e-32)
 
     _results = pd.DataFrame(
         {
             "score": [
-                micro_prec,
-                micro_reca,
-                micro_f1,
                 macro_prec,
                 macro_reca,
                 macro_f1,
+                micro_prec,
+                micro_reca,
+                micro_f1,
             ],
             "metric": [
-                f"microPrec@{n_prediction}",
-                f"microReca@{n_prediction}",
-                f"microF1@{n_prediction}",
                 f"macroPrec@{n_prediction}",
                 f"macroReca@{n_prediction}",
                 f"macroF1@{n_prediction}",
+                f"microPrec@{n_prediction}",
+                f"microReca@{n_prediction}",
+                f"microF1@{n_prediction}",
             ],
             "data": data_name,
         }
@@ -108,8 +115,8 @@ for n_prediction in [3, 5, 10, 50]:
     results.append(_results)
 
 results = pd.concat(results)
-
-# ========================
+results
+# %% ========================
 # Save
 # ========================
 results.to_csv(output_file, index=False)

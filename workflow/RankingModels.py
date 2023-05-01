@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-01 07:06:54
+# @Last Modified time: 2023-04-19 18:01:54
 from scipy import sparse
 import numpy as np
 import faiss
@@ -12,6 +12,8 @@ from EmbeddingModels import *
 
 
 def ranking_by_topology(model_name, network, max_k, batch=1000):
+    max_k = np.minimum(network.shape[0] - 1, max_k)
+
     n = network.shape[1]
     L = int(np.ceil(n / batch))
     score_table = []
@@ -23,7 +25,6 @@ def ranking_by_topology(model_name, network, max_k, batch=1000):
     original_src_trg = np.maximum(src, trg) + 1j * np.minimum(src, trg)
 
     for focal_nodes in np.array_split(np.arange(n), L):
-
         # Generate the candidates in ranking
         # sort by degree
         if model_name in ["preferentialAttachment"]:
@@ -69,11 +70,21 @@ def ranking_by_topology(model_name, network, max_k, batch=1000):
     )
 
 
-def ranking_by_embedding(emb, max_k):
+def ranking_by_embedding(emb, max_k, net, model_name):
+    max_k = np.minimum(emb.shape[0] - 1, max_k)
     n = emb.shape[0]
-    emb = emb.astype("float32")
-    index = make_faiss_index(emb, metric="cosine", gpu_id="cpu")
-    dist, indices = index.search(emb, k=max_k)
+    query_emb = emb.astype("float32").copy()
+    key_emb = emb.astype("float32").copy()
+
+    if model_name in ["node2vec", "deepwalk", "graphsage", "line"]:
+        query_emb = np.hstack([query_emb, np.ones((n, 1))])
+        deg = np.array(net.sum(axis=1)).reshape(-1)
+        deg = np.maximum(1, deg)
+        deg = deg / np.sum(deg)
+        key_emb = np.hstack([key_emb, np.log(deg).reshape((-1, 1))])
+
+    index = make_faiss_index(key_emb, metric="cosine", gpu_id="cpu")
+    dist, indices = index.search(query_emb, k=int(max_k))
     scores, value_nodes = np.array(dist).reshape(-1), np.array(indices).reshape(-1)
     query_nodes = np.kron(np.arange(emb.shape[0]), np.ones(max_k)).astype(int)
     return sparse.csr_matrix(

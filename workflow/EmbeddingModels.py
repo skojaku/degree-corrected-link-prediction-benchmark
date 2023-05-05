@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-04 22:36:58
+# @Last Modified time: 2023-05-05 06:35:19
 
 from sklearn.decomposition import PCA
 import embcom
@@ -182,6 +182,14 @@ def SGTNormAdjacencyNeumann(network, dim):
     model = embcom.embeddings.SpectralGraphTransformation(
         kernel_func="neu", kernel_matrix="normalized_A"
     )
+    model.fit(network)
+    emb = model.transform(dim=dim)
+    return emb
+
+
+@embedding_model
+def dcSBM(network, dim):
+    model = embcom.embeddings.SBMEmbedding()
     model.fit(network)
     emb = model.transform(dim=dim)
     return emb

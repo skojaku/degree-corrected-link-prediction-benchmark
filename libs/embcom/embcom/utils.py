@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# @Author: Sadamori Kojaku
+# @Date:   2023-03-27 17:59:10
+# @Last Modified by:   Sadamori Kojaku
+# @Last Modified time: 2023-05-04 22:15:59
 import logging
 import numbers
 from collections import Counter
@@ -180,7 +185,6 @@ def construct_node2vec_supra_net_edge_pairs(
     edge_weight_list = -np.zeros(num_edges)
     edge_id = 0
     for i in range(num_nodes):
-
         # neighbors for the outgoing edges
         # (i)->(next_node)
         for next_nei_id in range(A_indptr_csr[i], A_indptr_csr[i + 1]):
@@ -255,7 +259,6 @@ def to_trans_mat(mat):
 
 
 def const_sparse_mat(r, c, v, N, uniqify=True, min_nonzero_value=0):
-
     if uniqify:
         rc = pairing(r, c)
         rc, rc_id = np.unique(rc, return_inverse=True)
@@ -282,7 +285,7 @@ def depairing(z):
     """Inverse of Cantor pairing function http://en.wikipedia.org/wiki/Pairing_
     function#Inverting_the_Cantor_pairing_function."""
     w = np.floor((np.sqrt(8 * z + 1) - 1) * 0.5)
-    t = (w ** 2 + w) * 0.5
+    t = (w**2 + w) * 0.5
     y = np.round(z - t).astype(np.int64)
     x = np.round(w - y).astype(np.int64)
     return x, y
@@ -368,7 +371,8 @@ def to_member_matrix(group_ids, node_ids=None, shape=None):
         Nc = int(np.max(group_ids) + 1)
         shape = (Nr, Nc)
     U = sparse.csr_matrix(
-        (np.ones_like(group_ids), (node_ids, group_ids)), shape=shape,
+        (np.ones_like(group_ids), (node_ids, group_ids)),
+        shape=shape,
     )
     U.data = U.data * 0 + 1
     return U
@@ -390,3 +394,25 @@ def matrix_sum_power(A, T):
         At = A @ At
         As += At
     return As
+
+
+def toUndirected(net):
+    net = net + net.T
+    net.data = net.data * 0 + 1
+    net.eliminate_zeros()
+    net = sparse.csr_matrix.asfptype(net)
+    return net
+
+
+def edge2network(src, trg, n_nodes=None, val=None):
+    if val is None:
+        val = np.ones_like(src)
+    if n_nodes is None:
+        n_nodes = np.max([np.max(src), np.max(trg)]) + 1
+    return toUndirected(sparse.csr_matrix((val, (src, trg)), shape=(n_nodes, n_nodes)))
+def pairing(r, c):
+    return np.minimum(r, c) + 1j * np.maximum(r, c)
+
+
+def depairing(v):
+    return np.real(v).astype(int), np.imag(v).astype(int)

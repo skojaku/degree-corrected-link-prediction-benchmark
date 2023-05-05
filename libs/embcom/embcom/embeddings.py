@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-19 21:40:49
+# @Last Modified time: 2023-05-04 22:29:59
 """Module for embedding."""
 # %%
 import gensim
@@ -16,11 +16,14 @@ from torch_geometric.utils import negative_sampling
 import torch_geometric.transforms as T
 from torch_geometric.nn import GCNConv
 from embcom import rsvd, samplers, utils
+from scipy.sparse import csgraph
+from scipy.optimize import curve_fit
+import utils
 
-#import stellargraph
-#from tensorflow import keras
-#from stellargraph.data import UnsupervisedSampler
-#from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator
+# import stellargraph
+# from tensorflow import keras
+# from stellargraph.data import UnsupervisedSampler
+# from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator
 
 try:
     import glove
@@ -518,7 +521,7 @@ class DegreeEmbedding:
         return emb
 
 
-#class graphSAGE:
+# class graphSAGE:
 #    """A python class for the GraphSAGE.
 #    Parameters
 #    ----------
@@ -701,3 +704,88 @@ class FastRP:
         # Normalization
         X = sparse.diags(1.0 / np.maximum(np.array(h).reshape(-1), 1e-8)) @ X
         return X
+
+
+class SpectralGraphTransformation(NodeEmbeddings):
+    def __init__(self, kernel_func="exp", kernel_matrix="A"):
+        self.kernel_matrix = kernel_matrix
+
+        if kernel_func == "exp":
+            self.kernel_func = lambda x, a: np.exp(-a * x)
+        elif kernel_func == "neu":
+            self.kernel_func = lambda x, a: 1.0 / (1 - a * x)
+        else:
+            self.kernel_func = kernel_func
+        self.in_vec = None
+        self.out_vec = None
+
+    def fit(self, net):
+        A = utils.to_adjacency_matrix(net)
+        n_nodes = A.shape[0]
+        train_edges, test_edges = self.train_test_edge_split(A, 1 / 3)
+        train_net = utils.edge2network(train_edges[0], train_edges[1], n_nodes=n_nodes)
+        test_net = utils.edge2network(test_edges[0], test_edges[1], n_nodes=n_nodes)
+
+        self.A = A
+        self.train_net = train_net
+        self.test_net = test_net
+        self.Gkernel = self.get_kernel_matrix(A)
+        self.Gkernel_train = self.get_kernel_matrix(train_net)
+
+        return self
+
+    def update_embedding(self, dim):
+        which = "LR"
+        if self.kernel_matrix == "laplacian":
+            which = "SR"
+
+        s_train, u = sparse.linalg.eigs(self.Gkernel_train, k=dim, which=which)
+        s_test = np.diag(u.T @ self.Gkernel @ u)
+        s_test, u, s_train = np.real(s_test), np.real(u), np.real(s_train)
+
+        popt, pcov = curve_fit(
+            self.kernel_func,
+            s_train / np.max(np.abs(s_train)),
+            s_test / np.max(np.abs(s_test)),
+            p0=[-5e-1],
+        )
+        alpha = popt[0]
+        spred = self.kernel_func(s_test, alpha)
+        self.in_vec = u @ np.diag(np.sqrt(np.abs(spred)))
+        self.out_vec = self.in_vec
+
+    def get_kernel_matrix(self, A):
+        deg = np.array(A.sum(axis=1)).reshape(-1)
+        if self.kernel_matrix == "A":
+            M = A
+        elif self.kernel_matrix == "normalized_A":
+            M = sparse.diags(1 / np.sqrt(deg)) @ A @ sparse.diags(1 / np.sqrt(deg))
+        elif self.kernel_matrix == "laplacian":
+            M = sparse.diags(deg) - A
+        return sparse.csr_matrix(M)
+
+    def train_test_edge_split(self, A, fraction):
+        r, c, _ = sparse.find(A)
+        edges = np.unique(utils.pairing(r, c))
+
+        MST = csgraph.minimum_spanning_tree(A + A.T)
+        r, c, _ = sparse.find(MST)
+        mst_edges = np.unique(utils.pairing(r, c))
+        remained_edge_set = np.array(
+            list(set(list(edges)).difference(set(list(mst_edges))))
+        )
+        max_fraction = len(remained_edge_set) / len(edges)
+        if fraction > max_fraction:
+            fraction = max_fraction * 0.5
+        n_edge_removal = int(fraction * len(remained_edge_set))
+        test_edge_set = np.random.choice(
+            remained_edge_set, n_edge_removal, replace=False
+        )
+
+        train_edge_set = np.array(
+            list(set(list(edges)).difference(set(list(test_edge_set))))
+        )
+
+        test_edges_ = utils.depairing(test_edge_set)
+        train_edges_ = utils.depairing(train_edge_set)
+        return train_edges_, test_edges_

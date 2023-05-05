@@ -2,9 +2,10 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-04 22:38:13
+# @Last Modified time: 2023-05-05 06:48:23
 """Module for embedding."""
 # %%
+import graph_tool.all as gt
 import gensim
 import networkx as nx
 import numpy as np
@@ -17,7 +18,7 @@ import torch_geometric.transforms as T
 from torch_geometric.nn import GCNConv
 from embcom import rsvd, samplers, utils
 from scipy.sparse import csgraph
-from scipy.optimize import curve_fit
+from scipy.optimize import minimize
 
 # import stellargraph
 # from tensorflow import keras
@@ -769,6 +770,7 @@ class SpectralGraphTransformation(NodeEmbeddings):
             self.kernel_func = kernel_func
         self.in_vec = None
         self.out_vec = None
+        self.reg = 1e-2
 
     def fit(self, net):
         """
@@ -820,15 +822,22 @@ class SpectralGraphTransformation(NodeEmbeddings):
         s_train, u = sparse.linalg.eigs(self.Gkernel_train, k=dim, which=which)
         s_test = np.diag(u.T @ self.Gkernel @ u)
         s_test, u, s_train = np.real(s_test), np.real(u), np.real(s_train)
+        s_train = s_train / np.max(np.abs(s_train))
+        s_test = s_test / np.max(np.abs(s_test))
 
-        popt, pcov = curve_fit(
-            self.kernel_func,
-            s_train / np.max(np.abs(s_train)),
-            s_test / np.max(np.abs(s_test)),
-            p0=[-5e-1],
-        )
-        alpha = popt[0]
-        spred = self.kernel_func(s_test, alpha)
+        def cost(params):  # simply use globally defined x and y
+            alpha = params[0]
+            return (
+                np.mean((self.kernel_func(s_train, alpha) - s_test) ** 2)
+                + self.reg * alpha**2
+            )  # quadratic cost function
+
+        res = minimize(cost, [1e-1])
+        alpha = res.x[0]
+        if (np.isnan(alpha)) or (np.isinf(alpha)):
+            spred = s_test
+        else:
+            spred = self.kernel_func(s_test, alpha)
         self.in_vec = u @ np.diag(np.sqrt(np.abs(spred)))
         self.out_vec = self.in_vec
 
@@ -869,4 +878,46 @@ class SpectralGraphTransformation(NodeEmbeddings):
         return train_edges_, test_edges_
 
 
-# %%
+class SBMEmbedding(NodeEmbeddings):
+    def __init__(self, min_com_size=5):
+        self.min_com_size = min_com_size
+        self.in_vec = None
+        self.out_vec = None
+
+    def fit(self, net):
+        self.net = net
+        return self
+
+    def update_embedding(self, dim):
+        r, c, v = sparse.find(self.net)
+        g = gt.Graph(directed=False)
+        g.add_edge_list(np.vstack([r, c]).T)
+
+        n_nodes = self.net.shape[0]
+        K = np.minimum(dim, int(n_nodes / self.min_com_size))
+        state = gt.minimize_blockmodel_dl(
+            g,
+            state_args={"B_min": K, "B_max": K},
+            multilevel_mcmc_args={"B_max": K, "B_min": K},
+        )
+        b = state.get_blocks()
+        cids = np.unique(np.array(b.a), return_inverse=True)[1]
+        n_nodes = len(cids)
+        U = sparse.csr_matrix(
+            (np.ones_like(cids), (np.arange(len(cids)), cids)), shape=(n_nodes, K)
+        )
+        outdeg = np.array(self.net.sum(axis=1)).reshape(-1)
+        indeg = np.array(self.net.sum(axis=0)).reshape(-1)
+        Din = np.array(U.T @ indeg).reshape(-1)
+        Dout = np.array(U.T @ outdeg).reshape(-1)
+        Lsbm = (
+            np.diag(1 / np.maximum(1e-32, Dout))
+            @ (U.T @ self.net @ U)
+            @ np.diag(1 / np.maximum(1e-32, Din))
+        )
+
+        s, u = np.linalg.eig(Lsbm)
+        u = np.einsum("ij,j->ij", u, np.sqrt(np.maximum(s, 0)))
+        u = U @ u
+        self.in_vec = np.einsum("ij,i->ij", u, outdeg)
+        self.out_vec = np.einsum("ij,i->ij", u, indeg)

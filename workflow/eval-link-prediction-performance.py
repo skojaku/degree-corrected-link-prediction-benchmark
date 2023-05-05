@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:34:47
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-01 06:30:14
+# @Last Modified time: 2023-05-05 06:20:50
 # %%
 import numpy as np
 import pandas as pd
@@ -27,6 +27,8 @@ data_table = pd.read_csv(input_file)
 # ========================
 
 y, ypred = data_table["y"].values, data_table["ypred"].values
+ypred[pd.isna(ypred)] = np.min(ypred[~pd.isna(ypred)])
+ypred[np.isinf(ypred)] = np.min(ypred[~np.isinf(ypred)])
 aucroc = roc_auc_score(y, ypred)
 
 # ========================

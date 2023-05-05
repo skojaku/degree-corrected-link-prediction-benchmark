@@ -241,6 +241,7 @@ RANK_SCORE_NET_FILE = j(
 
 LP_ALL_AUCROC_SCORE_FILE = j(RESULT_DIR, "result_auc_roc.csv")
 LP_ALL_RANKING_SCORE_FILE = j(RESULT_DIR, "result_ranking.csv")
+LP_ALL_QUANTILE_RANKING_FILE = j(RESULT_DIR, "result_quantile_ranking.csv")
 
 LP_SCORE_OPT_STACK_FILE = j(
     OPT_STACK_DIR,
@@ -266,7 +267,8 @@ FIG_DEGSKEW_AUCDIFF = j(RESULT_DIR, "figs", "corr_degskew_aucdiff.pdf")
 FIG_NODES_AUCDIFF = j(RESULT_DIR, "figs", "corr_nodes_aucdiff.pdf")
 FIG_DEGSKEW_AUCDIFF_NODESIZE = j(RESULT_DIR, "figs", "corr_degskew_aucdiff_nodesize.pdf")
 FIG_PREC_RECAL_F1 =j(RESULT_DIR, "figs", "prec-recall-f1.pdf")
-
+FIG_DEG_DEG_PLOT =j(RESULT_DIR, "figs", "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
+FIG_QUANTILE_RANKING=j(RESULT_DIR, "figs", "quantile_ranking_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
 #
 #
 # RULES
@@ -279,7 +281,7 @@ rule all:
         LP_ALL_AUCROC_SCORE_FILE,
         LP_ALL_RANKING_SCORE_FILE,
         #
-        # Link classification
+        # Link classification (Check point 1)
         #
         expand(
             LP_SCORE_EMB_FILE,
@@ -296,11 +298,11 @@ rule all:
             **params_train_test_split
         ),
         #
-        # Network stats
+        # Network stats (Check point 2)
         #
-        NET_STAT_FILE
+        NET_STAT_FILE,
         #
-        # Link ranking
+        # Link ranking (Check point 3)
         #
 #        expand(
 #            RANK_SCORE_EMB_FILE,
@@ -314,10 +316,16 @@ rule all:
 #            **params_net_linkpred,
 #            **params_train_test_split
 #        )
+        #
+        # Quantile ranking file (Checkpoint 4)
+        #
+        LP_ALL_QUANTILE_RANKING_FILE
 
 
 rule figs:
     input:
+        expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
+        expand(FIG_QUANTILE_RANKING, **params_negative_edge_sampler),
         FIG_AUCROC,
         #FIG_DEGSKEW_AUCDIFF,
         #FIG_NODES_AUCDIFF,
@@ -632,10 +640,46 @@ rule concatenate_ranking_results:
     script:
         "workflow/concat-results.py"
 
+#
+# Evaluate the quantile
+#
+rule calc_quantiles:
+    input:
+        auc_roc_table_file =  LP_ALL_AUCROC_SCORE_FILE,
+        ranking_table_file = LP_ALL_RANKING_SCORE_FILE,
+        net_stat_file = NET_STAT_FILE
+    output:
+        output_file = LP_ALL_QUANTILE_RANKING_FILE
+    script:
+        "workflow/calc-quantiles.py"
 
 # =====================
 # Plot
 # =====================
+
+#
+# Figure 1 and 2
+#
+rule calc_deg_deg_plot:
+    input:
+        edge_table_file=EDGE_TABLE_FILE.format(data = "airport-rach"),
+    params:
+        negativeEdgeSampler = lambda wildcards: wildcards.negativeEdgeSampler
+    output:
+        output_file=FIG_DEG_DEG_PLOT,
+    script:
+        "workflow/plot-deg-deg-plot"
+
+rule plot_node2vec_vs_pa_ranking:
+    input:
+        input_file=LP_ALL_QUANTILE_RANKING_FILE,
+    params:
+        negativeEdgeSampler = lambda wildcards: wildcards.negativeEdgeSampler
+    output:
+        output_file=FIG_QUANTILE_RANKING,
+    script:
+        "workflow/plot-ranking-pref-vs-node2vec.py"
+
 rule plot_aucroc:
     input:
         input_file=LP_ALL_AUCROC_SCORE_FILE,

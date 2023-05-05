@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-03 08:52:00
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 14:46:46
+# @Last Modified time: 2023-05-05 14:57:33
 # %%
 """
 This Python script is a visualization code that reads an edge table
@@ -16,9 +16,11 @@ import sys
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy import sparse
+import linkpred
 
 if "snakemake" in sys.modules:
-    input_file = snakemake.input["input_file"]
+    edge_table_file = snakemake.input["edge_table_file"]
+    negativeEdgeSampler = snakemake.params["negativeEdgeSampler"]
     output_file = snakemake.output["output_file"]
 else:
     net_file = "../../data/derived/networks/preprocessed/airport-rach/edge_table.csv"
@@ -28,9 +30,8 @@ else:
 # ========================
 # Load
 # ========================
-import linkpred
 
-edge_table = pd.read_csv(net_file)
+edge_table = pd.read_csv(edge_table_file)
 
 src, trg = tuple(edge_table.values.T)
 

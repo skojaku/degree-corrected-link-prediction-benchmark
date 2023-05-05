@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-04 22:33:33
+# @Last Modified time: 2023-05-04 22:38:13
 """Module for embedding."""
 # %%
 import gensim
@@ -18,7 +18,6 @@ from torch_geometric.nn import GCNConv
 from embcom import rsvd, samplers, utils
 from scipy.sparse import csgraph
 from scipy.optimize import curve_fit
-import utils
 
 # import stellargraph
 # from tensorflow import keras

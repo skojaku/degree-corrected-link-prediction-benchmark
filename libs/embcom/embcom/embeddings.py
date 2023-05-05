@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-04 22:29:59
+# @Last Modified time: 2023-05-04 22:33:04
 """Module for embedding."""
 # %%
 import gensim
@@ -707,7 +707,61 @@ class FastRP:
 
 
 class SpectralGraphTransformation(NodeEmbeddings):
+    """
+    Spectral graph transformation
+
+    Fits and transforms input graph using spectral graph transformation method.
+
+    Parameters
+    ----------
+    NodeEmbeddings : _type_
+        _description_
+
+    Attributes
+    ----------
+    kernel_matrix : str
+        String indicating kernel matrix to use (options: "A", "normalized_A", "laplacian")
+    kernel_func : callable
+        Function defining the kernel function used in the transformation
+    in_vec, out_vec : ndarray or None
+        Input and output node embeddings
+
+    Methods
+    -------
+    fit(net)
+        Fits the model on the input graph
+    update_embedding(dim)
+        Transforms the fitted graph into low-dimensional space
+    get_kernel_matrix(A)
+        Computes the kernel matrix from an adjacency matrix
+    train_test_edge_split(A, fraction)
+        Splits edge set into training and testing sets
+
+    References
+    ----------
+    .. [1] Yan, X., Tang, J., & Liu, H. (2009).
+           Link prediction approach to collaborative filtering.
+           Proceedings of the third ACM conference on Recommender systems, 141-148.
+    """
+
     def __init__(self, kernel_func="exp", kernel_matrix="A"):
+        """
+        Initialize SpectralGraphTransformation with given kernel function and
+        kernel matrix options.
+
+        Parameters
+        ----------
+        kernel_func : str or callable, optional (default="exp")
+            The kernel function used for the spectral graph transformation.
+            Can be a string representing one of two built-in kernel functions ("exp" or "neu"),
+            or a user-defined function taking two input values as follows:
+            `kernel_func(x, a) -> y`, where x is an array of eigenvalues, a is a scalar parameter,
+            and y is the transformed array of eigenvalues.
+        kernel_matrix : str, optional (default="A")
+            The kernel matrix used in the transformation. Can be one of three options:
+            "A" for adjacency matrix, "normalized_A" for normalized adjacency matrix,
+            or "laplacian" for Laplacian matrix.
+        """
         self.kernel_matrix = kernel_matrix
 
         if kernel_func == "exp":
@@ -720,6 +774,20 @@ class SpectralGraphTransformation(NodeEmbeddings):
         self.out_vec = None
 
     def fit(self, net):
+        """
+        Fit the spectral graph transformation model on the input graph.
+
+        Parameters
+        ----------
+        net : array-like or sparse matrix
+            Input graph as an adjacency matrix or equivalent sparse matrix format.
+
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+
         A = utils.to_adjacency_matrix(net)
         n_nodes = A.shape[0]
         train_edges, test_edges = self.train_test_edge_split(A, 1 / 3)
@@ -735,6 +803,19 @@ class SpectralGraphTransformation(NodeEmbeddings):
         return self
 
     def update_embedding(self, dim):
+        """
+        Update the input network embedding and transform it into low-dimensional space.
+
+        Parameters
+        ----------
+        dim : int
+            Dimensions of the output embedding.
+
+        Returns
+        -------
+        None
+        """
+
         which = "LR"
         if self.kernel_matrix == "laplacian":
             which = "SR"
@@ -789,3 +870,6 @@ class SpectralGraphTransformation(NodeEmbeddings):
         test_edges_ = utils.depairing(test_edge_set)
         train_edges_ = utils.depairing(train_edge_set)
         return train_edges_, test_edges_
+
+
+# %%

@@ -26,19 +26,10 @@ EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
 
-# DATA_LIST = [
-#     'polbooks', 'football', 'netscience', 'highschool', 'foodweb-baywet', 'foodweb-baydry', 'celegans', 'maayan-foodweb', 'jazz', 'sociopatterns-infectious', 'airport-rach', 'radoslaw-email-email', 'email', 'YeastS', 'japanesebookinter-st', 'moreno-health', 'petster', 'ca-GrQc', 'hep-th', 'opsahl-ucsocial', 'bitcoinalpha', 'opsahl-openflights', 'Caltech36', 'polblogs-rachith', 'ht09-contact-list', 'Reed98', 'p2p-Gnutella08', 'bitcoinotc', 'frenchbookinter-st', 'PGPgiantcompo', 'ca-HepTh', 'p2p-Gnutella09', 'p2p-Gnutella06', 'p2p-Gnutella05', 'Simmons81', 'p2p-Gnutella04', 'spanishbookinter-st', 'darwinbookinter-st',
-#     ]
-# DATA_LIST = [
-#     'polbooks', 'football', 'netscience', 'highschool', 'foodweb-baywet', 'foodweb-baydry',
-#     ]
+#All networks
 DATA_LIST = [
-    'polbooks'
-    ]
-# All networks
-# DATA_LIST = [
-#     f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
-# ]
+    f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
+]
 
 # Small networks
 # Comment out if you want to run for all networks
@@ -137,6 +128,13 @@ TRAIN_NET_FILE_OPTIMAL_STACKING = j(
 # ====================
 # Intermediate files
 # ====================
+
+#
+# Network statistics
+#
+NET_STAT_FILE = j(
+   NETWORK_DIR, "network-stats.csv"
+)
 
 #
 # Embedding
@@ -298,29 +296,33 @@ rule all:
             **params_train_test_split
         ),
         #
+        # Network stats
+        #
+        NET_STAT_FILE
+        #
         # Link ranking
         #
-        expand(
-            RANK_SCORE_EMB_FILE,
-            data=DATA_LIST,
-            **params_emb,
-            **params_train_test_split
-        ),
-        expand(
-            RANK_SCORE_NET_FILE,
-            data=DATA_LIST,
-            **params_net_linkpred,
-            **params_train_test_split
-        )
+#        expand(
+#            RANK_SCORE_EMB_FILE,
+#            data=DATA_LIST,
+#            **params_emb,
+#            **params_train_test_split
+#        ),
+#        expand(
+#            RANK_SCORE_NET_FILE,
+#            data=DATA_LIST,
+#            **params_net_linkpred,
+#            **params_train_test_split
+#        )
 
 
 rule figs:
     input:
         FIG_AUCROC,
-        FIG_DEGSKEW_AUCDIFF,
-        FIG_NODES_AUCDIFF,
-        FIG_DEGSKEW_AUCDIFF_NODESIZE,
-        FIG_PREC_RECAL_F1
+        #FIG_DEGSKEW_AUCDIFF,
+        #FIG_NODES_AUCDIFF,
+        #FIG_DEGSKEW_AUCDIFF_NODESIZE,
+        #FIG_PREC_RECAL_F1
 
 # ============================
 # Cleaning networks
@@ -334,6 +336,14 @@ rule clean_networks:
         edge_table_file=EDGE_TABLE_FILE,
     script:
         "workflow/clean_networks.py"
+
+rule calc_network_stats:
+    input:
+        input_files = expand(EDGE_TABLE_FILE, data = DATA_LIST)
+    output:
+        output_file = NET_STAT_FILE
+    script:
+        "workflow/calc-network-stats.py"
 
 # ============================
 # Optimal stacking

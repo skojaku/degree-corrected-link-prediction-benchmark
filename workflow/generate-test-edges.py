@@ -2,7 +2,8 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-17 03:57:05
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-11 17:43:53
+# @Last Modified time: 2023-05-04 05:43:02
+# %%
 import numpy as np
 import pandas as pd
 from scipy import sparse
@@ -17,7 +18,12 @@ if "snakemake" in sys.modules:
     train_net_file = snakemake.input["train_net_file"]
     output_target_edge_table_file = snakemake.output["output_target_edge_table_file"]
 else:
-    input_file = "../data/"
+    data = "wiki-Vote"
+    edge_table_file = f"../data/derived/networks/preprocessed/{data}/edge_table.csv"
+    parameters = {"negativeEdgeSampler": "uniform"}
+    train_net_file = (
+        f"../data/derived/datasets/{data}/train-net_testEdgeFraction~0.5_sampleId~1.npz"
+    )
     output_file = "../data/"
 
 # =================
@@ -55,7 +61,7 @@ model.fit(net)
 test_src, test_trg = np.concatenate([test_src, test_trg]), np.concatenate(
     [test_trg, test_src]
 )
-neg_src, neg_trg = model.sampling(source_nodes=test_src)
+neg_src, neg_trg = model.sampling(source_nodes=test_src, size=len(test_src))
 
 # ===============
 # Save

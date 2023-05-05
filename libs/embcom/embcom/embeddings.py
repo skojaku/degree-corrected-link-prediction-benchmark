@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-04 22:33:04
+# @Last Modified time: 2023-05-04 22:33:33
 """Module for embedding."""
 # %%
 import gensim
@@ -739,9 +739,7 @@ class SpectralGraphTransformation(NodeEmbeddings):
 
     References
     ----------
-    .. [1] Yan, X., Tang, J., & Liu, H. (2009).
-           Link prediction approach to collaborative filtering.
-           Proceedings of the third ACM conference on Recommender systems, 141-148.
+    - https://dl.acm.org/doi/abs/10.1145/1553374.1553447
     """
 
     def __init__(self, kernel_func="exp", kernel_matrix="A"):

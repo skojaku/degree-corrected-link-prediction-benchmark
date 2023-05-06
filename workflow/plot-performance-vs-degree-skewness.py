@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 11:38:32
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 13:05:03
+# @Last Modified time: 2023-05-05 15:15:39
 # %%
 import numpy as np
 import pandas as pd
@@ -14,11 +14,10 @@ if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
     output_file = snakemake.output["output_file"]
 else:
-    auc_roc_table_file = "../../data/derived/results/result_auc_roc.csv"
-    ranking_table_file = "../../data/derived/results/result_ranking.csv"
-    net_stat_file = "../../data/derived/networks/network-stats.csv"
-    output_file = "../data/opt_stack_auc_roc.png"
-    metric_name = "AUCROC+uniform"
+    auc_roc_table_file = "../data/derived/results/result_auc_roc.csv"
+    ranking_table_file = "../data/derived/results/result_ranking.csv"
+    net_stat_file = "../data/derived/networks/network-stats.csv"
+    output_file = "../figs/performance_vs_degree_kurtosis.pdf"
 
 # ========================
 # Load
@@ -99,4 +98,4 @@ for i, col in enumerate(col_order):
     g.axes[i].set_ylabel(col)
     g.axes[i].set_xlabel("Degree heterogeneity (kurtosis)")
 g.figure.subplots_adjust(wspace=0.4)
-# g.fig.savefig(output_file, bbox_inches="tight", dpi=300)
+g.fig.savefig(output_file, bbox_inches="tight", dpi=300)

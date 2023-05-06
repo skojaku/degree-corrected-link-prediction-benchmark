@@ -2,7 +2,8 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 11:36:44
+# @Last Modified time: 2023-05-05 15:17:26
+# %%
 import numpy as np
 import pandas as pd
 import sys
@@ -15,8 +16,11 @@ if "snakemake" in sys.modules:
     negativeEdgeSampler = snakemake.params["parameters"]["negativeEdgeSampler"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "score_quantile_table.csv"
+    input_file = "../data/derived/results/result_quantile_ranking.csv"
     negativeEdgeSampler = "uniform"
+    output_file = (
+        f"../figs/quantile_ranking_negativeEdgeSampler~{negativeEdgeSampler}.pdf"
+    )
 
 # ========================
 # Load

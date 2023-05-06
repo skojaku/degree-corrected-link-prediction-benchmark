@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 14:50:30
+# @Last Modified time: 2023-05-06 05:44:24
 """Loads and preprocesses tables of AUC-ROC scores, rankings, and
 network statistics, computes the quantiles of the scores among models
 for each dataset/metric combination, and creates a new table containing
@@ -19,10 +19,11 @@ if "snakemake" in sys.modules:
     auc_roc_table_file = snakemake.input["auc_roc_table_file"]
     ranking_table_file = snakemake.input["ranking_table_file"]
     net_stat_file = snakemake.input["net_stat_file"]
+    output_file = snakemake.output["output_file"]
 else:
-    auc_roc_table_file = "../../data/derived/results/result_auc_roc.csv"
-    ranking_table_file = "../../data/derived/results/result_ranking.csv"
-    output_file = "score_quantile_table.csv"
+    auc_roc_table_file = "../data/derived/results/result_auc_roc.csv"
+    ranking_table_file = "../data/derived/results/result_ranking.csv"
+    output_file = "../data/derived/results/result_quantile_ranking.csv"
 
 # ========================
 # Load
@@ -62,15 +63,5 @@ for (data, metric), df in ranking_table.groupby(["data", "metric"]):
     df = df.groupby(["model", "data", "metric"]).mean(numeric_only=True).reset_index()
     results.append(df)
 results = pd.concat(results)
-## %%
-# data_table = results.pivot(
-#    columns="metric",
-#    values="quantile",
-#    index=[
-#        "data",
-#        # "sampleId",
-#        "model",
-#    ],
-# ).reset_index()
 
 results.to_csv(output_file, sep=",", index=False)

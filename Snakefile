@@ -269,6 +269,7 @@ FIG_DEGSKEW_AUCDIFF_NODESIZE = j(RESULT_DIR, "figs", "corr_degskew_aucdiff_nodes
 FIG_PREC_RECAL_F1 =j(RESULT_DIR, "figs", "prec-recall-f1.pdf")
 FIG_DEG_DEG_PLOT =j(RESULT_DIR, "figs", "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
 FIG_QUANTILE_RANKING=j(RESULT_DIR, "figs", "quantile_ranking_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
+FIG_PERF_VS_KURTOSIS_PLOT=j(RESULT_DIR, "figs", "performance_vs_degree_kurtosis.pdf")
 #
 #
 # RULES
@@ -326,6 +327,7 @@ rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
         expand(FIG_QUANTILE_RANKING, **params_negative_edge_sampler),
+        FIG_PERF_VS_KURTOSIS_PLOT,
         FIG_AUCROC,
         #FIG_DEGSKEW_AUCDIFF,
         #FIG_NODES_AUCDIFF,
@@ -668,7 +670,18 @@ rule calc_deg_deg_plot:
     output:
         output_file=FIG_DEG_DEG_PLOT,
     script:
-        "workflow/plot-deg-deg-plot"
+        "workflow/plot-deg-deg-plot.py"
+
+
+rule calc_deg_skewness_plot:
+    input:
+        auc_roc_table_file =  LP_ALL_AUCROC_SCORE_FILE,
+        ranking_table_file = LP_ALL_RANKING_SCORE_FILE,
+        net_stat_file = NET_STAT_FILE
+    output:
+        output_file=FIG_PERF_VS_KURTOSIS_PLOT,
+    script:
+        "workflow/plot-performance-vs-degree-skewness.py"
 
 rule plot_node2vec_vs_pa_ranking:
     input:

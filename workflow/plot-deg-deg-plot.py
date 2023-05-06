@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-03 08:52:00
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 14:57:33
+# @Last Modified time: 2023-05-05 15:15:09
 # %%
 """
 This Python script is a visualization code that reads an edge table
@@ -23,9 +23,11 @@ if "snakemake" in sys.modules:
     negativeEdgeSampler = snakemake.params["negativeEdgeSampler"]
     output_file = snakemake.output["output_file"]
 else:
-    net_file = "../../data/derived/networks/preprocessed/airport-rach/edge_table.csv"
+    edge_table_file = (
+        "../data/derived/networks/preprocessed/airport-rach/edge_table.csv"
+    )
     negativeEdgeSampler = "uniform"
-    output_file = "../data/opt_stack_auc_roc.png"
+    output_file = f"../figs/deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf"
 
 # ========================
 # Load

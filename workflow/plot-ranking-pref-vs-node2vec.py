@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 15:17:26
+# @Last Modified time: 2023-05-06 06:43:22
 # %%
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ import itertools
 
 if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
-    negativeEdgeSampler = snakemake.params["parameters"]["negativeEdgeSampler"]
+    negativeEdgeSampler = snakemake.params["negativeEdgeSampler"]
     output_file = snakemake.output["output_file"]
 else:
     input_file = "../data/derived/results/result_quantile_ranking.csv"
@@ -33,6 +33,7 @@ data_table = pd.read_csv(input_file)
 
 
 # Subsetting and styling
+n_models = len(data_table["model"].unique())
 plot_data = data_table.copy()
 plot_data = (
     plot_data.query("model in ['preferentialAttachment', 'node2vec']")
@@ -51,7 +52,7 @@ model2label = {
 plot_data["model"] = plot_data["model"].map(model2label)
 
 plot_data = plot_data.pivot(
-    columns=["metric"], index=["data", "model"], values=["quantile"]
+    columns=["metric"], index=["data", "model"], values=["rank"]
 )
 plot_data.columns = plot_data.columns.get_level_values(1)
 plot_data = plot_data.reset_index()
@@ -69,12 +70,17 @@ cmap = sns.color_palette("Set3").as_hex()
 
 
 def plot(ranking_metric, negativeEdgeSampler, legend, ax):
+    margin = n_models * 0.15
     ax.add_patch(
         Polygon(
-            [[-0.15, -0.15], [1.15, 1.15], [1.15, -0.15]],
+            [
+                [-margin, -margin],
+                [n_models + margin, n_models + margin],
+                [n_models + margin, -margin],
+            ],
             closed=True,
             fill=True,
-            facecolor=cmap[1] + "44",
+            facecolor=cmap[3] + "44",
         )
     )
     ax.annotate(
@@ -88,10 +94,14 @@ def plot(ranking_metric, negativeEdgeSampler, legend, ax):
 
     ax.add_patch(
         Polygon(
-            [[-0.15, -0.15], [-0.15, 1.15], [1.15, 1.15]],
+            [
+                [-margin, -margin],
+                [-margin, n_models + margin],
+                [n_models + margin, n_models + margin],
+            ],
             closed=True,
             fill=True,
-            facecolor=cmap[3] + "44",
+            facecolor=cmap[1] + "44",
         )
     )
     ax.annotate(
@@ -102,22 +112,37 @@ def plot(ranking_metric, negativeEdgeSampler, legend, ax):
         xycoords="axes fraction",
         fontsize=16,
     )
-    ax.plot([-0.15, 1.15], [-0.15, 1.15], ls=":", color="#4d4d4d")
-
+    ax.plot(
+        [-margin, n_models + margin],
+        [-margin, n_models + margin],
+        ls=":",
+        color="#4d4d4d",
+    )
+    df = (
+        plot_data.groupby(
+            [f"AUCROC+{negativeEdgeSampler}", f"{ranking_metric}", "model"]
+        )
+        .size()
+        .reset_index(name="sz")
+    )
     ax = sns.scatterplot(
-        data=plot_data,
+        data=df,
+        # data=plot_data,
         y=f"AUCROC+{negativeEdgeSampler}",
         x=f"{ranking_metric}",
         hue="model",
         edgecolor="k",
+        size="sz",
+        sizes=(30, 100),
         s=40,
-        alpha=0.8,
         ax=ax,
     )
-    ax.set_xlim(-0.05, 1.05)
-    ax.set_ylim(-0.15, 1.15)
-    ax.set_xlabel(f"Quantile ({ranking_metric})")
-    ax.set_ylabel("Quantile (AUC-ROC)")
+    ax.set_xlim(-margin / 3, n_models + margin / 3)
+    ax.set_ylim(-margin, n_models + margin)
+    ax.invert_xaxis()
+    ax.invert_yaxis()
+    ax.set_ylabel("Rank (AUC-ROC)")
+    ax.set_xlabel(f"Rank ({ranking_metric})")
     if legend is False:
         ax.legend().remove()
     # ax.legend(frameon=False, loc="upper center", bbox_to_anchor=(0.5, -0.15), ncols=2)
@@ -164,3 +189,5 @@ sns.move_legend(
 )
 g.set_titles("")
 g.fig.savefig(output_file, bbox_inches="tight", dpi=300)
+
+# %%

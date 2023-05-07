@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 11:38:32
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 15:15:39
+# @Last Modified time: 2023-05-06 05:50:20
 # %%
 import numpy as np
 import pandas as pd
@@ -11,7 +11,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 if "snakemake" in sys.modules:
-    input_file = snakemake.input["input_file"]
+    auc_roc_table_file = snakemake.input["auc_roc_table_file"]
+    ranking_table_file = snakemake.input["ranking_table_file"]
+    net_stat_file = snakemake.input["net_stat_file"]
     output_file = snakemake.output["output_file"]
 else:
     auc_roc_table_file = "../data/derived/results/result_auc_roc.csv"

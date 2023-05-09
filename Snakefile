@@ -270,6 +270,7 @@ FIG_PREC_RECAL_F1 =j(RESULT_DIR, "figs", "prec-recall-f1.pdf")
 FIG_DEG_DEG_PLOT =j(RESULT_DIR, "figs", "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
 FIG_QUANTILE_RANKING=j(RESULT_DIR, "figs", "quantile_ranking_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
 FIG_PERF_VS_KURTOSIS_PLOT=j(RESULT_DIR, "figs", "performance_vs_degree_kurtosis.pdf")
+FIG_RANKING_SIMILARITY=j(RESULT_DIR, "figs", "ranking-similarity-similarityMetric~{similarityMetric}.pdf")
 #
 #
 # RULES
@@ -327,6 +328,7 @@ rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
         expand(FIG_QUANTILE_RANKING, **params_negative_edge_sampler),
+        expand(FIG_RANKING_SIMILARITY, similarityMetric = ["RBO", "Spearmanr"]),
         FIG_PERF_VS_KURTOSIS_PLOT,
         FIG_AUCROC,
         #FIG_DEGSKEW_AUCDIFF,
@@ -692,6 +694,16 @@ rule plot_node2vec_vs_pa_ranking:
         output_file=FIG_QUANTILE_RANKING,
     script:
         "workflow/plot-ranking-pref-vs-node2vec.py"
+
+rule plot_ranking_correlation:
+    input:
+        input_file=LP_ALL_QUANTILE_RANKING_FILE,
+    params:
+        similarityMetric = lambda wildcards: wildcards.similarityMetric
+    output:
+        output_file=FIG_RANKING_SIMILARITY,
+    script:
+        "workflow/plot-ranking-similarity.py"
 
 rule plot_aucroc:
     input:

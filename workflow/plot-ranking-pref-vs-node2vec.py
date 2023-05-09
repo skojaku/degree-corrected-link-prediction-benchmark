@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-06 06:43:22
+# @Last Modified time: 2023-05-08 21:39:45
 # %%
 import numpy as np
 import pandas as pd
@@ -178,8 +178,7 @@ for i, ax in enumerate(g.axes.flat):
         ax=ax,
         legend=i == len(ranking_metrics) - 3,
     )
-sns.move_legend(
-    g.axes[len(ranking_metrics) - 3],
+g.axes[len(ranking_metrics) - 3].legend(
     loc="upper center",
     bbox_to_anchor=(1.08, -0.15),
     title="",

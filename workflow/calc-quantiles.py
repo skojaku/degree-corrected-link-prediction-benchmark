@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-06 06:43:48
+# @Last Modified time: 2023-05-08 21:35:00
 """Loads and preprocesses tables of AUC-ROC scores, rankings, and
 network statistics, computes the quantiles of the scores among models
 for each dataset/metric combination, and creates a new table containing
@@ -39,14 +39,13 @@ ranking_table = pd.read_csv(
 # ========================
 # Preprocessing
 # ========================
-
-
-# %%
 #
 # Compute the ranking
 #
 results = []
-for (data, negSampler), df in aucroc_table.groupby(["data", "negativeEdgeSampler"]):
+for (data, negSampler, _), df in aucroc_table.groupby(
+    ["data", "negativeEdgeSampler", "sampleId"]
+):
     df = (
         df.groupby(["data", "negativeEdgeSampler", "model"])
         .mean(numeric_only=True)
@@ -58,14 +57,14 @@ for (data, negSampler), df in aucroc_table.groupby(["data", "negativeEdgeSampler
     df["metric"] = "AUCROC+" + df["negativeEdgeSampler"]
     results.append(df)
 
-for (data, metric), df in ranking_table.groupby(["data", "metric"]):
+for (data, metric, _), df in ranking_table.groupby(["data", "metric", "sampleId"]):
     df = df.groupby(["model", "data", "metric"]).mean(numeric_only=True).reset_index()
     df = df.sort_values(by="score")
     df["quantile"] = np.arange(df.shape[0]) / (df.shape[0] - 1)
     df["rank"] = df.shape[0] - np.arange(df.shape[0])
     results.append(df)
 results = pd.concat(results)
-# %%
+
 # data_table = results.pivot(
 #    columns="metric",
 #    values="quantile",

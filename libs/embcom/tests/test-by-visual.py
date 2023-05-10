@@ -45,9 +45,17 @@ net, labels, node_table = load_airport_net()
 #
 # Embedding
 #
-model = embcom.SpectralGraphTransformation()
-model.fit(net)
-emb = model.transform(dim=64)
+device = embcom.gnns.get_gpu_id()
+feature_dim = 64
+dim_h = 128 
+dim = 64
+gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
+gnn = embcom.gnns.train(
+    model=gnn, feature_vec=None, net=net, device=device, epochs=100
+)
+emb = gnn.generate_embedding(feature_vec=None, net=network, device=device)
+#model.fit(net)
+#emb = model.transform(dim=64)
 
 # %%
 np.sum(emb @ emb.T, axis=1)

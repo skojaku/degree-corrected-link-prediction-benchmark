@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-10 04:51:58
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 06:52:52
+# @Last Modified time: 2023-05-10 08:59:41
 # %%
 import numpy as np
 from scipy import sparse
@@ -15,7 +15,7 @@ import torch_geometric.transforms as T
 from torch_geometric.nn import GCNConv, SAGEConv, GATConv
 from torch_geometric.data import Data
 from torch_geometric.loader import ClusterData, ClusterLoader
-
+import GPUtil
 
 #
 # Models
@@ -115,7 +115,7 @@ class GNNBase(torch.nn.Module):
         logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
         return logits
 
-    def generate_embedding(net, feature_vec=None, device="cpu"):
+    def generate_embedding(self, net, feature_vec=None, device="cpu"):
         """Generate embeddings using a specified network model.
 
         Parameters
@@ -382,3 +382,17 @@ def train(
     # Set the model in evaluation mode and return
     model.eval()
     return model
+
+
+def get_gpu_id(excludeID=[]):
+    device = GPUtil.getFirstAvailable(
+        order="random",
+        maxLoad=1,
+        maxMemory=0.3,
+        attempts=99999,
+        interval=60 * 1,
+        verbose=False,
+        excludeID=excludeID,
+    )[0]
+    device = f"cuda:{device}"
+    return device

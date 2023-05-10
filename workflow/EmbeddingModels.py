@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 06:56:55
+# @Last Modified time: 2023-05-10 09:00:40
 
 from sklearn.decomposition import PCA
 import embcom
@@ -68,8 +68,10 @@ def modspec(network, dim):
 
 
 @embedding_model
-def GCN(network, dim, feature_dim=64, device="cuda:0", dim_h=128):
-    gnn = embcom.gnns.GCN(dim_in=feature_dim, dim_h=dim_h, dim_out=feature_dim)
+def GCN(network, dim, feature_dim=64, device=None, dim_h=128):
+    if device is None:
+        device = embcom.gnns.get_gpu_id()
+    gnn = embcom.gnns.GCN(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
     gnn = embcom.gnns.train(
         model=gnn, feature_vec=None, net=network, device=device, epochs=100
     )
@@ -77,8 +79,10 @@ def GCN(network, dim, feature_dim=64, device="cuda:0", dim_h=128):
 
 
 @embedding_model
-def GraphSAGE(network, dim, feature_dim=64, device="cuda:0", dim_h=128):
-    gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=feature_dim)
+def GraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
+    if device is None:
+        device = embcom.gnns.get_gpu_id()
+    gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
     gnn = embcom.gnns.train(
         model=gnn, feature_vec=None, net=network, device=device, epochs=100
     )
@@ -86,8 +90,10 @@ def GraphSAGE(network, dim, feature_dim=64, device="cuda:0", dim_h=128):
 
 
 @embedding_model
-def GAT(network, dim, feature_dim=64, device="cuda:1", dim_h=128):
-    gnn = embcom.gnns.GAT(dim_in=feature_dim, dim_h=dim_h, dim_out=feature_dim)
+def GAT(network, dim, feature_dim=64, device=None, dim_h=128):
+    if device is None:
+        device = embcom.gnns.get_gpu_id()
+    gnn = embcom.gnns.GAT(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
     gnn = embcom.gnns.train(
         model=gnn, feature_vec=None, net=network, device=device, epochs=100
     )

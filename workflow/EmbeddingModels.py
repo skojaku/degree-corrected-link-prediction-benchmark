@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 04:55:04
+# @Last Modified time: 2023-05-10 06:56:55
 
 from sklearn.decomposition import PCA
 import embcom
@@ -69,35 +69,29 @@ def modspec(network, dim):
 
 @embedding_model
 def GCN(network, dim, feature_dim=64, device="cuda:0", dim_h=128):
-    """
-    Parameters
-    ----------
-    network: adjacency matrix
-    feature_dim: dimension of features
-    dim: dimension of embedding vectors
-    dim_h : dimension of hidden layer
-    device : device
-
-    """
-
-    model = embcom.embeddings.LaplacianEigenMap()
-    model.fit(network)
-    features = model.transform(dim=feature_dim)
-
-    model_GCN, data = embcom.gnns.GCN(feature_dim, dim_h, dim).to(
-        device
-    ), torch.from_numpy(features).to(dtype=torch.float, device=device)
-    model_trained = embcom.gnns.train(model_GCN, data, network, device)
-
-    network_c = network.tocoo()
-
-    edge_list_gcn = torch.from_numpy(np.array([network_c.row, network_c.col])).to(
-        device
+    gnn = embcom.gnns.GCN(dim_in=feature_dim, dim_h=dim_h, dim_out=feature_dim)
+    gnn = embcom.gnns.train(
+        model=gnn, feature_vec=None, net=network, device=device, epochs=100
     )
+    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
 
-    embeddings = model_trained(data, edge_list_gcn)
 
-    return embeddings.detach().cpu().numpy()
+@embedding_model
+def GraphSAGE(network, dim, feature_dim=64, device="cuda:0", dim_h=128):
+    gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=feature_dim)
+    gnn = embcom.gnns.train(
+        model=gnn, feature_vec=None, net=network, device=device, epochs=100
+    )
+    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
+
+
+@embedding_model
+def GAT(network, dim, feature_dim=64, device="cuda:1", dim_h=128):
+    gnn = embcom.gnns.GAT(dim_in=feature_dim, dim_h=dim_h, dim_out=feature_dim)
+    gnn = embcom.gnns.train(
+        model=gnn, feature_vec=None, net=network, device=device, epochs=100
+    )
+    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
 
 
 #

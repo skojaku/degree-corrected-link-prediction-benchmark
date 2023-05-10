@@ -2,7 +2,8 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-10 04:51:58
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 04:59:45
+# @Last Modified time: 2023-05-10 06:52:52
+# %%
 import numpy as np
 from scipy import sparse
 import pandas as pd
@@ -11,12 +12,18 @@ from tqdm import tqdm
 import torch
 from torch_geometric.utils import negative_sampling
 import torch_geometric.transforms as T
-from torch_geometric.nn import GCNConv
+from torch_geometric.nn import GCNConv, SAGEConv, GATConv
 from torch_geometric.data import Data
+from torch_geometric.loader import ClusterData, ClusterLoader
 
 
-class GCN(torch.nn.Module):
-    """A python class for the GCN.
+#
+# Models
+#
+
+
+class GNNBase(torch.nn.Module):
+    """A python class for Graph neural networks
 
     Parameters
     ----------
@@ -24,200 +31,354 @@ class GCN(torch.nn.Module):
     dim_out: dimension of out vector
     dim_h : dimension of hidden layer
 
+    Example
+    ----------
+    >> import networkx as nx
+    >> G = nx.karate_club_graph()
+    >> A = nx.adjacency_matrix(G)
+    >> labels = np.unique([d[1]["club"] for d in G.nodes(data=True)], return_inverse=True)[1]
+    >> model.fit(A)
+    >> gnn_model = GAT(dim_in=4, dim_h=128, dim_out=64)
+    >> gnn_model = train(
+    >>     model=gnn_model,
+    >>     feature_vec=None,
+    >>     net=A,
+    >>     device="cuda:0",
+    >>     epochs=100,
+    >> )
+    >> emb = gnn_model.generate_embedding(feature_vec=None, net=A, device="cuda:0")
     """
 
-    def __init__(self, dim_in, dim_h, dim_out):
-        super(GCN, self).__init__()
-        self.conv1 = GCNConv(dim_in, dim_h)
-        self.conv2 = GCNConv(dim_h, dim_out)
+    def __init__(self, dim_in, dim_out):
+        """
+        Initializes the GNNBase object.
+
+        Parameters
+        ----------
+        dim_in : int
+            The input dimension of the GNN.
+        dim_out : int
+            The output dimension of the GNN.
+
+        Returns
+        -------
+        None
+        """
+        super(GNNBase, self).__init__()
+        self.conv1 = None
+        self.conv2 = None
+        self.dim_in = dim_in
+        self.dim_out = dim_out
+        self.base_emb = None
 
     def forward(self, x, positive_edge_index):
+        """
+        Perform the forward pass through the graph convolutional network.
+
+        Parameters
+        ----------
+        x : torch.Tensor
+            Node feature matrix of shape (num_nodes, input_dim).
+        positive_edge_index : torch.Tensor
+            Edge index tensor of shape (2, num_edges). Specifies the indices of the nodes connected by each edge.
+
+        Returns
+        -------
+        torch.Tensor
+            The output node feature matrix of shape (num_nodes, output_dim) after passing through the GCN.
+        """
         h = self.conv1(x, positive_edge_index)
         h = h.relu()
         h = self.conv2(h, positive_edge_index)
         return h
 
-    def decode(self, z, pos_edge_index, neg_edge_index):  # only pos and neg edges
+    def decode(self, z, pos_edge_index, neg_edge_index):
+        """
+        Decodes the graph by computing dot products for positive and negative edges.
+
+        Parameters
+        ----------
+        z (torch.Tensor): Node embeddings of shape [num_nodes, hidden_channels].
+        pos_edge_index (torch.Tensor): Tensor of shape [2, num_pos_edges] representing the
+            indices of positive edges.
+        neg_edge_index (torch.Tensor): Tensor of shape [2, num_neg_edges] representing the
+            indices of negative edges.
+
+        Returns
+        -------
+            logits (torch.Tensor): Tensor of shape [num_pos_edges + num_neg_edges] representing the
+                dot product between node embeddings for each edge.
+        """
         edge_index = torch.cat(
             [pos_edge_index, neg_edge_index], dim=-1
         )  # concatenate pos and neg edges
         logits = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=-1)  # dot product
         return logits
 
+    def generate_embedding(net, feature_vec=None, device="cpu"):
+        """Generate embeddings using a specified network model.
 
-def get_link_labels(pos_edge_index, neg_edge_index, device):
-    # returns a tensor:
-    # [1,1,1,1,...,0,0,0,0,0,..] with the number of ones is equel to the lenght of pos_edge_index
-    # and the number of zeros is equal to the length of neg_edge_index
-    E = pos_edge_index.size(1) + neg_edge_index.size(1)
-    link_labels = torch.zeros(E, dtype=torch.float, device=device)
-    link_labels[: pos_edge_index.size(1)] = 1.0
-    return link_labels
+        Parameters
+        ----------
+            net (sparse matrix): The input sparse matrix.
+            feature_vec (ndarray, optional): The initial feature vector. If not provided,
+                the base embedding will be used instead. Defaults to None.
+            device (str, optional): The device to use for computations. Defaults to "cpu".
+
+        Returns
+        -------
+            ndarray: The resulting embeddings as a numpy array on the CPU.
+        """
+        rows, cols, _ = sparse.find(
+            net
+        )  # Find the row and column indices of non-zero elements in the sparse matrix
+        edge_index = torch.LongTensor(
+            np.array([rows.astype(int), cols.astype(int)])
+        ).to(
+            device
+        )  # Convert the indices to a tensor and move it to the specified device
+
+        if feature_vec is None:
+            if self.base_emb is None:
+                self.generate_base_embedding(net)
+            feature_vec = self.base_emb
+
+        embeddings = self.forward(
+            torch.FloatTensor(feature_vec).to(device), edge_index
+        )  # Generate embeddings using the model
+        return (
+            embeddings.detach().cpu().numpy()
+        )  # Detach the embeddings from the computation graph and convert it to a numpy array on the CPU
+
+    def generate_base_embedding(self, A):
+        """
+        Compute the base embedding using the input adjacency matrix.
+
+        Parameters
+        ----------
+        A (numpy.ndarray): Input adjacency matrix
+
+        Returns
+        -------
+        numpy.ndarray: Base embedding computed using normalized laplacian matrix
+        """
+        # Compute the (inverse) normalized laplacian matrix
+        deg = np.array(A.sum(axis=1)).reshape(-1)
+        Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
+        L = Dsqrt @ A @ Dsqrt
+        L.setdiag(1)
+
+        s, u = sparse.linalg.eigs(L, k=self.dim_in + 1, which="LR")
+        s, u = np.real(s), np.real(u)
+        order = np.argsort(-s)[1:]
+        s, u = s[order], u[:, order]
+        Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
+        base_emb = Dsqrt @ u @ sparse.diags(np.sqrt(np.abs(s)))
+        self.base_emb = base_emb
+        return base_emb
 
 
-def train(model, data, adjacency, device, epochs=1000, negative_edge_sampler=None):
-    #
-    # Create the dataset
-    #
+class GCN:
+    """
+    A Graph Convolutional Network (GCN) implemented using PyTorch.
 
-    # To edge list
-    adj_c = adjacency.tocoo()
-    edge_list_torch = torch.from_numpy(np.array([adj_c.row, adj_c.col])).to(device)
+    Parameters
+    ----------
+    dim_in : int
+        The number of input features.
+    dim_h : int
+        The number of hidden units.
+    dim_out : int
+        The number of output features.
 
+    Attributes
+    ----------
+    conv1 : GCNConv
+        The first graph convolutional layer.
+    conv2 : GCNConv
+        The second graph convolutional layer.
+    """
+
+    def __init__(self, dim_in, dim_h, dim_out):
+        """
+        Initializes a new instance of the GCN class.
+
+        Parameters
+        ----------
+        dim_in : int
+            The number of input features.
+        dim_h : int
+            The number of hidden units.
+        dim_out : int
+            The number of output features.
+        """
+        super(GCN, self).__init__(dim_in, dim_out)
+        self.conv1 = GCNConv(dim_in, dim_h)
+        self.conv2 = GCNConv(dim_h, dim_out)
+
+
+class GraphSAGE(GNNBase):
+    """
+    Implementation of the GraphSAGE model for graph neural networks.
+
+    Parameters:
+    -----------
+    dim_in : int
+        Number of input features.
+    dim_h : int
+        Number of hidden features.
+    dim_out : int
+        Number of output features.
+
+    Attributes:
+    -----------
+    conv1 : SAGEConv
+        First GraphSAGE convolutional layer.
+    conv2 : SAGEConv
+        Second GraphSAGE convolutional layer.
+
+    Returns:
+    --------
+    None
+    """
+
+    def __init__(self, dim_in, dim_h, dim_out):
+        super(GraphSAGE, self).__init__(dim_in, dim_out)
+        self.conv1 = SAGEConv(dim_in, dim_h, project=True, aggr="max")
+        self.conv2 = SAGEConv(dim_h, dim_out)
+
+
+class GAT(GNNBase):
+    """
+    Implementation of the GAT model for graph neural networks.
+
+    Parameters:
+    -----------
+    dim_in : int
+        Number of input features.
+    dim_h : int
+        Number of hidden features.
+    dim_out : int
+        Number of output features.
+
+    Attributes:
+    -----------
+    conv1 : GATConv
+        First GAT convolutional layer.
+    conv2 : GATConv
+        Second GAT convolutional layer.
+
+    Returns:
+    --------
+    None
+    """
+
+    def __init__(self, dim_in, dim_h, dim_out):
+        super(GAT, self).__init__(dim_in, dim_out)
+        self.conv1 = GATConv(dim_in, dim_h, dropout=0.2)
+        self.conv2 = GATConv(dim_h, dim_out, dropout=0.2)
+
+
+#
+# Utilities
+#
+def train(
+    model: torch.nn.Module,
+    feature_vec: np.ndarray,
+    net: sparse.spmatrix,
+    device: str,
+    epochs: int,
+    negative_edge_sampler=None,
+    batch_size: int = 500,
+) -> torch.nn.Module:
+    """
+    Train a PyTorch model on a given graph dataset using minibatch stochastic gradient descent with negative sampling.
+
+    Parameters
+    ----------
+    model : nn.Module
+        A PyTorch module representing the model to be trained.
+    feature_vec : np.ndarray
+        A numpy array of shape (num_nodes, num_features) containing the node feature vectors for the graph.
+    net : sp.spmatrix
+        A scipy sparse matrix representing the adjacency matrix of the graph.
+    device : str
+        The device to use for training the model.
+    epochs : int
+        The number of epochs to train the model for.
+    negative_edge_sampler : Callable, optional
+        A function that samples negative edges given positive edges and the number of nodes in the graph.
+        If unspecified, a default negative sampling function is used.
+    batch_size : int, optional
+        The number of nodes in each minibatch.
+
+    Returns
+    -------
+    nn.Module
+        The trained model.
+    """
+
+    # Convert sparse adjacency matrix to edge list format
+    r, c, _ = sparse.find(net)
+    edge_index = torch.LongTensor(np.array([r.astype(int), c.astype(int)]))
+
+    # Create PyTorch data object with features and edge list
+    if feature_vec is None:
+        feature_vec = model.generate_base_embedding(net)
+
+    data = Data(x=torch.FloatTensor(feature_vec), edge_index=edge_index)
+
+    # Move the model to the specified device
+    model.to(device)
+
+    # Set up minibatching for the data using a clustering algorithm
+    n_nodes = net.shape[0]
+    num_sub_batches = 5
+    batch_size = np.minimum(n_nodes, batch_size)
+    cluster_data = ClusterData(
+        data, num_parts=int(np.floor(n_nodes / batch_size) * num_sub_batches)
+    )  # 1. Create subgraphs.
+    train_loader = ClusterLoader(
+        cluster_data, batch_size=num_sub_batches, shuffle=True
+    )  # 2. Stochastic partioning scheme.
+
+    # Use default negative sampling function if none is specified
+    if negative_edge_sampler is None:
+        negative_edge_sampler = negative_sampling
+
+    # Set the model in training mode and initialize optimizer
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-    for epoch in tqdm(range(epochs + 1)):
-        if negative_edge_sampler is None:
-            neg_edge_index = negative_sampling(
-                edge_index=edge_list_torch,  # positive edges
-                num_nodes=data.shape[0],  # number of nodes
-                num_neg_samples=edge_list_torch.size(1),
-            )
-        else:
+
+    # Train the model for the specified number of epochs
+    for epoch in tqdm(range(epochs)):
+        # Iterate over minibatches of the data
+        for sub_data in train_loader:
+            # Sample negative edges using specified or default sampler
+            pos_edge_index = sub_data.edge_index.to(device)  # positive edges
+            node_feature_vec = sub_data.x.to(device)
             neg_edge_index = negative_edge_sampler(
-                edge_index=edge_list_torch,  # positive edges
-                num_nodes=data.shape[0],  # number of nodes
-                num_neg_samples=edge_list_torch.size(1),
+                edge_index=pos_edge_index,
+                num_nodes=node_feature_vec.shape[0],
+                num_neg_samples=pos_edge_index.size(1),
             )
 
-        optimizer.zero_grad()
+            # Zero-out gradient, compute embeddings and logits, and calculate loss
+            optimizer.zero_grad()
+            z = model(node_feature_vec, pos_edge_index)
+            link_logits = model.decode(z, pos_edge_index, neg_edge_index)
+            link_labels = torch.zeros(
+                pos_edge_index.size(1) + neg_edge_index.size(1),
+                dtype=torch.float,
+                device=device,
+            )
+            link_labels[: pos_edge_index.size(1)] = 1.0
+            loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
 
-        z = model(data, edge_list_torch)
+            # Compute gradients and update parameters of the model
+            loss.backward()
+            optimizer.step()
 
-        link_logits = model.decode(z, edge_list_torch, neg_edge_index)  # decode
-        link_labels = get_link_labels(edge_list_torch, neg_edge_index, device)
-        loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
-        loss.backward()
-        optimizer.step()
-
+    # Set the model in evaluation mode and return
+    model.eval()
     return model
-
-
-# import stellargraph
-# from tensorflow import keras
-# from stellargraph.data import UnsupervisedSampler
-# from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator
-# class graphSAGE:
-#    """A python class for the GraphSAGE.
-#    Parameters
-#    ----------
-#    num_walks : int (optional, default 1)
-#        Number of walks per node
-#    walk_length : int (optional, default 5)
-#        Length of walks
-#    """
-#
-#    def __init__(
-#        self,
-#        num_walks=1,
-#        walk_length=5,
-#        emb_dim=50,
-#        num_samples=[10, 5],
-#        batch_size=50,
-#        epochs=4,
-#        verbose=False,
-#        feature_dim=50,
-#    ):
-#        self.in_vec = None  # In-vector
-#        self.out_vec = None  # Out-vector
-#        self.feature_vector = None
-#        self.model = None
-#        self.generator = None
-#        self.train_gen = None
-#        self.G = None
-#
-#        self.num_walks = num_walks
-#        self.walk_length = walk_length
-#        self.layer_sizes = [50, emb_dim]
-#        self.num_samples = num_samples
-#        self.batch_size = batch_size
-#        self.epochs = epochs
-#
-#        self.verbose = verbose
-#        self.feature_dim = feature_dim
-#
-#    def fit(self, net):
-#        """Takes a network as an input, transforms it into an adjacency matrix, and generates
-#        feature vectors for nodes and creates a StellarGraph object"""
-#
-#        # transform into an adjacency matrix
-#        A = utils.to_adjacency_matrix(net)
-#
-#        # create node features
-#        self.feature_vector = self.create_feature_vector(
-#            A, feature_dim=self.feature_dim
-#        )
-#
-#        # transform the adjacency matrix into a networkx Graph object
-#        self.G = nx.Graph(A)
-#        nodes = [*self.G.nodes()]
-#
-#        # transform it into a StellarGraph
-#        self.G = stellargraph.StellarGraph.from_networkx(
-#            graph=self.G, node_features=zip(nodes, self.feature_vector)
-#        )
-#
-#        # Create the UnsupervisedSampler instance with the relevant parameters passed to it
-#        unsupervised_samples = UnsupervisedSampler(
-#            self.G, nodes=nodes, length=self.walk_length, number_of_walks=self.num_walks
-#        )
-#
-#        self.generator = GraphSAGELinkGenerator(
-#            self.G, self.batch_size, self.num_samples
-#        )
-#        self.train_gen = self.generator.flow(unsupervised_samples)
-#
-#        return self
-#
-#    def create_feature_vector(self, A, feature_dim):
-#        """Takes an adjacency matrix and generates feature vectors using
-#        Laplacian Eigen Map"""
-#        lapeigen = LaplacianEigenMap(p=100, q=40)
-#        lapeigen.fit(A)
-#        return lapeigen.transform(self.feature_dim, return_out_vector=False)
-#
-#    def train_GraphSAGE(self):
-#        graphsage = GraphSAGE(
-#            layer_sizes=self.layer_sizes,
-#            generator=self.generator,
-#            bias=True,
-#            dropout=0.0,
-#            normalize="l2",
-#        )
-#
-#        self.in_vec, self.out_vec = graphsage.in_out_tensors()
-#
-#        prediction = link_classification(
-#            output_dim=1, output_act="sigmoid", edge_embedding_method="ip"
-#        )(self.out_vec)
-#
-#        self.model = keras.Model(inputs=self.in_vec, outputs=prediction)
-#
-#        self.model.compile(
-#            optimizer=keras.optimizers.Adam(lr=1e-3),
-#            loss=keras.losses.binary_crossentropy,
-#            metrics=[keras.metrics.binary_accuracy],
-#        )
-#
-#        history = self.model.fit(
-#            self.train_gen,
-#            epochs=self.epochs,
-#            verbose=self.verbose,
-#            use_multiprocessing=False,
-#            workers=4,
-#            shuffle=True,
-#        )
-#
-#    def get_embeddings(self):
-#        x_inp_src = self.in_vec[0::2]
-#        x_out_src = self.out_vec[0]
-#        embedding_model = keras.Model(inputs=x_inp_src, outputs=x_out_src)
-#
-#        node_ids = [*self.G.nodes()]
-#        node_gen = GraphSAGENodeGenerator(
-#            self.G, self.batch_size, self.num_samples
-#        ).flow(node_ids)
-#
-#        node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=0)
-#
-#        return node_embeddings

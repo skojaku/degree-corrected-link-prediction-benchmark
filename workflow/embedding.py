@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-31 17:19:09
+# @Last Modified time: 2023-05-10 08:46:51
 # %%
 import sys
 import numpy as np
@@ -17,9 +17,9 @@ if "snakemake" in sys.modules:
     embfile = snakemake.output["output_file"]
     params = snakemake.params["parameters"]
 else:
-    netfile = "../data/derived/datasets/astro-ph/train-net_negativeEdgeSampler~degreeBiased_testEdgeFraction~0.5_sampleId~0.npz"
+    netfile = "../data/derived/datasets/astro-ph/train-net_testEdgeFraction~0.5_sampleId~0.npz"
     embfile = "tmp.npz"
-    params = {"model": "node2vec", "dim": 64}
+    params = {"model": "GCN", "dim": 64}
 
 dim = int(params["dim"])
 model_name = params["model"]

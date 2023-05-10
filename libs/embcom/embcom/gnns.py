@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-10 04:51:58
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 08:59:41
+# @Last Modified time: 2023-05-10 09:37:17
 # %%
 import numpy as np
 from scipy import sparse
@@ -168,12 +168,16 @@ class GNNBase(torch.nn.Module):
         L = Dsqrt @ A @ Dsqrt
         L.setdiag(1)
 
-        s, u = sparse.linalg.eigs(L, k=self.dim_in + 1, which="LR")
+        s, u = sparse.linalg.eigs(L, k=self.dim_in, which="LR")
         s, u = np.real(s), np.real(u)
         order = np.argsort(-s)[1:]
         s, u = s[order], u[:, order]
         Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
         base_emb = Dsqrt @ u @ sparse.diags(np.sqrt(np.abs(s)))
+        mean_norm = np.mean(np.linalg.norm(base_emb, axis=0))
+        _deg = deg / np.sum(deg)
+        _deg = mean_norm * _deg / np.linalg.norm(_deg)
+        base_emb = np.hstack([base_emb, _deg.reshape((-1, 1))])
         self.base_emb = base_emb
         return base_emb
 

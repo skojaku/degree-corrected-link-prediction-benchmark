@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 06:35:19
+# @Last Modified time: 2023-05-10 04:55:04
 
 from sklearn.decomposition import PCA
 import embcom
@@ -84,10 +84,10 @@ def GCN(network, dim, feature_dim=64, device="cuda:0", dim_h=128):
     model.fit(network)
     features = model.transform(dim=feature_dim)
 
-    model_GCN, data = embcom.embeddings.GCN(feature_dim, dim_h, dim).to(
+    model_GCN, data = embcom.gnns.GCN(feature_dim, dim_h, dim).to(
         device
     ), torch.from_numpy(features).to(dtype=torch.float, device=device)
-    model_trained = embcom.train(model_GCN, data, network, device)
+    model_trained = embcom.gnns.train(model_GCN, data, network, device)
 
     network_c = network.tocoo()
 

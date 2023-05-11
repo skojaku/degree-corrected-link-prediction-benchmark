@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-27 17:59:10
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-11 05:08:27
+# @Last Modified time: 2023-05-11 05:10:44
 # %%
 import embcom
 import matplotlib.pyplot as plt
@@ -56,7 +56,7 @@ gnn = embcom.gnns.train(
     net=net,
     negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["uniform"],
     device=device,
-    epochs=500,
+    epochs=1000,
 )
 emb = gnn.generate_embedding(feature_vec=None, net=net, device=device)
 # model.fit(net)

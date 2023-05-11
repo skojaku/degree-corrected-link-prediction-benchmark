@@ -73,7 +73,7 @@ def GCN(network, dim, feature_dim=64, device=None, dim_h=128):
         device = embcom.gnns.get_gpu_id()
     gnn = embcom.gnns.GCN(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
     gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=100
+        model=gnn, feature_vec=None, net=network, device=device, epochs=500
     )
     return gnn.generate_embedding(feature_vec=None, net=network, device=device)
 
@@ -84,7 +84,7 @@ def GraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
         device = embcom.gnns.get_gpu_id()
     gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
     gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=100
+        model=gnn, feature_vec=None, net=network, device=device, epochs=500
     )
     return gnn.generate_embedding(feature_vec=None, net=network, device=device)
 
@@ -95,10 +95,43 @@ def GAT(network, dim, feature_dim=64, device=None, dim_h=128):
         device = embcom.gnns.get_gpu_id()
     gnn = embcom.gnns.GAT(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
     gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=100
+        model=gnn, feature_vec=None, net=network, device=device, epochs=500
     )
     return gnn.generate_embedding(feature_vec=None, net=network, device=device)
 
+
+
+@embedding_model
+def dcGCN(network, dim, feature_dim=64, device=None, dim_h=128):
+    if device is None:
+        device = embcom.gnns.get_gpu_id()
+    gnn = embcom.gnns.GCN(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
+    gnn = embcom.gnns.train(
+        model=gnn, feature_vec=None, net=network, device=device, epochs=500, negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"]
+    )
+    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
+
+
+@embedding_model
+def dcGraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
+    if device is None:
+        device = embcom.gnns.get_gpu_id()
+    gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
+    gnn = embcom.gnns.train(
+        model=gnn, feature_vec=None, net=network, device=device, epochs=500, negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"]
+    )
+    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
+
+
+@embedding_model
+def dcGAT(network, dim, feature_dim=64, device=None, dim_h=128):
+    if device is None:
+        device = embcom.gnns.get_gpu_id()
+    gnn = embcom.gnns.GAT(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
+    gnn = embcom.gnns.train(
+        model=gnn, feature_vec=None, net=network, device=device, epochs=500, negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"]
+    )
+    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
 
 #
 #

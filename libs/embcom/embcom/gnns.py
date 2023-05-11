@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-10 04:51:58
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 09:37:17
+# @Last Modified time: 2023-05-11 05:02:28
 # %%
 import numpy as np
 from scipy import sparse
@@ -284,6 +284,22 @@ class GAT(GNNBase):
 
 
 #
+# negative edge sampling
+#
+def degreeBiasedNegativeEdgeSampling(edge_index, num_nodes, num_neg_samples):
+    t = edge_index.clone().reshape(-1)
+    idx = torch.randperm(t.shape[0])
+    t = t[idx].view(edge_index.size())
+    return t
+
+
+NegativeEdgeSampler = {
+    "degreeBiased": degreeBiasedNegativeEdgeSampling,
+    "uniform": negative_sampling,
+}
+
+
+#
 # Utilities
 #
 def train(
@@ -293,7 +309,7 @@ def train(
     device: str,
     epochs: int,
     negative_edge_sampler=None,
-    batch_size: int = 500,
+    batch_size: int = 2500,
 ) -> torch.nn.Module:
     """
     Train a PyTorch model on a given graph dataset using minibatch stochastic gradient descent with negative sampling.
@@ -359,13 +375,16 @@ def train(
         # Iterate over minibatches of the data
         for sub_data in train_loader:
             # Sample negative edges using specified or default sampler
-            pos_edge_index = sub_data.edge_index.to(device)  # positive edges
-            node_feature_vec = sub_data.x.to(device)
+            pos_edge_index = sub_data.edge_index  # positive edges
+            node_feature_vec = sub_data.x
             neg_edge_index = negative_edge_sampler(
                 edge_index=pos_edge_index,
                 num_nodes=node_feature_vec.shape[0],
                 num_neg_samples=pos_edge_index.size(1),
             )
+            neg_edge_index = neg_edge_index.to(device)
+            pos_edge_index = pos_edge_index.to(device)
+            node_feature_vec = node_feature_vec.to(device)
 
             # Zero-out gradient, compute embeddings and logits, and calculate loss
             optimizer.zero_grad()

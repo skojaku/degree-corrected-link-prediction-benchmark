@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 09:30:35
+# @Last Modified time: 2023-05-13 11:53:34
 
 from sklearn.decomposition import PCA
 import embcom
@@ -11,6 +11,8 @@ import numpy as np
 
 embedding_models = {}
 embedding_model = lambda f: embedding_models.setdefault(f.__name__, f)
+
+degree_corrected_gnn_models = ["node2vec", "line", "dcGCN", "dcGAT", "dcGraphSAGE"]
 
 
 def calc_prob_i_j(emb, src, trg, net, model_name):
@@ -23,12 +25,12 @@ def calc_prob_i_j(emb, src, trg, net, model_name):
     # where p0 is proportional to the degree. In residual2vec paper,
     # we found that P(i,j) is more predictable of missing edges than
     # the dot similarity u[i]^\top u[j].
-    #    if model_name in ["deepwalk", "node2vec", "line", "graphsage"]:
-    #        deg = np.array(net.sum(axis=1)).reshape(-1)
-    #        deg = np.maximum(deg, 1)
-    #        deg = deg / np.sum(deg)
-    #        log_deg = np.log(deg)
-    #        score += log_deg[src] + log_deg[trg]
+    if model_name in degree_corrected_gnn_models:
+        deg = np.array(net.sum(axis=1)).reshape(-1)
+        deg = np.maximum(deg, 1)
+        deg = deg / np.sum(deg)
+        log_deg = np.log(deg)
+        score += log_deg[src] + log_deg[trg]
     return score
 
 
@@ -100,14 +102,18 @@ def GAT(network, dim, feature_dim=64, device=None, dim_h=128):
     return gnn.generate_embedding(feature_vec=None, net=network, device=device)
 
 
-
 @embedding_model
 def dcGCN(network, dim, feature_dim=64, device=None, dim_h=128):
     if device is None:
         device = embcom.gnns.get_gpu_id()
     gnn = embcom.gnns.GCN(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
     gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=500, negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"]
+        model=gnn,
+        feature_vec=None,
+        net=network,
+        device=device,
+        epochs=500,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
     return gnn.generate_embedding(feature_vec=None, net=network, device=device)
 
@@ -118,7 +124,12 @@ def dcGraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
         device = embcom.gnns.get_gpu_id()
     gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
     gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=500, negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"]
+        model=gnn,
+        feature_vec=None,
+        net=network,
+        device=device,
+        epochs=500,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
     return gnn.generate_embedding(feature_vec=None, net=network, device=device)
 
@@ -129,9 +140,15 @@ def dcGAT(network, dim, feature_dim=64, device=None, dim_h=128):
         device = embcom.gnns.get_gpu_id()
     gnn = embcom.gnns.GAT(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
     gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=500, negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"]
+        model=gnn,
+        feature_vec=None,
+        net=network,
+        device=device,
+        epochs=500,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
     return gnn.generate_embedding(feature_vec=None, net=network, device=device)
+
 
 #
 #

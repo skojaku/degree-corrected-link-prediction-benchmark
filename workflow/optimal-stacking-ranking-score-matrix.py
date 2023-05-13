@@ -126,6 +126,7 @@ arr[:] = np.nan
 # Fill in the array with the values from the list of tuples
 for row_idx, col_idx, val in results:
     arr[row_idx, col_idx] = val
+    arr[col_idx, row_idx] = val # symmetric
 
 
 with open(output_file, "wb") as f:

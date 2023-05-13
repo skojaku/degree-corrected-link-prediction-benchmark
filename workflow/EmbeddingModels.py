@@ -157,7 +157,7 @@ def dcSBM(network, dim):
 #
 # Graph neural networks
 #
-def gnn_embedding(model, network, device=None, epochs=50, negative_edge_sampler=None):
+def gnn_embedding(model, network, device=None, epochs=500, negative_edge_sampler=None):
     if device is None:
         device = embcom.gnns.get_gpu_id()
 
@@ -239,7 +239,7 @@ def PNA(network, dim, feature_dim=64, device=None, dim_h=64):
                 "linear",
                 "inverse_linear",
             ],
-            deg=torch.FloatTensor(np.bincount(np.array(net.sum(axis=0)).reshape(-1))),
+            deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
         ),
         network=network,
     )
@@ -342,7 +342,7 @@ def dcPNA(network, dim, feature_dim=64, device=None, dim_h=64):
                 "linear",
                 "inverse_linear",
             ],
-            deg=torch.FloatTensor(np.bincount(np.array(net.sum(axis=0)).reshape(-1))),
+            deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
         ),
         network=network,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],

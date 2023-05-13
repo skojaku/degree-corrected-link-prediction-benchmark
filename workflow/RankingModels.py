@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-19 18:01:54
+# @Last Modified time: 2023-05-05 06:17:31
 from scipy import sparse
 import numpy as np
 import faiss
@@ -87,6 +87,8 @@ def ranking_by_embedding(emb, max_k, net, model_name):
     dist, indices = index.search(query_emb, k=int(max_k))
     scores, value_nodes = np.array(dist).reshape(-1), np.array(indices).reshape(-1)
     query_nodes = np.kron(np.arange(emb.shape[0]), np.ones(max_k)).astype(int)
+    s = (query_nodes >= 0) * (value_nodes >= 0)
+    scores, query_nodes, value_nodes = scores[s], query_nodes[s], value_nodes[s]
     return sparse.csr_matrix(
         (
             scores,

@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-27 16:40:11
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-22 22:05:57
+# @Last Modified time: 2023-05-03 15:16:28
 import numpy as np
 import pandas as pd
 from scipy import sparse
@@ -50,11 +50,12 @@ class LinkPredictionDataset:
         :param conditionedOnSource: Whether to condition negative edge sampling on the source node of the positive edge. Defaults to False.
         :type conditionedOnSource: bool, optional
         """
-        self.sampler = NegativeEdgeSampler(negative_edge_sampler=negative_edge_sampler)
+        self.sampler = NegativeEdgeSampler(
+            negative_edge_sampler=negative_edge_sampler,
+        )
         self.splitter = TrainTestEdgeSplitter(fraction=testEdgeFraction)
         self.testEdgeFraction = testEdgeFraction
         self.negatives_per_positive = negatives_per_positive
-        self.conditionedOnSource = conditionedOnSource
         self.all_negatives = all_negatives
 
     def fit(self, net):
@@ -101,10 +102,9 @@ class LinkPredictionDataset:
         n_test_edges = np.int(len(test_src))
         neg_src, neg_trg = [], []
         for _ in range(self.negatives_per_positive):
-            if self.conditionedOnSource:
-                _neg_src, _neg_trg = self.sampler.sampling(source_nodes=test_src)
-            else:
-                _neg_src, _neg_trg = self.sampler.sampling(size=n_test_edges)
+            _neg_src, _neg_trg = self.sampler.sampling(
+                source_nodes=test_src, size=n_test_edges
+            )
             neg_src.append(_neg_src)
             neg_trg.append(_neg_trg)
         neg_src, neg_trg = np.concatenate(neg_src), np.concatenate(neg_trg)
@@ -172,6 +172,10 @@ class NegativeEdgeSampler:
             "uniform": ErdosRenyiNodeSampler(),
             "degreeBiased": ConfigModelNodeSampler(),
         }[negative_edge_sampler]
+        self.conditionedOnSource = {
+            "uniform": False,
+            "degreeBiased": True,
+        }[negative_edge_sampler]
 
     def fit(self, net):
         self.net = net
@@ -191,11 +195,20 @@ class NegativeEdgeSampler:
         :return: Tuple of node indices for positive edges (pos_edges) and negative edges (neg_edges)
         :rtype: tuple
         """
+
+        if (self.conditionedOnSource) & (source_nodes is None):
+            ValueError(
+                "When `conditionedOnSource=True`, source nodes must be specified"
+            )
+
+        if (not self.conditionedOnSource) & (size is None):
+            ValueError("When `conditionedOnSource=False`, size must be specified")
+
         # prep. sampling the negative edges
-        if source_nodes is None:
-            source_nodes = self.sampler.sampling_source_nodes(size=size)
-        else:
+        if self.conditionedOnSource:
             size = len(source_nodes)
+        else:
+            source_nodes = self.sampler.sampling_source_nodes(size=size)
 
         sampled_neg_edge_indices = set([])
         n_sampled = 0

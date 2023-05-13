@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-17 04:25:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-19 17:58:33
+# @Last Modified time: 2023-05-05 15:26:52
 # %%
 import numpy as np
 import pandas as pd
@@ -32,6 +32,7 @@ emb = np.load(emb_file)["emb"]
 # ========================
 
 emb[pd.isna(emb)] = 0
+emb = np.real(emb)
 
 src, trg, y = (
     edge_table["src"].values.astype(int),

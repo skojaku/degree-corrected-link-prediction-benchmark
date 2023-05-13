@@ -2,9 +2,10 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-19 21:40:49
+# @Last Modified time: 2023-05-05 06:48:23
 """Module for embedding."""
 # %%
+import graph_tool.all as gt
 import gensim
 import networkx as nx
 import numpy as np
@@ -16,10 +17,13 @@ from torch_geometric.utils import negative_sampling
 import torch_geometric.transforms as T
 from torch_geometric.nn import GCNConv
 from embcom import rsvd, samplers, utils
-import stellargraph
-from tensorflow import keras
-from stellargraph.data import UnsupervisedSampler
-from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator
+from scipy.sparse import csgraph
+from scipy.optimize import minimize
+
+# import stellargraph
+# from tensorflow import keras
+# from stellargraph.data import UnsupervisedSampler
+# from stellargraph.mapper import GraphSAGELinkGenerator, GraphSAGENodeGenerator
 
 try:
     import glove
@@ -517,130 +521,130 @@ class DegreeEmbedding:
         return emb
 
 
-class graphSAGE:
-    """A python class for the GraphSAGE.
-    Parameters
-    ----------
-    num_walks : int (optional, default 1)
-        Number of walks per node
-    walk_length : int (optional, default 5)
-        Length of walks
-    """
-
-    def __init__(
-        self,
-        num_walks=1,
-        walk_length=5,
-        emb_dim=50,
-        num_samples=[10, 5],
-        batch_size=50,
-        epochs=4,
-        verbose=False,
-        feature_dim=50,
-    ):
-        self.in_vec = None  # In-vector
-        self.out_vec = None  # Out-vector
-        self.feature_vector = None
-        self.model = None
-        self.generator = None
-        self.train_gen = None
-        self.G = None
-
-        self.num_walks = num_walks
-        self.walk_length = walk_length
-        self.layer_sizes = [50, emb_dim]
-        self.num_samples = num_samples
-        self.batch_size = batch_size
-        self.epochs = epochs
-
-        self.verbose = verbose
-        self.feature_dim = feature_dim
-
-    def fit(self, net):
-        """Takes a network as an input, transforms it into an adjacency matrix, and generates
-        feature vectors for nodes and creates a StellarGraph object"""
-
-        # transform into an adjacency matrix
-        A = utils.to_adjacency_matrix(net)
-
-        # create node features
-        self.feature_vector = self.create_feature_vector(
-            A, feature_dim=self.feature_dim
-        )
-
-        # transform the adjacency matrix into a networkx Graph object
-        self.G = nx.Graph(A)
-        nodes = [*self.G.nodes()]
-
-        # transform it into a StellarGraph
-        self.G = stellargraph.StellarGraph.from_networkx(
-            graph=self.G, node_features=zip(nodes, self.feature_vector)
-        )
-
-        # Create the UnsupervisedSampler instance with the relevant parameters passed to it
-        unsupervised_samples = UnsupervisedSampler(
-            self.G, nodes=nodes, length=self.walk_length, number_of_walks=self.num_walks
-        )
-
-        self.generator = GraphSAGELinkGenerator(
-            self.G, self.batch_size, self.num_samples
-        )
-        self.train_gen = self.generator.flow(unsupervised_samples)
-
-        return self
-
-    def create_feature_vector(self, A, feature_dim):
-        """Takes an adjacency matrix and generates feature vectors using
-        Laplacian Eigen Map"""
-        lapeigen = LaplacianEigenMap(p=100, q=40)
-        lapeigen.fit(A)
-        return lapeigen.transform(self.feature_dim, return_out_vector=False)
-
-    def train_GraphSAGE(self):
-        graphsage = GraphSAGE(
-            layer_sizes=self.layer_sizes,
-            generator=self.generator,
-            bias=True,
-            dropout=0.0,
-            normalize="l2",
-        )
-
-        self.in_vec, self.out_vec = graphsage.in_out_tensors()
-
-        prediction = link_classification(
-            output_dim=1, output_act="sigmoid", edge_embedding_method="ip"
-        )(self.out_vec)
-
-        self.model = keras.Model(inputs=self.in_vec, outputs=prediction)
-
-        self.model.compile(
-            optimizer=keras.optimizers.Adam(lr=1e-3),
-            loss=keras.losses.binary_crossentropy,
-            metrics=[keras.metrics.binary_accuracy],
-        )
-
-        history = self.model.fit(
-            self.train_gen,
-            epochs=self.epochs,
-            verbose=self.verbose,
-            use_multiprocessing=False,
-            workers=4,
-            shuffle=True,
-        )
-
-    def get_embeddings(self):
-        x_inp_src = self.in_vec[0::2]
-        x_out_src = self.out_vec[0]
-        embedding_model = keras.Model(inputs=x_inp_src, outputs=x_out_src)
-
-        node_ids = [*self.G.nodes()]
-        node_gen = GraphSAGENodeGenerator(
-            self.G, self.batch_size, self.num_samples
-        ).flow(node_ids)
-
-        node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=0)
-
-        return node_embeddings
+# class graphSAGE:
+#    """A python class for the GraphSAGE.
+#    Parameters
+#    ----------
+#    num_walks : int (optional, default 1)
+#        Number of walks per node
+#    walk_length : int (optional, default 5)
+#        Length of walks
+#    """
+#
+#    def __init__(
+#        self,
+#        num_walks=1,
+#        walk_length=5,
+#        emb_dim=50,
+#        num_samples=[10, 5],
+#        batch_size=50,
+#        epochs=4,
+#        verbose=False,
+#        feature_dim=50,
+#    ):
+#        self.in_vec = None  # In-vector
+#        self.out_vec = None  # Out-vector
+#        self.feature_vector = None
+#        self.model = None
+#        self.generator = None
+#        self.train_gen = None
+#        self.G = None
+#
+#        self.num_walks = num_walks
+#        self.walk_length = walk_length
+#        self.layer_sizes = [50, emb_dim]
+#        self.num_samples = num_samples
+#        self.batch_size = batch_size
+#        self.epochs = epochs
+#
+#        self.verbose = verbose
+#        self.feature_dim = feature_dim
+#
+#    def fit(self, net):
+#        """Takes a network as an input, transforms it into an adjacency matrix, and generates
+#        feature vectors for nodes and creates a StellarGraph object"""
+#
+#        # transform into an adjacency matrix
+#        A = utils.to_adjacency_matrix(net)
+#
+#        # create node features
+#        self.feature_vector = self.create_feature_vector(
+#            A, feature_dim=self.feature_dim
+#        )
+#
+#        # transform the adjacency matrix into a networkx Graph object
+#        self.G = nx.Graph(A)
+#        nodes = [*self.G.nodes()]
+#
+#        # transform it into a StellarGraph
+#        self.G = stellargraph.StellarGraph.from_networkx(
+#            graph=self.G, node_features=zip(nodes, self.feature_vector)
+#        )
+#
+#        # Create the UnsupervisedSampler instance with the relevant parameters passed to it
+#        unsupervised_samples = UnsupervisedSampler(
+#            self.G, nodes=nodes, length=self.walk_length, number_of_walks=self.num_walks
+#        )
+#
+#        self.generator = GraphSAGELinkGenerator(
+#            self.G, self.batch_size, self.num_samples
+#        )
+#        self.train_gen = self.generator.flow(unsupervised_samples)
+#
+#        return self
+#
+#    def create_feature_vector(self, A, feature_dim):
+#        """Takes an adjacency matrix and generates feature vectors using
+#        Laplacian Eigen Map"""
+#        lapeigen = LaplacianEigenMap(p=100, q=40)
+#        lapeigen.fit(A)
+#        return lapeigen.transform(self.feature_dim, return_out_vector=False)
+#
+#    def train_GraphSAGE(self):
+#        graphsage = GraphSAGE(
+#            layer_sizes=self.layer_sizes,
+#            generator=self.generator,
+#            bias=True,
+#            dropout=0.0,
+#            normalize="l2",
+#        )
+#
+#        self.in_vec, self.out_vec = graphsage.in_out_tensors()
+#
+#        prediction = link_classification(
+#            output_dim=1, output_act="sigmoid", edge_embedding_method="ip"
+#        )(self.out_vec)
+#
+#        self.model = keras.Model(inputs=self.in_vec, outputs=prediction)
+#
+#        self.model.compile(
+#            optimizer=keras.optimizers.Adam(lr=1e-3),
+#            loss=keras.losses.binary_crossentropy,
+#            metrics=[keras.metrics.binary_accuracy],
+#        )
+#
+#        history = self.model.fit(
+#            self.train_gen,
+#            epochs=self.epochs,
+#            verbose=self.verbose,
+#            use_multiprocessing=False,
+#            workers=4,
+#            shuffle=True,
+#        )
+#
+#    def get_embeddings(self):
+#        x_inp_src = self.in_vec[0::2]
+#        x_out_src = self.out_vec[0]
+#        embedding_model = keras.Model(inputs=x_inp_src, outputs=x_out_src)
+#
+#        node_ids = [*self.G.nodes()]
+#        node_gen = GraphSAGENodeGenerator(
+#            self.G, self.batch_size, self.num_samples
+#        ).flow(node_ids)
+#
+#        node_embeddings = embedding_model.predict(node_gen, workers=4, verbose=0)
+#
+#        return node_embeddings
 
 
 class FastRP:
@@ -700,3 +704,220 @@ class FastRP:
         # Normalization
         X = sparse.diags(1.0 / np.maximum(np.array(h).reshape(-1), 1e-8)) @ X
         return X
+
+
+class SpectralGraphTransformation(NodeEmbeddings):
+    """
+    Spectral graph transformation
+
+    Fits and transforms input graph using spectral graph transformation method.
+
+    Parameters
+    ----------
+    NodeEmbeddings : _type_
+        _description_
+
+    Attributes
+    ----------
+    kernel_matrix : str
+        String indicating kernel matrix to use (options: "A", "normalized_A", "laplacian")
+    kernel_func : callable
+        Function defining the kernel function used in the transformation
+    in_vec, out_vec : ndarray or None
+        Input and output node embeddings
+
+    Methods
+    -------
+    fit(net)
+        Fits the model on the input graph
+    update_embedding(dim)
+        Transforms the fitted graph into low-dimensional space
+    get_kernel_matrix(A)
+        Computes the kernel matrix from an adjacency matrix
+    train_test_edge_split(A, fraction)
+        Splits edge set into training and testing sets
+
+    References
+    ----------
+    - https://dl.acm.org/doi/abs/10.1145/1553374.1553447
+    """
+
+    def __init__(self, kernel_func="exp", kernel_matrix="A"):
+        """
+        Initialize SpectralGraphTransformation with given kernel function and
+        kernel matrix options.
+
+        Parameters
+        ----------
+        kernel_func : str or callable, optional (default="exp")
+            The kernel function used for the spectral graph transformation.
+            Can be a string representing one of two built-in kernel functions ("exp" or "neu"),
+            or a user-defined function taking two input values as follows:
+            `kernel_func(x, a) -> y`, where x is an array of eigenvalues, a is a scalar parameter,
+            and y is the transformed array of eigenvalues.
+        kernel_matrix : str, optional (default="A")
+            The kernel matrix used in the transformation. Can be one of three options:
+            "A" for adjacency matrix, "normalized_A" for normalized adjacency matrix,
+            or "laplacian" for Laplacian matrix.
+        """
+        self.kernel_matrix = kernel_matrix
+
+        if kernel_func == "exp":
+            self.kernel_func = lambda x, a: np.exp(-a * x)
+        elif kernel_func == "neu":
+            self.kernel_func = lambda x, a: 1.0 / (1 - a * x)
+        else:
+            self.kernel_func = kernel_func
+        self.in_vec = None
+        self.out_vec = None
+        self.reg = 1e-2
+
+    def fit(self, net):
+        """
+        Fit the spectral graph transformation model on the input graph.
+
+        Parameters
+        ----------
+        net : array-like or sparse matrix
+            Input graph as an adjacency matrix or equivalent sparse matrix format.
+
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+
+        A = utils.to_adjacency_matrix(net)
+        n_nodes = A.shape[0]
+        train_edges, test_edges = self.train_test_edge_split(A, 1 / 3)
+        train_net = utils.edge2network(train_edges[0], train_edges[1], n_nodes=n_nodes)
+        test_net = utils.edge2network(test_edges[0], test_edges[1], n_nodes=n_nodes)
+
+        self.A = A
+        self.train_net = train_net
+        self.test_net = test_net
+        self.Gkernel = self.get_kernel_matrix(A)
+        self.Gkernel_train = self.get_kernel_matrix(train_net)
+
+        return self
+
+    def update_embedding(self, dim):
+        """
+        Update the input network embedding and transform it into low-dimensional space.
+
+        Parameters
+        ----------
+        dim : int
+            Dimensions of the output embedding.
+
+        Returns
+        -------
+        None
+        """
+
+        which = "LR"
+        if self.kernel_matrix == "laplacian":
+            which = "SR"
+
+        s_train, u = sparse.linalg.eigs(self.Gkernel_train, k=dim, which=which)
+        s_test = np.diag(u.T @ self.Gkernel @ u)
+        s_test, u, s_train = np.real(s_test), np.real(u), np.real(s_train)
+        s_train = s_train / np.max(np.abs(s_train))
+        s_test = s_test / np.max(np.abs(s_test))
+
+        def cost(params):  # simply use globally defined x and y
+            alpha = params[0]
+            return (
+                np.mean((self.kernel_func(s_train, alpha) - s_test) ** 2)
+                + self.reg * alpha**2
+            )  # quadratic cost function
+
+        res = minimize(cost, [1e-1])
+        alpha = res.x[0]
+        if (np.isnan(alpha)) or (np.isinf(alpha)):
+            spred = s_test
+        else:
+            spred = self.kernel_func(s_test, alpha)
+        self.in_vec = u @ np.diag(np.sqrt(np.abs(spred)))
+        self.out_vec = self.in_vec
+
+    def get_kernel_matrix(self, A):
+        deg = np.array(A.sum(axis=1)).reshape(-1)
+        if self.kernel_matrix == "A":
+            M = A
+        elif self.kernel_matrix == "normalized_A":
+            M = sparse.diags(1 / np.sqrt(deg)) @ A @ sparse.diags(1 / np.sqrt(deg))
+        elif self.kernel_matrix == "laplacian":
+            M = sparse.diags(deg) - A
+        return sparse.csr_matrix(M)
+
+    def train_test_edge_split(self, A, fraction):
+        r, c, _ = sparse.find(A)
+        edges = np.unique(utils.pairing(r, c))
+
+        MST = csgraph.minimum_spanning_tree(A + A.T)
+        r, c, _ = sparse.find(MST)
+        mst_edges = np.unique(utils.pairing(r, c))
+        remained_edge_set = np.array(
+            list(set(list(edges)).difference(set(list(mst_edges))))
+        )
+        max_fraction = len(remained_edge_set) / len(edges)
+        if fraction > max_fraction:
+            fraction = max_fraction * 0.5
+        n_edge_removal = int(fraction * len(remained_edge_set))
+        test_edge_set = np.random.choice(
+            remained_edge_set, n_edge_removal, replace=False
+        )
+
+        train_edge_set = np.array(
+            list(set(list(edges)).difference(set(list(test_edge_set))))
+        )
+
+        test_edges_ = utils.depairing(test_edge_set)
+        train_edges_ = utils.depairing(train_edge_set)
+        return train_edges_, test_edges_
+
+
+class SBMEmbedding(NodeEmbeddings):
+    def __init__(self, min_com_size=5):
+        self.min_com_size = min_com_size
+        self.in_vec = None
+        self.out_vec = None
+
+    def fit(self, net):
+        self.net = net
+        return self
+
+    def update_embedding(self, dim):
+        r, c, v = sparse.find(self.net)
+        g = gt.Graph(directed=False)
+        g.add_edge_list(np.vstack([r, c]).T)
+
+        n_nodes = self.net.shape[0]
+        K = np.minimum(dim, int(n_nodes / self.min_com_size))
+        state = gt.minimize_blockmodel_dl(
+            g,
+            state_args={"B_min": K, "B_max": K},
+            multilevel_mcmc_args={"B_max": K, "B_min": K},
+        )
+        b = state.get_blocks()
+        cids = np.unique(np.array(b.a), return_inverse=True)[1]
+        n_nodes = len(cids)
+        U = sparse.csr_matrix(
+            (np.ones_like(cids), (np.arange(len(cids)), cids)), shape=(n_nodes, K)
+        )
+        outdeg = np.array(self.net.sum(axis=1)).reshape(-1)
+        indeg = np.array(self.net.sum(axis=0)).reshape(-1)
+        Din = np.array(U.T @ indeg).reshape(-1)
+        Dout = np.array(U.T @ outdeg).reshape(-1)
+        Lsbm = (
+            np.diag(1 / np.maximum(1e-32, Dout))
+            @ (U.T @ self.net @ U)
+            @ np.diag(1 / np.maximum(1e-32, Din))
+        )
+
+        s, u = np.linalg.eig(Lsbm)
+        u = np.einsum("ij,j->ij", u, np.sqrt(np.maximum(s, 0)))
+        u = U @ u
+        self.in_vec = np.einsum("ij,i->ij", u, outdeg)
+        self.out_vec = np.einsum("ij,i->ij", u, indeg)

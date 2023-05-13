@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# @Author: Sadamori Kojaku
+# @Date:   2023-03-27 17:59:10
+# @Last Modified by:   Sadamori Kojaku
+# @Last Modified time: 2023-05-05 06:43:31
 # %%
 import embcom
 import matplotlib.pyplot as plt
@@ -33,28 +38,32 @@ def load_airport_net():
     net = net[s, :][:, s]
     return net, labels, node_table
 
+
 net, labels, node_table = load_airport_net()
 
 # %%
 #
 # Embedding
 #
-model = embcom.NonBacktrackingNode2Vec()
+model = embcom.SpectralGraphTransformation()
 model.fit(net)
-emb = model.transform(dim = 64)
+emb = model.transform(dim=64)
 
+# %%
+np.sum(emb @ emb.T, axis=1)
 
 # %%
 # Plot
 #
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+
 clf = LinearDiscriminantAnalysis(n_components=2)
 xy = clf.fit_transform(emb, np.unique(labels, return_inverse=True)[1])
 
 
-plot_data = pd.DataFrame({"x":xy[:,0], "y":xy[:, 1], "label":labels})
+plot_data = pd.DataFrame({"x": xy[:, 0], "y": xy[:, 1], "label": labels})
 
-sns.scatterplot(data = plot_data, x = "x", y = "y", hue = "label")
+sns.scatterplot(data=plot_data, x="x", y="y", hue="label")
 
 
 # %%

@@ -26,19 +26,10 @@ EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
 
-# DATA_LIST = [
-#     'polbooks', 'football', 'netscience', 'highschool', 'foodweb-baywet', 'foodweb-baydry', 'celegans', 'maayan-foodweb', 'jazz', 'sociopatterns-infectious', 'airport-rach', 'radoslaw-email-email', 'email', 'YeastS', 'japanesebookinter-st', 'moreno-health', 'petster', 'ca-GrQc', 'hep-th', 'opsahl-ucsocial', 'bitcoinalpha', 'opsahl-openflights', 'Caltech36', 'polblogs-rachith', 'ht09-contact-list', 'Reed98', 'p2p-Gnutella08', 'bitcoinotc', 'frenchbookinter-st', 'PGPgiantcompo', 'ca-HepTh', 'p2p-Gnutella09', 'p2p-Gnutella06', 'p2p-Gnutella05', 'Simmons81', 'p2p-Gnutella04', 'spanishbookinter-st', 'darwinbookinter-st',
-#     ]
-# DATA_LIST = [
-#     'polbooks', 'football', 'netscience', 'highschool', 'foodweb-baywet', 'foodweb-baydry',
-#     ]
+#All networks
 DATA_LIST = [
-    'polbooks'
-    ]
-# All networks
-# DATA_LIST = [
-#     f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
-# ]
+    f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
+]
 
 # Small networks
 # Comment out if you want to run for all networks
@@ -137,6 +128,13 @@ TRAIN_NET_FILE_OPTIMAL_STACKING = j(
 # ====================
 # Intermediate files
 # ====================
+
+#
+# Network statistics
+#
+NET_STAT_FILE = j(
+   NETWORK_DIR, "network-stats.csv"
+)
 
 #
 # Embedding
@@ -243,6 +241,7 @@ RANK_SCORE_NET_FILE = j(
 
 LP_ALL_AUCROC_SCORE_FILE = j(RESULT_DIR, "result_auc_roc.csv")
 LP_ALL_RANKING_SCORE_FILE = j(RESULT_DIR, "result_ranking.csv")
+LP_ALL_QUANTILE_RANKING_FILE = j(RESULT_DIR, "result_quantile_ranking.csv")
 
 LP_SCORE_OPT_STACK_FILE = j(
     OPT_STACK_DIR,
@@ -268,7 +267,10 @@ FIG_DEGSKEW_AUCDIFF = j(RESULT_DIR, "figs", "corr_degskew_aucdiff.pdf")
 FIG_NODES_AUCDIFF = j(RESULT_DIR, "figs", "corr_nodes_aucdiff.pdf")
 FIG_DEGSKEW_AUCDIFF_NODESIZE = j(RESULT_DIR, "figs", "corr_degskew_aucdiff_nodesize.pdf")
 FIG_PREC_RECAL_F1 =j(RESULT_DIR, "figs", "prec-recall-f1.pdf")
-
+FIG_DEG_DEG_PLOT =j(RESULT_DIR, "figs", "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
+FIG_QUANTILE_RANKING=j(RESULT_DIR, "figs", "quantile_ranking_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
+FIG_PERF_VS_KURTOSIS_PLOT=j(RESULT_DIR, "figs", "performance_vs_degree_kurtosis.pdf")
+FIG_RANKING_SIMILARITY=j(RESULT_DIR, "figs", "ranking-similarity-similarityMetric~{similarityMetric}.pdf")
 #
 #
 # RULES
@@ -281,7 +283,7 @@ rule all:
         LP_ALL_AUCROC_SCORE_FILE,
         LP_ALL_RANKING_SCORE_FILE,
         #
-        # Link classification
+        # Link classification (Check point 1)
         #
         expand(
             LP_SCORE_EMB_FILE,
@@ -298,29 +300,41 @@ rule all:
             **params_train_test_split
         ),
         #
-        # Link ranking
+        # Network stats (Check point 2)
         #
-        expand(
-            RANK_SCORE_EMB_FILE,
-            data=DATA_LIST,
-            **params_emb,
-            **params_train_test_split
-        ),
-        expand(
-            RANK_SCORE_NET_FILE,
-            data=DATA_LIST,
-            **params_net_linkpred,
-            **params_train_test_split
-        )
+        NET_STAT_FILE,
+        #
+        # Link ranking (Check point 3)
+        #
+#        expand(
+#            RANK_SCORE_EMB_FILE,
+#            data=DATA_LIST,
+#            **params_emb,
+#            **params_train_test_split
+#        ),
+#        expand(
+#            RANK_SCORE_NET_FILE,
+#            data=DATA_LIST,
+#            **params_net_linkpred,
+#            **params_train_test_split
+#        )
+        #
+        # Quantile ranking file (Checkpoint 4)
+        #
+        LP_ALL_QUANTILE_RANKING_FILE
 
 
 rule figs:
     input:
+        expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
+        expand(FIG_QUANTILE_RANKING, **params_negative_edge_sampler),
+        expand(FIG_RANKING_SIMILARITY, similarityMetric = ["RBO", "Spearmanr"]),
+        FIG_PERF_VS_KURTOSIS_PLOT,
         FIG_AUCROC,
-        FIG_DEGSKEW_AUCDIFF,
-        FIG_NODES_AUCDIFF,
-        FIG_DEGSKEW_AUCDIFF_NODESIZE,
-        FIG_PREC_RECAL_F1
+        #FIG_DEGSKEW_AUCDIFF,
+        #FIG_NODES_AUCDIFF,
+        #FIG_DEGSKEW_AUCDIFF_NODESIZE,
+        #FIG_PREC_RECAL_F1
 
 # ============================
 # Cleaning networks
@@ -334,6 +348,14 @@ rule clean_networks:
         edge_table_file=EDGE_TABLE_FILE,
     script:
         "workflow/clean_networks.py"
+
+rule calc_network_stats:
+    input:
+        input_files = expand(EDGE_TABLE_FILE, data = DATA_LIST)
+    output:
+        output_file = NET_STAT_FILE
+    script:
+        "workflow/calc-network-stats.py"
 
 # ============================
 # Optimal stacking
@@ -622,10 +644,67 @@ rule concatenate_ranking_results:
     script:
         "workflow/concat-results.py"
 
+#
+# Evaluate the quantile
+#
+rule calc_quantiles:
+    input:
+        auc_roc_table_file =  LP_ALL_AUCROC_SCORE_FILE,
+        ranking_table_file = LP_ALL_RANKING_SCORE_FILE,
+        net_stat_file = NET_STAT_FILE
+    output:
+        output_file = LP_ALL_QUANTILE_RANKING_FILE
+    script:
+        "workflow/calc-quantiles.py"
 
 # =====================
 # Plot
 # =====================
+
+#
+# Figure 1 and 2
+#
+rule calc_deg_deg_plot:
+    input:
+        edge_table_file=EDGE_TABLE_FILE.format(data = "airport-rach"),
+    params:
+        negativeEdgeSampler = lambda wildcards: wildcards.negativeEdgeSampler
+    output:
+        output_file=FIG_DEG_DEG_PLOT,
+    script:
+        "workflow/plot-deg-deg-plot.py"
+
+
+rule calc_deg_skewness_plot:
+    input:
+        auc_roc_table_file =  LP_ALL_AUCROC_SCORE_FILE,
+        ranking_table_file = LP_ALL_RANKING_SCORE_FILE,
+        net_stat_file = NET_STAT_FILE
+    output:
+        output_file=FIG_PERF_VS_KURTOSIS_PLOT,
+    script:
+        "workflow/plot-performance-vs-degree-skewness.py"
+
+rule plot_node2vec_vs_pa_ranking:
+    input:
+        input_file=LP_ALL_QUANTILE_RANKING_FILE,
+    params:
+        negativeEdgeSampler = lambda wildcards: wildcards.negativeEdgeSampler
+    output:
+        output_file=FIG_QUANTILE_RANKING,
+    script:
+        "workflow/plot-ranking-pref-vs-node2vec.py"
+
+rule plot_ranking_correlation:
+    input:
+        input_file=LP_ALL_QUANTILE_RANKING_FILE,
+    params:
+        similarityMetric = lambda wildcards: wildcards.similarityMetric
+    output:
+        output_file=FIG_RANKING_SIMILARITY,
+    script:
+        "workflow/plot-ranking-similarity.py"
+
 rule plot_aucroc:
     input:
         input_file=LP_ALL_AUCROC_SCORE_FILE,

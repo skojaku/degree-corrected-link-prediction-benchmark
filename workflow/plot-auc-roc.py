@@ -2,7 +2,8 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:06:41
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-30 11:02:54
+# @Last Modified time: 2023-05-03 08:49:17
+# %%
 import numpy as np
 import pandas as pd
 import sys
@@ -13,14 +14,13 @@ if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/derived/results/result_opt_stack_auc_roc.csv"
+    input_file = "../data/derived/results/result_auc_roc.csv"
     output_file = "../data/opt_stack_auc_roc.png"
 
 # ========================
 # Load
 # ========================
 data_table = pd.read_csv(input_file)
-
 # %% ========================
 # Style
 # ========================
@@ -35,6 +35,10 @@ palette = {
     "Pref. Attach.": "red",
     "Uniform": "#adadad",
 }
+
+if not ("model" in plot_data.columns):
+    plot_data["model"] = "Optimal Stacking"
+
 # %%
 # ========================
 # Plot
@@ -42,9 +46,6 @@ palette = {
 sns.set_style("white")
 sns.set(font_scale=1)
 sns.set_style("ticks")
-
-if ~('model' in plot_data.columns):
-    plot_data["model"] = "Optimal Stacking" 
 
 g = sns.catplot(
     data=plot_data,

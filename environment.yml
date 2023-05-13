@@ -15,6 +15,7 @@ dependencies:
   - cudatoolkit=11.6
   - ca-certificates
   - certifi
+  - chardet
   - openssl
   - snakemake
   - graph-tool

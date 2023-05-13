@@ -37,7 +37,7 @@ if config["small_networks"]:
     with open("workflow/small-networks.json", "r") as f:
         DATA_LIST = json.load(f)
 
-N_ITERATION = 5
+N_ITERATION = 1
 
 # ====================
 # Configuration

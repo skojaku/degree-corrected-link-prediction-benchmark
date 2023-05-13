@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-27 17:59:10
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 06:43:31
+# @Last Modified time: 2023-05-11 05:10:44
 # %%
 import embcom
 import matplotlib.pyplot as plt
@@ -45,9 +45,22 @@ net, labels, node_table = load_airport_net()
 #
 # Embedding
 #
-model = embcom.SpectralGraphTransformation()
-model.fit(net)
-emb = model.transform(dim=64)
+device = embcom.gnns.get_gpu_id()
+feature_dim = 64
+dim_h = 128
+dim = 64
+gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
+gnn = embcom.gnns.train(
+    model=gnn,
+    feature_vec=None,
+    net=net,
+    negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["uniform"],
+    device=device,
+    epochs=1000,
+)
+emb = gnn.generate_embedding(feature_vec=None, net=net, device=device)
+# model.fit(net)
+# emb = model.transform(dim=64)
 
 # %%
 np.sum(emb @ emb.T, axis=1)
@@ -61,9 +74,24 @@ clf = LinearDiscriminantAnalysis(n_components=2)
 xy = clf.fit_transform(emb, np.unique(labels, return_inverse=True)[1])
 
 
-plot_data = pd.DataFrame({"x": xy[:, 0], "y": xy[:, 1], "label": labels})
+plot_data = pd.DataFrame(
+    {
+        "x": xy[:, 0],
+        "y": xy[:, 1],
+        "deg": np.array(net.sum(axis=0)).reshape(-1),
+        "label": labels,
+    }
+)
 
-sns.scatterplot(data=plot_data, x="x", y="y", hue="label")
+sns.scatterplot(data=plot_data, x="x", y="y", hue="label", size="deg")
 
 
 # %%
+import torch
+
+r, c, _ = sparse.find(net)
+edge_index = torch.LongTensor(np.array([r.astype(int), c.astype(int)]))
+edge_index
+t = edge_index.clone().reshape(-1)
+idx = torch.randperm(t.shape[0])
+t = t[idx].view(edge_index.size())

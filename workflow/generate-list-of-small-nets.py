@@ -11,9 +11,9 @@ from os.path import join
 import networkx as nx
 import json
 
-max_n_nodes = 5000
+max_n_nodes = 20000
 
-DATA_DIR = "../mydata"  # set test_data for testing
+DATA_DIR = "../data"  # set test_data for testing
 DERIVED_DIR = join(DATA_DIR, "derived")
 NETWORK_DIR = join(DERIVED_DIR, "networks")
 RAW_UNPROCESSED_NETWORKS_DIR = join(NETWORK_DIR, "raw")

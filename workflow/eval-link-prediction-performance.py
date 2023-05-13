@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:34:47
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-01 06:30:14
+# @Last Modified time: 2023-05-05 15:26:18
 # %%
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ if "snakemake" in sys.modules:
     data_name = snakemake.params["data_name"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/"
+    input_file = "../data/derived/link-prediction/ht09-contact-list/score_basedOn~emb_testEdgeFraction~0.5_sampleId~3_negativeEdgeSampler~degreeBiased_model~dcSBM_dim~64.csv"
     output_file = "../data/"
 
 # ========================
@@ -22,11 +22,17 @@ else:
 # ========================
 data_table = pd.read_csv(input_file)
 
+
 # ========================
 # Preprocess
 # ========================
 
 y, ypred = data_table["y"].values, data_table["ypred"].values
+# %%
+ypred
+# %%
+ypred[pd.isna(ypred)] = np.min(ypred[~pd.isna(ypred)])
+ypred[np.isinf(ypred)] = np.min(ypred[~np.isinf(ypred)])
 aucroc = roc_auc_score(y, ypred)
 
 # ========================
@@ -35,3 +41,5 @@ aucroc = roc_auc_score(y, ypred)
 pd.DataFrame({"score": [aucroc], "metric": "aucroc", "data": data_name}).to_csv(
     output_file, index=False
 )
+
+# %%

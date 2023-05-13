@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-17 04:25:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-19 18:00:08
+# @Last Modified time: 2023-05-05 15:27:47
 # %%
 import numpy as np
 import pandas as pd
@@ -24,6 +24,7 @@ else:
 # ========================
 emb = np.load(emb_file)["emb"]
 net = sparse.load_npz(net_file)
+emb = np.real(emb)
 
 # ========================
 # Preprocess

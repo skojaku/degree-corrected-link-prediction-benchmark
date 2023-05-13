@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-08 21:47:31
+# @Last Modified time: 2023-05-12 12:47:08
 # %%
 import numpy as np
 import pandas as pd
@@ -18,15 +18,19 @@ if "snakemake" in sys.modules:
     similarityMetric = snakemake.params["similarityMetric"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/derived/results/result_quantile_ranking.csv"
-    output_file = f"../figs/ranking-similarity-similarityMetric~RBO.pdf"
     similarityMetric = "RBO"
+    input_file = "../data/derived/results/_result_quantile_ranking.csv"
+    output_file = f"../figs/ranking-similarity-similarityMetric~{similarityMetric}.pdf"
 
 # ========================
 # Load
 # ========================
 data_table = pd.read_csv(input_file)
 data_table["model"].unique()
+
+# %%
+len(data_table["data"].unique())
+
 # %%
 # ========================
 # Preprocessing
@@ -113,13 +117,13 @@ for (data, _), dg in tqdm(
 result_table = pd.DataFrame(results)
 # %%
 sns.set_style("white")
-sns.set(font_scale=1.5)
+sns.set(font_scale=1.4)
 sns.set_style("ticks")
 # fig, ax = plt.subplots(figsize=(7,5))
-cmap = sns.color_palette().as_hex()
-palette = {}
-hue_order = ["Uniform", "Bias\naligned"]
-palette = {"Uniform": cmap[0], "Bias\naligned": cmap[1]}
+cmap = sns.color_palette("Set3").as_hex()
+hue_order = ["Uniform", "Degree\nadjusted"]
+palette = {"Uniform": cmap[2], "Degree\nadjusted": cmap[5]}
+
 col_order = [
     "macroF1@5",
     "macroF1@10",
@@ -148,10 +152,10 @@ plot_data = result_table.query(
     f"ranking in [{col_order_string}] and metric == '{similarityMetric}'"
 )
 plot_data["reference_ranking"] = plot_data["reference_ranking"].map(
-    {"AUCROC+uniform": "Uniform", "AUCROC+degreeBiased": "Bias\naligned"}
+    {"AUCROC+uniform": "Uniform", "AUCROC+degreeBiased": "Degree\nadjusted"}
 )
 plot_data["x"] = plot_data["reference_ranking"].apply(
-    lambda x: {"Uniform": -0.7, "Bias\naligned": 1.7}[x]
+    lambda x: {"Uniform": -0.7, "Degree\nadjusted": 1.7}[x]
 )
 jitter = 0.12
 plot_data["x"] = (
@@ -160,14 +164,15 @@ plot_data["x"] = (
 g = sns.catplot(
     data=plot_data.sort_values(by="reference_ranking", ascending=False),
     kind="violin",
-    x="reference_ranking",
-    y="similarity",
-    col="ranking",
-    bw=0.15,
-    col_order=col_order,
+    y="reference_ranking",
+    x="similarity",
+    row="ranking",
+    # bw=0.15,
+    row_order=col_order,
     inner="box",
-    col_wrap=3,
+    # col_wrap=3,
     cmap=palette,
+    palette=palette,
     # palette = {k:v+"aa" for k, v in palette.items()},
     # color="#efefef",
     width=0.8,
@@ -175,7 +180,8 @@ g = sns.catplot(
     alpha=0.8,
     sharey=False,
     sharex=False,
-    aspect=0.7,
+    aspect=3,
+    height=3,
 )
 for ax in g.axes.flat:
     for _ax in ax.collections[::2]:
@@ -183,19 +189,19 @@ for ax in g.axes.flat:
 
 g.map(
     sns.scatterplot,
-    "x",
     "similarity",
+    "x",
     "reference_ranking",
     hue_order=hue_order,
     palette=palette,
     edgecolor=None,
-    alpha=0.2,
-    size=3,
+    alpha=0.5,
+    size=5,
 )
-g.set_ylabels("Ranking Bias Overlap")
-g.set_xlabels("Sampling method")
+g.set_xlabels("Ranking Alignment (Ranking Bias Overlap)")
+g.set_ylabels("")
 
-g.set_titles(template="{col_name}")
+g.set_titles(template="vs {row_name}", fontsize=12)
 g.fig.savefig(output_file, bbox_inches="tight", dpi=300)
 
 # %%

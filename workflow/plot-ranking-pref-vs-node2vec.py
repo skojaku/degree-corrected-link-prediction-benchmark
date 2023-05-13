@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-08 21:39:45
+# @Last Modified time: 2023-05-12 06:30:02
 # %%
 import numpy as np
 import pandas as pd
@@ -16,8 +16,8 @@ if "snakemake" in sys.modules:
     negativeEdgeSampler = snakemake.params["negativeEdgeSampler"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/derived/results/result_quantile_ranking.csv"
-    negativeEdgeSampler = "uniform"
+    input_file = "../data/derived/results/_result_quantile_ranking.csv"
+    negativeEdgeSampler = "degreeBiased"
     output_file = (
         f"../figs/quantile_ranking_negativeEdgeSampler~{negativeEdgeSampler}.pdf"
     )
@@ -80,11 +80,11 @@ def plot(ranking_metric, negativeEdgeSampler, legend, ax):
             ],
             closed=True,
             fill=True,
-            facecolor=cmap[3] + "44",
+            facecolor=cmap[3] + "33",
         )
     )
     ax.annotate(
-        "Under evaluation",
+        "Under estimated",
         xy=(1.0, 0.01),
         va="bottom",
         ha="right",
@@ -101,11 +101,11 @@ def plot(ranking_metric, negativeEdgeSampler, legend, ax):
             ],
             closed=True,
             fill=True,
-            facecolor=cmap[1] + "44",
+            facecolor=cmap[1] + "33",
         )
     )
     ax.annotate(
-        "Over evaluation",
+        "Over estimated",
         xy=(0.05, 0.98),
         va="top",
         ha="left",
@@ -125,15 +125,18 @@ def plot(ranking_metric, negativeEdgeSampler, legend, ax):
         .size()
         .reset_index(name="sz")
     )
+    _cmap = sns.color_palette("dark").as_hex()
     ax = sns.scatterplot(
         data=df,
         # data=plot_data,
         y=f"AUCROC+{negativeEdgeSampler}",
         x=f"{ranking_metric}",
         hue="model",
-        edgecolor="k",
+        style="model",
+        style_order=["node2vec", "Pref. Attach."],
+        palette={"Pref. Attach.": _cmap[0], "node2vec": _cmap[1]},
         size="sz",
-        sizes=(30, 100),
+        sizes=(50, 150),
         s=40,
         ax=ax,
     )

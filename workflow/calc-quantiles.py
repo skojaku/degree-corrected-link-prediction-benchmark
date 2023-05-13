@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-08 21:35:00
+# @Last Modified time: 2023-05-12 06:11:39
 """Loads and preprocesses tables of AUC-ROC scores, rankings, and
 network statistics, computes the quantiles of the scores among models
 for each dataset/metric combination, and creates a new table containing
@@ -21,9 +21,9 @@ if "snakemake" in sys.modules:
     net_stat_file = snakemake.input["net_stat_file"]
     output_file = snakemake.output["output_file"]
 else:
-    auc_roc_table_file = "../data/derived/results/result_auc_roc.csv"
-    ranking_table_file = "../data/derived/results/result_ranking.csv"
-    output_file = "../data/derived/results/result_quantile_ranking.csv"
+    auc_roc_table_file = "../data/derived/results/_result_auc_roc.csv"
+    ranking_table_file = "../data/derived/results/_result_ranking.csv"
+    output_file = "../data/derived/results/_result_quantile_ranking.csv"
 
 # ========================
 # Load
@@ -43,9 +43,7 @@ ranking_table = pd.read_csv(
 # Compute the ranking
 #
 results = []
-for (data, negSampler, _), df in aucroc_table.groupby(
-    ["data", "negativeEdgeSampler", "sampleId"]
-):
+for (data, negSampler), df in aucroc_table.groupby(["data", "negativeEdgeSampler"]):
     df = (
         df.groupby(["data", "negativeEdgeSampler", "model"])
         .mean(numeric_only=True)
@@ -57,7 +55,7 @@ for (data, negSampler, _), df in aucroc_table.groupby(
     df["metric"] = "AUCROC+" + df["negativeEdgeSampler"]
     results.append(df)
 
-for (data, metric, _), df in ranking_table.groupby(["data", "metric", "sampleId"]):
+for (data, metric), df in ranking_table.groupby(["data", "metric"]):
     df = df.groupby(["model", "data", "metric"]).mean(numeric_only=True).reset_index()
     df = df.sort_values(by="score")
     df["quantile"] = np.arange(df.shape[0]) / (df.shape[0] - 1)

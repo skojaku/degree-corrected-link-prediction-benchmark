@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-14 06:16:30
+# @Last Modified time: 2023-05-14 09:57:09
 
 from sklearn.decomposition import PCA
 import embcom
@@ -166,7 +166,7 @@ def dcSBM(network, dim):
 #
 # Graph neural networks
 #
-def gnn_embedding(model, network, device=None, epochs=500, negative_edge_sampler=None):
+def gnn_embedding(model, network, device=None, epochs=1000, negative_edge_sampler=None, batch_size=2500):
     if device is None:
         device = embcom.gnns.get_gpu_id()
 
@@ -177,118 +177,126 @@ def gnn_embedding(model, network, device=None, epochs=500, negative_edge_sampler
         negative_edge_sampler=negative_edge_sampler,
         device=device,
         epochs=epochs,
+        batch_size=batch_size
     )
     return emb
 
 
 @embedding_model
-def GCN(network, dim, feature_dim=64, device=None, dim_h=64):
+def GCN(network, dim, feature_dim=64, device=None, dim_h=128):
     return gnn_embedding(
         model=torch_geometric.nn.models.GCN(
             in_channels=feature_dim,
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            dropout=0.5,
         ),
         network=network,
     )
 
 
 @embedding_model
-def GraphSAGE(network, dim, feature_dim=64, device=None, dim_h=64):
+def GraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
     return gnn_embedding(
         model=torch_geometric.nn.models.GraphSAGE(
             in_channels=feature_dim,
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            dropout=0.5,
         ),
         network=network,
     )
 
 
 @embedding_model
-def GAT(network, dim, feature_dim=64, device=None, dim_h=64):
+def GAT(network, dim, feature_dim=64, device=None, dim_h=128):
     return gnn_embedding(
         model=torch_geometric.nn.models.GAT(
             in_channels=feature_dim,
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            dropout=0.5,
         ),
         network=network,
     )
 
 
-# @embedding_model
-# def GIN(network, dim, feature_dim=64, device=None, dim_h=64):
-#    return gnn_embedding(
-#        model=torch_geometric.nn.models.GIN(
-#            in_channels=feature_dim,
-#            hidden_channels=dim_h,
-#            num_layers=2,
-#            out_channels=dim,
-#        ),
-#        network=network,
-#    )
-#
-#
-# @embedding_model
-# def PNA(network, dim, feature_dim=64, device=None, dim_h=64):
-#    return gnn_embedding(
-#        model=torch_geometric.nn.models.PNA(
-#            in_channels=feature_dim,
-#            hidden_channels=dim_h,
-#            num_layers=2,
-#            out_channels=dim,
-#            aggregators=["sum", "mean", "min", "max", "max", "var", "std"],
-#            scalers=[
-#                "identity",
-#                "amplification",
-#                "attenuation",
-#                "linear",
-#                "inverse_linear",
-#            ],
-#            deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
-#        ),
-#        network=network,
-#    )
-#
-#
-# @embedding_model
-# def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=64):
-#    return gnn_embedding(
-#        model=torch_geometric.nn.models.EdgeCNN(
-#            in_channels=feature_dim,
-#            hidden_channels=dim_h,
-#            num_layers=2,
-#            out_channels=dim,
-#        ),
-#        network=network,
-#    )
-#
-#
-# @embedding_model
-# def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=64):
-#    return gnn_embedding(
-#        model=torch_geometric.nn.models.GraphUNet(
-#            in_channels=feature_dim,
-#            hidden_channels=dim_h,
-#            out_channels=dim,
-#            depth=2,
-#        ),
-#        network=network,
-#    )
+@embedding_model
+def GIN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GIN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            dropout=0.5,
+        ),
+        network=network,
+    )
 
 
 @embedding_model
-def dcGCN(network, dim, feature_dim=64, device=None, dim_h=64):
+def PNA(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.PNA(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            aggregators=["sum", "mean", "min", "max", "max", "var", "std"],
+            scalers=[
+                "identity",
+                "amplification",
+                "attenuation",
+                "linear",
+                "inverse_linear",
+            ],
+            deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
+            dropout=0.5,
+        ),
+        network=network,
+    )
+
+
+@embedding_model
+def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.EdgeCNN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            dropout=0.5,
+        ),
+        network=network,
+    )
+
+
+@embedding_model
+def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GraphUNet(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            out_channels=dim,
+            depth=1,
+        ),
+        batch_size = 2500,
+        network=network,
+    )
+
+@embedding_model
+def dcGCN(network, dim, feature_dim=64, device=None, dim_h=128):
     return gnn_embedding(
         model=torch_geometric.nn.models.GCN(
             in_channels=feature_dim,
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            dropout=0.5,
         ),
         network=network,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
@@ -296,13 +304,14 @@ def dcGCN(network, dim, feature_dim=64, device=None, dim_h=64):
 
 
 @embedding_model
-def dcGraphSAGE(network, dim, feature_dim=64, device=None, dim_h=64):
+def dcGraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
     return gnn_embedding(
         model=torch_geometric.nn.models.GraphSAGE(
             in_channels=feature_dim,
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            dropout=0.5,
         ),
         network=network,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
@@ -310,80 +319,84 @@ def dcGraphSAGE(network, dim, feature_dim=64, device=None, dim_h=64):
 
 
 @embedding_model
-def dcGAT(network, dim, feature_dim=64, device=None, dim_h=64):
+def dcGAT(network, dim, feature_dim=64, device=None, dim_h=128):
     return gnn_embedding(
         model=torch_geometric.nn.models.GAT(
             in_channels=feature_dim,
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            dropout=0.5,
         ),
         network=network,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
 
-# @embedding_model
-# def dcGIN(network, dim, feature_dim=64, device=None, dim_h=64):
-#    return gnn_embedding(
-#        model=torch_geometric.nn.models.GIN(
-#            in_channels=feature_dim,
-#            hidden_channels=dim_h,
-#            num_layers=2,
-#            out_channels=dim,
-#        ),
-#        network=network,
-#        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
-#    )
-#
-#
-# @embedding_model
-# def dcPNA(network, dim, feature_dim=64, device=None, dim_h=64):
-#    return gnn_embedding(
-#        model=torch_geometric.nn.models.PNA(
-#            in_channels=feature_dim,
-#            hidden_channels=dim_h,
-#            num_layers=2,
-#            out_channels=dim,
-#            aggregators=["sum", "mean", "min", "max", "max", "var", "std"],
-#            scalers=[
-#                "identity",
-#                "amplification",
-#                "attenuation",
-#                "linear",
-#                "inverse_linear",
-#            ],
-#            deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
-#        ),
-#        network=network,
-#        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
-#    )
-#
-#
-# @embedding_model
-# def dcEdgeCNN(network, dim, feature_dim=64, device=None, dim_h=64):
-#    return gnn_embedding(
-#        model=torch_geometric.nn.models.EdgeCNN(
-#            in_channels=feature_dim,
-#            hidden_channels=dim_h,
-#            num_layers=2,
-#            out_channels=dim,
-#        ),
-#        network=network,
-#        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
-#    )
-#
-#
-# @embedding_model
-# def dcGraphUNet(network, dim, feature_dim=64, device=None, dim_h=64):
-#    return gnn_embedding(
-#        model=torch_geometric.nn.models.GraphUNet(
-#            in_channels=feature_dim,
-#            hidden_channels=dim_h,
-#            out_channels=dim,
-#            depth=2,
-#        ),
-#        network=network,
-#        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
-#    )
-#
+@embedding_model
+def dcGIN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GIN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            dropout=0.5,
+        ),
+        network=network,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )
+
+
+@embedding_model
+def dcPNA(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.PNA(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            aggregators=["sum", "mean", "min", "max", "max", "var", "std"],
+            scalers=[
+                "identity",
+                "amplification",
+                "attenuation",
+                "linear",
+                "inverse_linear",
+            ],
+            deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
+            dropout=0.5,
+        ),
+        network=network,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )
+
+
+@embedding_model
+def dcEdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.EdgeCNN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            dropout=0.5,
+        ),
+        network=network,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )
+
+
+@embedding_model
+def dcGraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GraphUNet(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            out_channels=dim,
+            depth=1,
+        ),
+        batch_size = 2500,
+        network=network,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )

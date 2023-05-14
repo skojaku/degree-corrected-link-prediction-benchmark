@@ -55,9 +55,14 @@
 %}}}
 
 \section{Results}\label{sec:results} %{{{ 
-
+\subsection{Link prediction algorithms}
 
 %}}}
+\textbf{Graph Covolutional Network} The Graph Convolutional Network (GCN) is a convolutional neural network variant specifically designed for analyzing graph-structured data.
+In the GCN framework, the convolutional layer performs an aggregation process wherein it combines information from the neighboring nodes of each node in the graph.
+This aggregation is achieved by computing a weighted sum of the feature vectors associated wiht the neighboring nodes, as well as the feature vector of the central node itself.
+The feature vectors for the graph nodes were derived using the Laplacian Eignenmap embedding. Our implemenation includes two consecutive convolutianal layers.
+
 
 \section{Methods}\label{sec:methods} %{{{
 

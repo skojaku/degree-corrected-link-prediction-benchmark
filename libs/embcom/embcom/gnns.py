@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-10 04:51:58
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-15 08:55:06
+# @Last Modified time: 2023-05-15 14:22:20
 # %%
 import numpy as np
 from scipy import sparse
@@ -70,51 +70,76 @@ def generate_base_embedding(A, dim):
     -------
     numpy.ndarray: Base embedding computed using normalized laplacian matrix
     """
-    svd = TruncatedSVD(n_components=dim, n_iter=7, random_state=42)
-    return svd.fit_transform(A)
+    #    svd = TruncatedSVD(n_components=dim, n_iter=7, random_state=42)
+    #    base_emb = svd.fit_transform(A)
+    #    base_emb = np.einsum("ij,j->ij", base_emb, 1 / np.linalg.norm(base_emb, axis=0))
+    #    return base_emb
+
     # Compute the (inverse) normalized laplacian matrix
 
+    deg = np.array(A.sum(axis=1)).reshape(-1)
+    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
+    L = Dsqrt @ A @ Dsqrt
+    L.setdiag(1)
 
-#    deg = np.array(A.sum(axis=1)).reshape(-1)
-#    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
-#    L = Dsqrt @ A @ Dsqrt
-#    L.setdiag(1)
-#
-#    s, u = sparse.linalg.eigs(L, k=dim, which="LR")
-#    s, u = np.real(s), np.real(u)
-#    order = np.argsort(-s)[1:]
-#    s, u = s[order], u[:, order]
-#    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
-#    base_base_emb = Dsqrt @ u @ sparse.diags(np.sqrt(np.abs(s)))
-#    mean_norm = np.mean(np.linalg.norm(base_base_emb, axis=0))
-#    _deg = deg / np.sum(deg)
-#    _deg = mean_norm * _deg / np.linalg.norm(_deg)
-#    base_base_emb = np.hstack([base_base_emb, _deg.reshape((-1, 1))])
-#    # base_base_emb = np.einsum("ij,i->ij", base_base_emb, 1 / np.linalg.norm(base_base_emb, axis=1))
-#    return base_base_emb
+    s, u = sparse.linalg.eigs(L, k=dim, which="LR")
+    s, u = np.real(s), np.real(u)
+    order = np.argsort(-s)[1:]
+    s, u = s[order], u[:, order]
+    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
+    base_base_emb = Dsqrt @ u @ sparse.diags(np.sqrt(np.abs(s)))
+    mean_norm = np.mean(np.linalg.norm(base_base_emb, axis=0))
+    _deg = np.log(deg)
+    # / np.sum(deg)
+    # _deg = mean_norm * _deg / np.linalg.norm(_deg)
+    base_base_emb = np.hstack([base_base_emb, _deg.reshape((-1, 1))])
+    # base_base_emb = np.einsum(
+    #    "ij,j->ij", base_base_emb, 1 / np.linalg.norm(base_base_emb, axis=0)
+    # )
+    return base_base_emb
 
 
 #
 # negative edge sampling
 #
 def degreeBiasedNegativeEdgeSampling(edge_index, num_nodes, num_neg_samples):
-    t = edge_index.clone().reshape(-1)
-    idx = torch.randperm(len(t))
-    t = t[idx].view(edge_index.size())
-    return t
+    deg = np.bincount(edge_index.reshape(-1).cpu(), minlength=num_nodes).astype(float)
+    deg /= np.sum(deg)
+    t = np.random.choice(
+        num_nodes, p=deg, size=num_neg_samples * edge_index.size()[1]
+    ).reshape((num_neg_samples, edge_index.size()[1]))
+    return torch.LongTensor(t)
 
 
 def negative_uniform(edge_index, num_nodes, num_neg_samples):
-    t = np.random.randint(0, num_nodes, size=np.prod(edge_index.size())).reshape(
-        edge_index.size()
-    )
+    t = np.random.randint(
+        0, num_nodes, size=num_neg_samples * edge_index.size()[1]
+    ).reshape((num_neg_samples, edge_index.size()[1]))
     return torch.LongTensor(t)
 
 
 NegativeEdgeSampler = {
     "degreeBiased": degreeBiasedNegativeEdgeSampling,
-    "uniform": negative_sampling,
+    "uniform": negative_uniform,
 }
+
+
+class GNNwithEmbLayer(torch.nn.Module):
+    def __init__(self, gnn, n_nodes, dim_emb):
+        super(GNNwithEmbLayer, self).__init__()
+        self.gnn = gnn
+        self.emb_layer = torch.nn.Embedding(n_nodes, dim_emb, padding_idx=-1)
+        self.emb_layer.weight = torch.nn.Parameter(
+            torch.FloatTensor(n_nodes, dim_emb).uniform_(-0.5 / dim_emb, 0.5 / dim_emb)
+        )
+        self.emb_layer.weight.requires_grad = True
+        self.n_nodes = n_nodes
+
+    def forward(self, edge_index, node_ids=None):
+        if node_ids is None:
+            node_ids = torch.arange(self.n_nodes, device=self.emb_layer.weight.device)
+        base_emb = self.emb_layer(node_ids)
+        return self.gnn(base_emb, edge_index)
 
 
 #
@@ -157,29 +182,25 @@ def train(
     nn.Module
         The trained model.
     """
+    n_nodes = net.shape[0]
 
     # Convert sparse adjacency matrix to edge list format
     r, c, _ = sparse.find(net)
     edge_index = torch.LongTensor(np.array([r.astype(int), c.astype(int)]))
 
     # Create PyTorch data object with features and edge list
-    if feature_vec is None:
-        feature_vec = generate_base_embedding(net, dim=feature_vec_dim)
-    feature_vec = torch.FloatTensor(feature_vec)
-    data = Data(x=feature_vec, edge_index=edge_index)
+    data = Data(edge_index=edge_index, node_ids=torch.arange(n_nodes))
 
     # Move the model to the specified device
     model.to(device)
 
     # Set up minibatching for the data using a clustering algorithm
-    n_nodes = net.shape[0]
-    num_sub_batches = 10
-    batch_size = np.minimum(n_nodes, batch_size * num_sub_batches)
-    num_sub_batches = int(np.ceil(batch_size / num_sub_batches))
+    num_sub_batches = 5
+    batch_size = np.minimum(n_nodes, batch_size)
     num_parts = int(np.floor(n_nodes / batch_size))
     cluster_data = ClusterData(data, num_parts=num_parts)  # 1. Create subgraphs.
     train_loader = ClusterLoader(
-        cluster_data, batch_size=num_sub_batches, shuffle=True
+        cluster_data, batch_size=num_sub_batches, shuffle=False
     )  # 2. Stochastic partioning scheme.
 
     # Use default negative sampling function if none is specified
@@ -201,36 +222,36 @@ def train(
         for sub_data in train_loader:
             # Sample negative edges using specified or default sampler
             pos_edge_index = sub_data.edge_index  # positive edges
-            node_feature_vec = sub_data.x
+            node_ids = sub_data.node_ids
             neg_edge_index = negative_edge_sampler(
                 edge_index=pos_edge_index,
-                num_nodes=node_feature_vec.shape[0],
-                num_neg_samples=pos_edge_index.size(1),
+                num_nodes=len(node_ids),
+                num_neg_samples=2,
             )
+
+            node_ids = node_ids.to(device)
             neg_edge_index = neg_edge_index.to(device)
             pos_edge_index = pos_edge_index.to(device)
-            node_feature_vec = node_feature_vec.to(device)
 
             # Zero-out gradient, compute embeddings and logits, and calculate loss
             optimizer.zero_grad()
-            z = model(node_feature_vec, pos_edge_index)
+            z = model(
+                torch.cat([pos_edge_index, neg_edge_index], dim=-1), node_ids=node_ids
+            )
+            # z = model(pos_edge_index, node_ids=node_ids)
+            # z = model(pos_edge_index, node_ids=node_ids)
 
-            # _edge_index = torch.cat(
-            #    [pos_edge_index, neg_edge_index], dim=-1
-            # )  # concatenate pos and neg edges
-            pos = (z[pos_edge_index[0]] * z[pos_edge_index[1]]).sum(dim=1)
-            neg = (z[edge_index[0]] * z[neg_edge_index[1]]).sum(dim=1)
-            # neg2 = (z[pos_edge_index[1]] * z[neg_edge_index[0]]).sum(dim=1)
-            loss = -(logsigmoid(pos) + logsigmoid(neg.neg())).mean()
-            #
-            #            link_logits = ().sum(dim=-1)  # dot product
-            #            link_labels = torch.zeros(
-            #                pos_edge_index.size(1) + neg_edge_index.size(1),
-            #                dtype=torch.float,
-            #                device=device,
-            #            )
-            #            link_labels[: pos_edge_index.size(1)] = 1.0
-            #            loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
+            pos = (z[pos_edge_index[0], :] * z[pos_edge_index[1], :]).sum(dim=1)
+            ploss = -pos.mean()
+            ploss = -logsigmoid(pos).mean()
+            nloss = 0
+            #            for i in range(neg_edge_index.size()[0]):
+            #                neg = (z[pos_edge_index[0], :] * z[neg_edge_index[i], :]).sum(dim=1)
+            #                nloss -= logsigmoid(neg.neg()).mean()
+            # for i in range(neg_edge_index.size()[0]):
+            neg = (z[neg_edge_index[0], :] * z[neg_edge_index[1], :]).sum(dim=1)
+            nloss -= logsigmoid(neg.neg()).mean()
+            loss = ploss + nloss / neg_edge_index.size()[0]
 
             # Compute gradients and update parameters of the model
             loss.backward()
@@ -244,7 +265,7 @@ def train(
 
     # Set the model in evaluation mode and return
     model.eval()
-    emb = model(feature_vec.to(device), edge_index.to(device))
+    emb = model(edge_index.to(device))
     emb = emb.detach().cpu().numpy()
     return model, emb
 
@@ -317,31 +338,23 @@ def train_all(
         neg_edge_index = negative_edge_sampler(
             edge_index=edge_index,
             num_nodes=feature_vec.shape[0],
-            num_neg_samples=edge_index.size(1),
+            num_neg_samples=2,
         )
         neg_edge_index = neg_edge_index.to(device)
 
         # Zero-out gradient, compute embeddings and logits, and calculate loss
         optimizer.zero_grad()
-        z = model(feature_vec, edge_index)
+        zpos = model(np.cat([edge_index, neg_edge_index]))
+        # zpos = model(edge_index)
 
-        # _edge_index = torch.cat(
-        #    [pos_edge_index, neg_edge_index], dim=-1
-        # )  # concatenate pos and neg edges
-        pos = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=1)
-        neg = (z[edge_index[0]] * z[neg_edge_index[1]]).sum(dim=1)
-        # neg2 = (z[pos_edge_index[1]] * z[neg_edge_index[0]]).sum(dim=1)
-        loss = -(logsigmoid(pos).mean() + logsigmoid(neg.neg()).mean())
-        # loss = -logsigmoid(pos).mean() + logsigmoid(neg).mean()
-        #
-        #            link_logits = ().sum(dim=-1)  # dot product
-        #            link_labels = torch.zeros(
-        #                pos_edge_index.size(1) + neg_edge_index.size(1),
-        #                dtype=torch.float,
-        #                device=device,
-        #            )
-        #            link_labels[: pos_edge_index.size(1)] = 1.0
-        #            loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
+        pos = (zpos[edge_index[0], :] * zpos[edge_index[1], :]).sum(dim=1)
+        ploss = -pos.mean()
+        ploss = -logsigmoid(pos).mean()
+        nloss = 0
+        for i in range(neg_edge_index.size()[0]):
+            neg = (zpos[edge_index[0], :] * zpos[neg_edge_index[i], :]).sum(dim=1)
+            nloss -= logsigmoid(neg.neg()).mean()
+        loss = ploss + nloss / neg_edge_index.size()[0]
 
         # Compute gradients and update parameters of the model
         loss.backward()
@@ -355,7 +368,7 @@ def train_all(
 
     # Set the model in evaluation mode and return
     model.eval()
-    emb = model(feature_vec.to(device), edge_index.to(device))
+    emb = model(edge_index.to(device))
     emb = emb.detach().cpu().numpy()
     return model, emb
 

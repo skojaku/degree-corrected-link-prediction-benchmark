@@ -60,6 +60,14 @@
 %}}}
 
 \section{Methods}\label{sec:methods} %{{{
+\subsection{Link prediction algorithms}
+
+\textbf{Graph SAGE}
+GraphSage is a neural network model that learns representations of nodes in graphs. Unlike GCNs that are implementing transductive learning, it uses an inductive setting that allows it to scale to large graphs. GraphSage employs a sampling-based approach to learn embeddings by aggregating information from a node's neighbors through a neighborhood aggregation operation. The final node representation is obtained by concatenating the aggregated neighborhood vector with the node's own features and passing it through a neural network.
+
+Our study used GraphSage in an unsupervised learning setting since our data had no labels. The unsupervised training learns the parameters in a way that represents neighboring nodes closer to each other in the vector space. To achieve this, the loss function encourages neighboring nodes to have similar representations while keeping representations of two random nodes at a high distance.
+
+To create feature vectors for nodes, we employed Laplacian Eigenmap embeddings as used in the GCN model. The GraphSage model has two hidden layers with 128 dimensions.
 
 %}}}
 

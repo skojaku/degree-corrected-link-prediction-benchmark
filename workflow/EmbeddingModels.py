@@ -166,7 +166,7 @@ def dcSBM(network, dim):
 #
 # Graph neural networks
 #
-def gnn_embedding(model, network, device=None, epochs=2000, negative_edge_sampler=None, batch_size=2500):
+def gnn_embedding(model, network, feature_vec_dim=64, device=None, epochs=2000, negative_edge_sampler=None, batch_size=2500):
     if device is None:
         device = embcom.gnns.get_gpu_id()
 
@@ -177,7 +177,8 @@ def gnn_embedding(model, network, device=None, epochs=2000, negative_edge_sample
         negative_edge_sampler=negative_edge_sampler,
         device=device,
         epochs=epochs,
-        batch_size=batch_size
+        batch_size=batch_size,
+        feature_vec_dim=feature_vec_dim
     )
     return emb
 
@@ -190,8 +191,10 @@ def GCN(network, dim, feature_dim=64, device=None, dim_h=128):
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
+        feature_vec_dim=feature_dim, 
         network=network,
     )
 
@@ -203,6 +206,7 @@ def GraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
             in_channels=feature_dim,
             hidden_channels=dim_h,
             num_layers=2,
+            act=torch.nn.LeakyReLU(),
             out_channels=dim,
             dropout=0.5,
         ),
@@ -218,8 +222,10 @@ def GAT(network, dim, feature_dim=64, device=None, dim_h=128):
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
+        feature_vec_dim=feature_dim, 
         network=network,
     )
 
@@ -232,6 +238,7 @@ def GIN(network, dim, feature_dim=64, device=None, dim_h=128):
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
         network=network,
@@ -255,8 +262,10 @@ def PNA(network, dim, feature_dim=64, device=None, dim_h=128):
                 "inverse_linear",
             ],
             deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
+            act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
+        feature_vec_dim=feature_dim, 
         network=network,
     )
 
@@ -269,8 +278,10 @@ def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
+        feature_vec_dim=feature_dim, 
         network=network,
     )
 
@@ -296,6 +307,7 @@ def dcGCN(network, dim, feature_dim=64, device=None, dim_h=128):
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
         network=network,
@@ -311,9 +323,11 @@ def dcGraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
         network=network,
+        feature_vec_dim=feature_dim, 
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
@@ -326,9 +340,11 @@ def dcGAT(network, dim, feature_dim=64, device=None, dim_h=128):
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
         network=network,
+        feature_vec_dim=feature_dim, 
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
@@ -341,9 +357,11 @@ def dcGIN(network, dim, feature_dim=64, device=None, dim_h=128):
             hidden_channels=dim_h,
             num_layers=2,
             out_channels=dim,
+            act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
         network=network,
+        feature_vec_dim=feature_dim, 
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
@@ -364,10 +382,12 @@ def dcPNA(network, dim, feature_dim=64, device=None, dim_h=128):
                 "linear",
                 "inverse_linear",
             ],
+            act=torch.nn.LeakyReLU(),
             deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
             dropout=0.5,
         ),
         network=network,
+        feature_vec_dim=feature_dim, 
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
@@ -379,10 +399,12 @@ def dcEdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
             in_channels=feature_dim,
             hidden_channels=dim_h,
             num_layers=2,
+            act=torch.nn.LeakyReLU(),
             out_channels=dim,
             dropout=0.5,
         ),
         network=network,
+        feature_vec_dim=feature_dim, 
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 

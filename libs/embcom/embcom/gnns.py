@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-10 04:51:58
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-15 08:35:20
+# @Last Modified time: 2023-05-15 08:50:09
 # %%
 import numpy as np
 from scipy import sparse
@@ -173,9 +173,9 @@ def train(
 
     # Set up minibatching for the data using a clustering algorithm
     n_nodes = net.shape[0]
-    num_sub_batches = 1
-    batch_size = np.minimum(n_nodes, batch_size)
-    num_parts = int(np.floor(n_nodes / batch_size) * num_sub_batches)
+    num_sub_batches = 10
+    batch_size = np.minimum(n_nodes, batch_size) * num_sub_batches
+    num_parts = int(np.floor(n_nodes / batch_size))
     cluster_data = ClusterData(data, num_parts=num_parts)  # 1. Create subgraphs.
     train_loader = ClusterLoader(
         cluster_data, batch_size=num_sub_batches, shuffle=True
@@ -218,7 +218,7 @@ def train(
             #    [pos_edge_index, neg_edge_index], dim=-1
             # )  # concatenate pos and neg edges
             pos = (z[pos_edge_index[0]] * z[pos_edge_index[1]]).sum(dim=1)
-            neg = (z[neg_edge_index[0]] * z[neg_edge_index[1]]).sum(dim=1)
+            neg = (z[edge_index[0]] * z[neg_edge_index[1]]).sum(dim=1)
             # neg2 = (z[pos_edge_index[1]] * z[neg_edge_index[0]]).sum(dim=1)
             loss = -(logsigmoid(pos) + logsigmoid(neg.neg())).mean()
             #

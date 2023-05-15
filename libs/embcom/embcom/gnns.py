@@ -184,6 +184,8 @@ def train(
     logsigmoid = torch.nn.LogSigmoid()
     for epoch in range(epochs):
         # Iterate over minibatches of the data
+        ave_loss = 0
+        n_iter = 0
         for sub_data in train_loader:
             # Sample negative edges using specified or default sampler
             pos_edge_index = sub_data.edge_index  # positive edges
@@ -220,10 +222,12 @@ def train(
             # Compute gradients and update parameters of the model
             loss.backward()
             optimizer.step()
-            pbar.update(1)
             with torch.no_grad():
-                loss = loss.item()
-                pbar.set_description(f"loss={loss}")
+                ave_loss+=loss.item()
+                n_iter+=1
+        pbar.update(1)
+        ave_loss/=n_iter
+        pbar.set_description(f"loss={ave_loss} iter/epoch={n_iter}")
 
     # Set the model in evaluation mode and return
     model.eval()

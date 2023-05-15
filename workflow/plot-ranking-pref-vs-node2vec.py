@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-12 06:30:02
+# @Last Modified time: 2023-05-14 04:48:03
 # %%
 import numpy as np
 import pandas as pd
@@ -16,7 +16,7 @@ if "snakemake" in sys.modules:
     negativeEdgeSampler = snakemake.params["negativeEdgeSampler"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/derived/results/_result_quantile_ranking.csv"
+    input_file = "../data/derived/results/result_quantile_ranking.csv"
     negativeEdgeSampler = "degreeBiased"
     output_file = (
         f"../figs/quantile_ranking_negativeEdgeSampler~{negativeEdgeSampler}.pdf"

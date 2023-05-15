@@ -157,7 +157,7 @@ def dcSBM(network, dim):
 #
 # Graph neural networks
 #
-def gnn_embedding(model, network, device=None, epochs=1000, negative_edge_sampler=None, batch_size=2500):
+def gnn_embedding(model, network, device=None, epochs=2000, negative_edge_sampler=None, batch_size=2500):
     if device is None:
         device = embcom.gnns.get_gpu_id()
 
@@ -265,18 +265,18 @@ def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
     )
 
 
-@embedding_model
-def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
-    return gnn_embedding(
-        model=torch_geometric.nn.models.GraphUNet(
-            in_channels=feature_dim,
-            hidden_channels=dim_h,
-            out_channels=dim,
-            depth=1,
-        ),
-        batch_size = 2500,
-        network=network,
-    )
+#@embedding_model
+#def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
+#    return gnn_embedding(
+#        model=torch_geometric.nn.models.GraphUNet(
+#            in_channels=feature_dim,
+#            hidden_channels=dim_h,
+#            out_channels=dim,
+#            depth=1,
+#        ),
+#        batch_size = 2500,
+#        network=network,
+#    )
 
 @embedding_model
 def dcGCN(network, dim, feature_dim=64, device=None, dim_h=128):
@@ -377,16 +377,16 @@ def dcEdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
     )
 
 
-@embedding_model
-def dcGraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
-    return gnn_embedding(
-        model=torch_geometric.nn.models.GraphUNet(
-            in_channels=feature_dim,
-            hidden_channels=dim_h,
-            out_channels=dim,
-            depth=1,
-        ),
-        batch_size = 2500,
-        network=network,
-        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
-    )
+#@embedding_model
+#def dcGraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
+#    return gnn_embedding(
+#        model=torch_geometric.nn.models.GraphUNet(
+#            in_channels=feature_dim,
+#            hidden_channels=dim_h,
+#            out_channels=dim,
+#            depth=1,
+#        ),
+#        batch_size = 2500,
+#        network=network,
+#        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+#    )

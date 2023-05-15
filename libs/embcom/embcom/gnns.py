@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-10 04:51:58
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-13 16:01:30
+# @Last Modified time: 2023-05-14 22:34:15
 # %%
 import numpy as np
 from scipy import sparse
@@ -55,6 +55,9 @@ def generate_embedding(model, net, feature_vec=None, device="cpu"):
     )  # Detach the embeddings from the computation graph and convert it to a numpy array on the CPU
 
 
+from sklearn.decomposition import TruncatedSVD
+
+
 def generate_base_embedding(A, dim):
     """
     Compute the base embedding using the input adjacency matrix.
@@ -67,6 +70,8 @@ def generate_base_embedding(A, dim):
     -------
     numpy.ndarray: Base embedding computed using normalized laplacian matrix
     """
+    svd = TruncatedSVD(n_components=dim, n_iter=7, random_state=42)
+    return svd.fit_transform(A)
     # Compute the (inverse) normalized laplacian matrix
     deg = np.array(A.sum(axis=1)).reshape(-1)
     Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
@@ -91,7 +96,7 @@ def generate_base_embedding(A, dim):
 #
 def degreeBiasedNegativeEdgeSampling(edge_index, num_nodes, num_neg_samples):
     t = edge_index.clone().reshape(-1)
-    idx = torch.randperm(t.shape[0])
+    idx = torch.randperm(len(t))
     t = t[idx].view(edge_index.size())
     return t
 
@@ -114,6 +119,7 @@ def train(
     feature_vec_dim: int = 64,
     negative_edge_sampler=None,
     batch_size: int = 2500,
+    lr=0.01,
 ) -> torch.nn.Module:
     """
     Train a PyTorch model on a given graph dataset using minibatch stochastic gradient descent with negative sampling.
@@ -172,10 +178,11 @@ def train(
 
     # Set the model in training mode and initialize optimizer
     model.train()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
-
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     # Train the model for the specified number of epochs
-    for epoch in tqdm(range(epochs)):
+    pbar = tqdm(total=epochs)
+    logsigmoid = torch.nn.LogSigmoid()
+    for epoch in range(epochs):
         # Iterate over minibatches of the data
         for sub_data in train_loader:
             # Sample negative edges using specified or default sampler
@@ -194,23 +201,29 @@ def train(
             optimizer.zero_grad()
             z = model(node_feature_vec, pos_edge_index)
 
-            _edge_index = torch.cat(
-                [pos_edge_index, neg_edge_index], dim=-1
-            )  # concatenate pos and neg edges
-            link_logits = (z[_edge_index[0]] * z[_edge_index[1]]).sum(
-                dim=-1
-            )  # dot product
-            link_labels = torch.zeros(
-                pos_edge_index.size(1) + neg_edge_index.size(1),
-                dtype=torch.float,
-                device=device,
-            )
-            link_labels[: pos_edge_index.size(1)] = 1.0
-            loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
+            # _edge_index = torch.cat(
+            #    [pos_edge_index, neg_edge_index], dim=-1
+            # )  # concatenate pos and neg edges
+            pos = (z[pos_edge_index[0]] * z[pos_edge_index[1]]).sum(dim=1)
+            neg = (z[pos_edge_index[0]] * z[neg_edge_index[1]]).sum(dim=1)
+            loss = -(logsigmoid(pos) + logsigmoid(neg.neg())).mean()
+            #
+            #            link_logits = ().sum(dim=-1)  # dot product
+            #            link_labels = torch.zeros(
+            #                pos_edge_index.size(1) + neg_edge_index.size(1),
+            #                dtype=torch.float,
+            #                device=device,
+            #            )
+            #            link_labels[: pos_edge_index.size(1)] = 1.0
+            #            loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
 
             # Compute gradients and update parameters of the model
             loss.backward()
             optimizer.step()
+            pbar.update(1)
+            with torch.no_grad():
+                loss = loss.item()
+                pbar.set_description(f"loss={loss}")
 
     # Set the model in evaluation mode and return
     model.eval()

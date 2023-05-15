@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-13 16:14:06
+# @Last Modified time: 2023-05-14 09:57:09
 
 from sklearn.decomposition import PCA
 import embcom
@@ -13,8 +13,17 @@ import torch_geometric
 embedding_models = {}
 embedding_model = lambda f: embedding_models.setdefault(f.__name__, f)
 
-degree_corrected_gnn_models = ["node2vec","line","dcGCN","dcGraphSAGE","dcGAT","dcGIN","dcPNA","dcEdgeCNN","dcGraphUNet"]
-
+degree_corrected_gnn_models = [
+    "node2vec",
+    "line",
+    "dcGCN",
+    "dcGraphSAGE",
+    "dcGAT",
+    "dcGIN",
+    "dcPNA",
+    "dcEdgeCNN",
+    "dcGraphUNet",
+]
 
 
 def calc_prob_i_j(emb, src, trg, net, model_name):
@@ -171,6 +180,7 @@ def gnn_embedding(model, network, device=None, epochs=2000, negative_edge_sample
         batch_size=batch_size
     )
     return emb
+
 
 @embedding_model
 def GCN(network, dim, feature_dim=64, device=None, dim_h=128):

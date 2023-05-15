@@ -73,22 +73,22 @@ def generate_base_embedding(A, dim):
     svd = TruncatedSVD(n_components=dim, n_iter=7, random_state=42)
     return svd.fit_transform(A)
     # Compute the (inverse) normalized laplacian matrix
-    deg = np.array(A.sum(axis=1)).reshape(-1)
-    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
-    L = Dsqrt @ A @ Dsqrt
-    L.setdiag(1)
-
-    s, u = sparse.linalg.eigs(L, k=dim, which="LR")
-    s, u = np.real(s), np.real(u)
-    order = np.argsort(-s)[1:]
-    s, u = s[order], u[:, order]
-    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
-    base_emb = Dsqrt @ u @ sparse.diags(np.sqrt(np.abs(s)))
-    mean_norm = np.mean(np.linalg.norm(base_emb, axis=0))
-    _deg = deg / np.sum(deg)
-    _deg = mean_norm * _deg / np.linalg.norm(_deg)
-    base_emb = np.hstack([base_emb, _deg.reshape((-1, 1))])
-    return base_emb
+#    deg = np.array(A.sum(axis=1)).reshape(-1)
+#    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
+#    L = Dsqrt @ A @ Dsqrt
+#    L.setdiag(1)
+#
+#    s, u = sparse.linalg.eigs(L, k=dim, which="LR")
+#    s, u = np.real(s), np.real(u)
+#    order = np.argsort(-s)[1:]
+#    s, u = s[order], u[:, order]
+#    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
+#    base_emb = Dsqrt @ u @ sparse.diags(np.sqrt(np.abs(s)))
+#    mean_norm = np.mean(np.linalg.norm(base_emb, axis=0))
+#    _deg = deg / np.sum(deg)
+#    _deg = mean_norm * _deg / np.linalg.norm(_deg)
+#    base_emb = np.hstack([base_emb, _deg.reshape((-1, 1))])
+#    return base_emb
 
 
 #
@@ -223,7 +223,7 @@ def train(
             pbar.update(1)
             with torch.no_grad():
                 loss = loss.item()
-                pbar.set_description(f"loss={loss}")
+                pbar.set_description(f"loss={loss:.2f}")
 
     # Set the model in evaluation mode and return
     model.eval()

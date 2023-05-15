@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-10 04:51:58
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-15 06:01:20
+# @Last Modified time: 2023-05-15 08:35:20
 # %%
 import numpy as np
 from scipy import sparse
@@ -73,6 +73,8 @@ def generate_base_embedding(A, dim):
     svd = TruncatedSVD(n_components=dim, n_iter=7, random_state=42)
     return svd.fit_transform(A)
     # Compute the (inverse) normalized laplacian matrix
+
+
 #    deg = np.array(A.sum(axis=1)).reshape(-1)
 #    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
 #    L = Dsqrt @ A @ Dsqrt
@@ -83,12 +85,13 @@ def generate_base_embedding(A, dim):
 #    order = np.argsort(-s)[1:]
 #    s, u = s[order], u[:, order]
 #    Dsqrt = sparse.diags(1 / np.maximum(np.sqrt(deg), 1e-12), format="csr")
-#    base_emb = Dsqrt @ u @ sparse.diags(np.sqrt(np.abs(s)))
-#    mean_norm = np.mean(np.linalg.norm(base_emb, axis=0))
+#    base_base_emb = Dsqrt @ u @ sparse.diags(np.sqrt(np.abs(s)))
+#    mean_norm = np.mean(np.linalg.norm(base_base_emb, axis=0))
 #    _deg = deg / np.sum(deg)
 #    _deg = mean_norm * _deg / np.linalg.norm(_deg)
-#    base_emb = np.hstack([base_emb, _deg.reshape((-1, 1))])
-#    return base_emb
+#    base_base_emb = np.hstack([base_base_emb, _deg.reshape((-1, 1))])
+#    # base_base_emb = np.einsum("ij,i->ij", base_base_emb, 1 / np.linalg.norm(base_base_emb, axis=1))
+#    return base_base_emb
 
 
 #
@@ -99,6 +102,13 @@ def degreeBiasedNegativeEdgeSampling(edge_index, num_nodes, num_neg_samples):
     idx = torch.randperm(len(t))
     t = t[idx].view(edge_index.size())
     return t
+
+
+def negative_uniform(edge_index, num_nodes, num_neg_samples):
+    t = np.random.randint(0, num_nodes, size=np.prod(edge_index.size())).reshape(
+        edge_index.size()
+    )
+    return torch.LongTensor(t)
 
 
 NegativeEdgeSampler = {
@@ -163,18 +173,18 @@ def train(
 
     # Set up minibatching for the data using a clustering algorithm
     n_nodes = net.shape[0]
-    num_sub_batches = 5
+    num_sub_batches = 1
     batch_size = np.minimum(n_nodes, batch_size)
-    cluster_data = ClusterData(
-        data, num_parts=int(np.floor(n_nodes / batch_size) * num_sub_batches)
-    )  # 1. Create subgraphs.
+    num_parts = int(np.floor(n_nodes / batch_size) * num_sub_batches)
+    cluster_data = ClusterData(data, num_parts=num_parts)  # 1. Create subgraphs.
     train_loader = ClusterLoader(
         cluster_data, batch_size=num_sub_batches, shuffle=True
     )  # 2. Stochastic partioning scheme.
 
     # Use default negative sampling function if none is specified
     if negative_edge_sampler is None:
-        negative_edge_sampler = negative_sampling
+        negative_edge_sampler = negative_uniform
+        # snegative_edge_sampler = negative_sampling
 
     # Set the model in training mode and initialize optimizer
     model.train()
@@ -182,6 +192,7 @@ def train(
     # Train the model for the specified number of epochs
     pbar = tqdm(total=epochs)
     logsigmoid = torch.nn.LogSigmoid()
+
     for epoch in range(epochs):
         # Iterate over minibatches of the data
         ave_loss = 0
@@ -207,7 +218,8 @@ def train(
             #    [pos_edge_index, neg_edge_index], dim=-1
             # )  # concatenate pos and neg edges
             pos = (z[pos_edge_index[0]] * z[pos_edge_index[1]]).sum(dim=1)
-            neg = (z[pos_edge_index[0]] * z[neg_edge_index[1]]).sum(dim=1)
+            neg = (z[neg_edge_index[0]] * z[neg_edge_index[1]]).sum(dim=1)
+            # neg2 = (z[pos_edge_index[1]] * z[neg_edge_index[0]]).sum(dim=1)
             loss = -(logsigmoid(pos) + logsigmoid(neg.neg())).mean()
             #
             #            link_logits = ().sum(dim=-1)  # dot product
@@ -223,11 +235,122 @@ def train(
             loss.backward()
             optimizer.step()
             with torch.no_grad():
-                ave_loss+=loss.item()
-                n_iter+=1
+                ave_loss += loss.item()
+                n_iter += 1
         pbar.update(1)
-        ave_loss/=n_iter
-        pbar.set_description(f"loss={ave_loss} iter/epoch={n_iter}")
+        ave_loss /= n_iter
+        pbar.set_description(f"loss={ave_loss:.3f} iter/epoch={n_iter}")
+
+    # Set the model in evaluation mode and return
+    model.eval()
+    emb = model(feature_vec.to(device), edge_index.to(device))
+    emb = emb.detach().cpu().numpy()
+    return model, emb
+
+
+def train_all(
+    model: torch.nn.Module,
+    feature_vec: np.ndarray,
+    net: sparse.spmatrix,
+    device: str,
+    epochs: int,
+    feature_vec_dim: int = 64,
+    negative_edge_sampler=None,
+    lr=0.01,
+) -> torch.nn.Module:
+    """
+    Train a PyTorch model on a given graph dataset using minibatch stochastic gradient descent with negative sampling.
+
+    Parameters
+    ----------
+    model : nn.Module
+        A PyTorch module representing the model to be trained.
+    feature_vec : np.ndarray
+        A numpy array of shape (num_nodes, num_features) containing the node feature vectors for the graph.
+    net : sp.spmatrix
+        A scipy sparse matrix representing the adjacency matrix of the graph.
+    device : str
+        The device to use for training the model.
+    epochs : int
+        The number of epochs to train the model for.
+    negative_edge_sampler : Callable, optional
+        A function that samples negative edges given positive edges and the number of nodes in the graph.
+        If unspecified, a default negative sampling function is used.
+    batch_size : int, optional
+        The number of nodes in each minibatch.
+
+    Returns
+    -------
+    nn.Module
+        The trained model.
+    """
+
+    # Convert sparse adjacency matrix to edge list format
+    r, c, _ = sparse.find(net)
+    edge_index = torch.LongTensor(np.array([r.astype(int), c.astype(int)]))
+
+    # Create PyTorch data object with features and edge list
+    if feature_vec is None:
+        feature_vec = generate_base_embedding(net, dim=feature_vec_dim)
+    feature_vec = torch.FloatTensor(feature_vec)
+
+    # Set up minibatching for the data using a clustering algorithm
+    if negative_edge_sampler is None:
+        # negative_edge_sampler = negative_sampling
+        negative_edge_sampler = negative_uniform
+
+    # Set the model in training mode and initialize optimizer
+    # Move the model to the specified device
+    model.to(device)
+    model.train()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    # Train the model for the specified number of epochs
+    pbar = tqdm(total=epochs)
+    logsigmoid = torch.nn.LogSigmoid()
+    edge_index = edge_index.to(device)
+    feature_vec = feature_vec.to(device)
+    for epoch in range(epochs):
+        # Iterate over minibatches of the data
+        ave_loss = 0
+        n_iter = 0
+        neg_edge_index = negative_edge_sampler(
+            edge_index=edge_index,
+            num_nodes=feature_vec.shape[0],
+            num_neg_samples=edge_index.size(1),
+        )
+        neg_edge_index = neg_edge_index.to(device)
+
+        # Zero-out gradient, compute embeddings and logits, and calculate loss
+        optimizer.zero_grad()
+        z = model(feature_vec, edge_index)
+
+        # _edge_index = torch.cat(
+        #    [pos_edge_index, neg_edge_index], dim=-1
+        # )  # concatenate pos and neg edges
+        pos = (z[edge_index[0]] * z[edge_index[1]]).sum(dim=1)
+        neg = (z[edge_index[0]] * z[neg_edge_index[1]]).sum(dim=1)
+        # neg2 = (z[pos_edge_index[1]] * z[neg_edge_index[0]]).sum(dim=1)
+        loss = -(logsigmoid(pos).mean() + logsigmoid(neg.neg()).mean())
+        # loss = -logsigmoid(pos).mean() + logsigmoid(neg).mean()
+        #
+        #            link_logits = ().sum(dim=-1)  # dot product
+        #            link_labels = torch.zeros(
+        #                pos_edge_index.size(1) + neg_edge_index.size(1),
+        #                dtype=torch.float,
+        #                device=device,
+        #            )
+        #            link_labels[: pos_edge_index.size(1)] = 1.0
+        #            loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
+
+        # Compute gradients and update parameters of the model
+        loss.backward()
+        optimizer.step()
+        with torch.no_grad():
+            ave_loss += loss.item()
+            n_iter += 1
+        pbar.update(1)
+        ave_loss /= n_iter
+        pbar.set_description(f"loss={ave_loss:.3f} iter/epoch={n_iter}")
 
     # Set the model in evaluation mode and return
     model.eval()

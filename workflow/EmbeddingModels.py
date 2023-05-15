@@ -24,6 +24,7 @@ degree_corrected_gnn_models = [
     "dcEdgeCNN",
     "dcGraphUNet",
 ]
+degree_corrected_gnn_models = []
 
 
 def calc_prob_i_j(emb, src, trg, net, model_name):

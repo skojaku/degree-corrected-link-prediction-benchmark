@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-14 09:57:09
+# @Last Modified time: 2023-05-15 14:02:13
 
 from sklearn.decomposition import PCA
 import embcom
@@ -166,21 +166,51 @@ def dcSBM(network, dim):
 #
 # Graph neural networks
 #
-def gnn_embedding(model, network, feature_vec_dim=64, device=None, epochs=2000, negative_edge_sampler=None, batch_size=2500):
+# def gnn_embedding(model, network, feature_vec_dim=64, device=None, epochs=2000, negative_edge_sampler=None, batch_size=2500):
+#    if device is None:
+#        device = embcom.gnns.get_gpu_id()
+#
+#    model, emb = embcom.gnns.train(
+#        model=model,
+#        feature_vec=None,
+#        net=network,
+#        negative_edge_sampler=negative_edge_sampler,
+#        device=device,
+#        epochs=epochs,
+#        batch_size=batch_size,
+#        feature_vec_dim=feature_vec_dim
+#    )
+#    return emb
+
+
+def gnn_embedding(
+    model,
+    network,
+    feature_vec_dim,
+    device=None,
+    epochs=1000,
+    negative_edge_sampler=None,
+    batch_size=3500 * 3,
+):
     if device is None:
         device = embcom.gnns.get_gpu_id()
-
+    model_ext = embcom.gnns.GNNwithEmbLayer(
+        gnn=model,
+        dim_emb=feature_vec_dim,
+        n_nodes=network.shape[0],
+    )
     model, emb = embcom.gnns.train(
-        model=model,
-        feature_vec=None,
+        model=model_ext,
+        feature_vec=None,  # network.toarray(),
+        feature_vec_dim=feature_vec_dim,
         net=network,
         negative_edge_sampler=negative_edge_sampler,
         device=device,
         epochs=epochs,
-        batch_size=batch_size,
-        feature_vec_dim=feature_vec_dim
+        # batch_size=batch_size,
+        lr=1e-3,
     )
-    return emb
+    return model, emb
 
 
 @embedding_model
@@ -194,7 +224,7 @@ def GCN(network, dim, feature_dim=64, device=None, dim_h=128):
             act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
-        feature_vec_dim=feature_dim, 
+        feature_vec_dim=feature_dim,
         network=network,
     )
 
@@ -225,7 +255,7 @@ def GAT(network, dim, feature_dim=64, device=None, dim_h=128):
             act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
-        feature_vec_dim=feature_dim, 
+        feature_vec_dim=feature_dim,
         network=network,
     )
 
@@ -261,11 +291,13 @@ def PNA(network, dim, feature_dim=64, device=None, dim_h=128):
                 "linear",
                 "inverse_linear",
             ],
-            deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
+            deg=torch.FloatTensor(
+                np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))
+            ),
             act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
-        feature_vec_dim=feature_dim, 
+        feature_vec_dim=feature_dim,
         network=network,
     )
 
@@ -281,13 +313,13 @@ def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
             act=torch.nn.LeakyReLU(),
             dropout=0.5,
         ),
-        feature_vec_dim=feature_dim, 
+        feature_vec_dim=feature_dim,
         network=network,
     )
 
 
-#@embedding_model
-#def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
+# @embedding_model
+# def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
 #    return gnn_embedding(
 #        model=torch_geometric.nn.models.GraphUNet(
 #            in_channels=feature_dim,
@@ -298,6 +330,7 @@ def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
 #        batch_size = 2500,
 #        network=network,
 #    )
+
 
 @embedding_model
 def dcGCN(network, dim, feature_dim=64, device=None, dim_h=128):
@@ -327,7 +360,7 @@ def dcGraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
             dropout=0.5,
         ),
         network=network,
-        feature_vec_dim=feature_dim, 
+        feature_vec_dim=feature_dim,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
@@ -344,7 +377,7 @@ def dcGAT(network, dim, feature_dim=64, device=None, dim_h=128):
             dropout=0.5,
         ),
         network=network,
-        feature_vec_dim=feature_dim, 
+        feature_vec_dim=feature_dim,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
@@ -361,7 +394,7 @@ def dcGIN(network, dim, feature_dim=64, device=None, dim_h=128):
             dropout=0.5,
         ),
         network=network,
-        feature_vec_dim=feature_dim, 
+        feature_vec_dim=feature_dim,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
@@ -383,11 +416,13 @@ def dcPNA(network, dim, feature_dim=64, device=None, dim_h=128):
                 "inverse_linear",
             ],
             act=torch.nn.LeakyReLU(),
-            deg=torch.FloatTensor(np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))),
+            deg=torch.FloatTensor(
+                np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))
+            ),
             dropout=0.5,
         ),
         network=network,
-        feature_vec_dim=feature_dim, 
+        feature_vec_dim=feature_dim,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
@@ -404,13 +439,13 @@ def dcEdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
             dropout=0.5,
         ),
         network=network,
-        feature_vec_dim=feature_dim, 
+        feature_vec_dim=feature_dim,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
 
-#@embedding_model
-#def dcGraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
+# @embedding_model
+# def dcGraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
 #    return gnn_embedding(
 #        model=torch_geometric.nn.models.GraphUNet(
 #            in_channels=feature_dim,

@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-05 06:17:31
+# @Last Modified time: 2023-05-13 11:54:09
 from scipy import sparse
 import numpy as np
 import faiss
@@ -76,7 +76,7 @@ def ranking_by_embedding(emb, max_k, net, model_name):
     query_emb = emb.astype("float32").copy()
     key_emb = emb.astype("float32").copy()
 
-    if model_name in ["node2vec", "deepwalk", "graphsage", "line"]:
+    if model_name in degree_corrected_gnn_models:
         query_emb = np.hstack([query_emb, np.ones((n, 1))])
         deg = np.array(net.sum(axis=1)).reshape(-1)
         deg = np.maximum(1, deg)

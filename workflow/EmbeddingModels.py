@@ -2,15 +2,28 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 09:30:35
+# @Last Modified time: 2023-05-15 16:09:32
 
 from sklearn.decomposition import PCA
 import embcom
 import torch
 import numpy as np
+import torch_geometric
 
 embedding_models = {}
 embedding_model = lambda f: embedding_models.setdefault(f.__name__, f)
+
+degree_corrected_gnn_models = [
+    "node2vec",
+    "line",
+    "dcGCN",
+    "dcGraphSAGE",
+    "dcGAT",
+    "dcGIN",
+    "dcPNA",
+    "dcEdgeCNN",
+    # "dcGraphUNet",
+]
 
 
 def calc_prob_i_j(emb, src, trg, net, model_name):
@@ -23,12 +36,12 @@ def calc_prob_i_j(emb, src, trg, net, model_name):
     # where p0 is proportional to the degree. In residual2vec paper,
     # we found that P(i,j) is more predictable of missing edges than
     # the dot similarity u[i]^\top u[j].
-    #    if model_name in ["deepwalk", "node2vec", "line", "graphsage"]:
-    #        deg = np.array(net.sum(axis=1)).reshape(-1)
-    #        deg = np.maximum(deg, 1)
-    #        deg = deg / np.sum(deg)
-    #        log_deg = np.log(deg)
-    #        score += log_deg[src] + log_deg[trg]
+    if model_name in degree_corrected_gnn_models:
+        deg = np.array(net.sum(axis=1)).reshape(-1)
+        deg = np.maximum(deg, 1)
+        deg = deg / np.sum(deg)
+        log_deg = np.log(deg)
+        score += log_deg[src] + log_deg[trg]
     return score
 
 
@@ -68,88 +81,10 @@ def modspec(network, dim):
 
 
 @embedding_model
-def GCN(network, dim, feature_dim=64, device=None, dim_h=128):
-    if device is None:
-        device = embcom.gnns.get_gpu_id()
-    gnn = embcom.gnns.GCN(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
-    gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=500
-    )
-    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
-
-
-@embedding_model
-def GraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
-    if device is None:
-        device = embcom.gnns.get_gpu_id()
-    gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
-    gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=500
-    )
-    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
-
-
-@embedding_model
-def GAT(network, dim, feature_dim=64, device=None, dim_h=128):
-    if device is None:
-        device = embcom.gnns.get_gpu_id()
-    gnn = embcom.gnns.GAT(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
-    gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=500
-    )
-    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
-
-
-
-@embedding_model
-def dcGCN(network, dim, feature_dim=64, device=None, dim_h=128):
-    if device is None:
-        device = embcom.gnns.get_gpu_id()
-    gnn = embcom.gnns.GCN(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
-    gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=500, negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"]
-    )
-    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
-
-
-@embedding_model
-def dcGraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
-    if device is None:
-        device = embcom.gnns.get_gpu_id()
-    gnn = embcom.gnns.GraphSAGE(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
-    gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=500, negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"]
-    )
-    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
-
-
-@embedding_model
-def dcGAT(network, dim, feature_dim=64, device=None, dim_h=128):
-    if device is None:
-        device = embcom.gnns.get_gpu_id()
-    gnn = embcom.gnns.GAT(dim_in=feature_dim, dim_h=dim_h, dim_out=dim)
-    gnn = embcom.gnns.train(
-        model=gnn, feature_vec=None, net=network, device=device, epochs=500, negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"]
-    )
-    return gnn.generate_embedding(feature_vec=None, net=network, device=device)
-
-#
-#
-@embedding_model
 def nonbacktracking(network, dim):
     model = embcom.embeddings.NonBacktrackingSpectralEmbedding()
     model.fit(network)
     return model.transform(dim=dim)
-
-
-# @embedding_model
-# def graphsage(network, dim, num_walks=1, walk_length=5):
-#   model = embcom.embeddings.graphSAGE(
-#       num_walks=num_walks, walk_length=walk_length, emb_dim=dim
-#   )
-#   model.fit(network)
-#   model.train_GraphSAGE()
-#   return model.get_embeddings()
 
 
 @embedding_model
@@ -226,3 +161,299 @@ def dcSBM(network, dim):
     model.fit(network)
     emb = model.transform(dim=dim)
     return emb
+
+
+#
+# Graph neural networks
+#
+# def gnn_embedding(model, network, feature_vec_dim=64, device=None, epochs=2000, negative_edge_sampler=None, batch_size=2500):
+#    if device is None:
+#        device = embcom.gnns.get_gpu_id()
+#
+#    model, emb = embcom.gnns.train(
+#        model=model,
+#        feature_vec=None,
+#        net=network,
+#        negative_edge_sampler=negative_edge_sampler,
+#        device=device,
+#        epochs=epochs,
+#        batch_size=batch_size,
+#        feature_vec_dim=feature_vec_dim
+#    )
+#    return emb
+
+
+def gnn_embedding(
+    model,
+    network,
+    feature_vec_dim,
+    device=None,
+    epochs=1000,
+    negative_edge_sampler=None,
+    batch_size=3500 * 3,
+):
+    if device is None:
+        device = embcom.gnns.get_gpu_id()
+    model_ext = embcom.gnns.GNNwithEmbLayer(
+        gnn=model,
+        dim_emb=feature_vec_dim,
+        n_nodes=network.shape[0],
+    )
+    model, emb = embcom.gnns.train(
+        model=model_ext,
+        feature_vec=None,  # network.toarray(),
+        feature_vec_dim=feature_vec_dim,
+        net=network,
+        negative_edge_sampler=negative_edge_sampler,
+        device=device,
+        epochs=epochs,
+        # batch_size=batch_size,
+        lr=1e-3,
+    )
+    return model, emb
+
+
+@embedding_model
+def GCN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GCN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            act=torch.nn.LeakyReLU(),
+            dropout=0.5,
+        ),
+        feature_vec_dim=feature_dim,
+        network=network,
+    )
+
+
+@embedding_model
+def GraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GraphSAGE(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            act=torch.nn.LeakyReLU(),
+            out_channels=dim,
+            dropout=0.5,
+        ),
+        network=network,
+    )
+
+
+@embedding_model
+def GAT(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GAT(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            act=torch.nn.LeakyReLU(),
+            dropout=0.5,
+        ),
+        feature_vec_dim=feature_dim,
+        network=network,
+    )
+
+
+@embedding_model
+def GIN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GIN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            act=torch.nn.LeakyReLU(),
+            dropout=0.5,
+        ),
+        network=network,
+    )
+
+
+@embedding_model
+def PNA(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.PNA(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            aggregators=["sum", "mean", "min", "max", "max", "var", "std"],
+            scalers=[
+                "identity",
+                "amplification",
+                "attenuation",
+                "linear",
+                "inverse_linear",
+            ],
+            deg=torch.FloatTensor(
+                np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))
+            ),
+            act=torch.nn.LeakyReLU(),
+            dropout=0.5,
+        ),
+        feature_vec_dim=feature_dim,
+        network=network,
+    )
+
+
+@embedding_model
+def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.EdgeCNN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            act=torch.nn.LeakyReLU(),
+            dropout=0.5,
+        ),
+        feature_vec_dim=feature_dim,
+        network=network,
+    )
+
+
+# @embedding_model
+# def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
+#    return gnn_embedding(
+#        model=torch_geometric.nn.models.GraphUNet(
+#            in_channels=feature_dim,
+#            hidden_channels=dim_h,
+#            out_channels=dim,
+#            depth=1,
+#        ),
+#        batch_size = 2500,
+#        network=network,
+#    )
+
+
+@embedding_model
+def dcGCN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GCN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            act=torch.nn.LeakyReLU(),
+            dropout=0.5,
+        ),
+        network=network,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )
+
+
+@embedding_model
+def dcGraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GraphSAGE(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            act=torch.nn.LeakyReLU(),
+            dropout=0.5,
+        ),
+        network=network,
+        feature_vec_dim=feature_dim,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )
+
+
+@embedding_model
+def dcGAT(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GAT(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            act=torch.nn.LeakyReLU(),
+            dropout=0.5,
+        ),
+        network=network,
+        feature_vec_dim=feature_dim,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )
+
+
+@embedding_model
+def dcGIN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GIN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            act=torch.nn.LeakyReLU(),
+            dropout=0.5,
+        ),
+        network=network,
+        feature_vec_dim=feature_dim,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )
+
+
+@embedding_model
+def dcPNA(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.PNA(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            out_channels=dim,
+            aggregators=["sum", "mean", "min", "max", "max", "var", "std"],
+            scalers=[
+                "identity",
+                "amplification",
+                "attenuation",
+                "linear",
+                "inverse_linear",
+            ],
+            act=torch.nn.LeakyReLU(),
+            deg=torch.FloatTensor(
+                np.bincount(np.array(network.sum(axis=0)).reshape(-1).astype(int))
+            ),
+            dropout=0.5,
+        ),
+        network=network,
+        feature_vec_dim=feature_dim,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )
+
+
+@embedding_model
+def dcEdgeCNN(network, dim, feature_dim=64, device=None, dim_h=128):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.EdgeCNN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=2,
+            act=torch.nn.LeakyReLU(),
+            out_channels=dim,
+            dropout=0.5,
+        ),
+        network=network,
+        feature_vec_dim=feature_dim,
+        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+    )
+
+
+# @embedding_model
+# def dcGraphUNet(network, dim, feature_dim=64, device=None, dim_h=128):
+#    return gnn_embedding(
+#        model=torch_geometric.nn.models.GraphUNet(
+#            in_channels=feature_dim,
+#            hidden_channels=dim_h,
+#            out_channels=dim,
+#            depth=1,
+#        ),
+#        batch_size = 2500,
+#        network=network,
+#        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+#    )

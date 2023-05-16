@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-10 04:51:58
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-15 14:22:20
+# @Last Modified time: 2023-05-15 16:47:34
 # %%
 import numpy as np
 from scipy import sparse
@@ -125,14 +125,20 @@ NegativeEdgeSampler = {
 
 
 class GNNwithEmbLayer(torch.nn.Module):
-    def __init__(self, gnn, n_nodes, dim_emb):
+    def __init__(self, gnn, n_nodes, dim_emb, feature_vec=None):
         super(GNNwithEmbLayer, self).__init__()
         self.gnn = gnn
         self.emb_layer = torch.nn.Embedding(n_nodes, dim_emb, padding_idx=-1)
-        self.emb_layer.weight = torch.nn.Parameter(
-            torch.FloatTensor(n_nodes, dim_emb).uniform_(-0.5 / dim_emb, 0.5 / dim_emb)
-        )
-        self.emb_layer.weight.requires_grad = True
+        if feature_vec is None:
+            self.emb_layer.weight = torch.nn.Parameter(
+                torch.FloatTensor(n_nodes, dim_emb).uniform_(
+                    -0.5 / dim_emb, 0.5 / dim_emb
+                )
+            )
+            self.emb_layer.weight.requires_grad = True
+        else:
+            self.emb_layer.weight = torch.nn.Parameter(torch.FloatTensor(feature_vec))
+            self.emb_layer.weight.requires_grad = False
         self.n_nodes = n_nodes
 
     def forward(self, edge_index, node_ids=None):

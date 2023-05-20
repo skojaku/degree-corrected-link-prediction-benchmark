@@ -248,15 +248,15 @@ def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=64):
     )
 
 
-@embedding_model
-def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=64):
-    return gnn_embedding(
-        model=torch_geometric.nn.models.GraphUNet(
-            in_channels=feature_dim,
-            hidden_channels=dim_h,
-            out_channels=dim,
-            depth=2,
-        ),
-        network=network,
-        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["uniform"],
-    )
+#@embedding_model
+#def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=64):
+#    return gnn_embedding(
+#        model=torch_geometric.nn.models.GraphUNet(
+#            in_channels=feature_dim,
+#            hidden_channels=dim_h,
+#            out_channels=dim,
+#            depth=2,
+#        ),
+#        network=network,
+#        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["uniform"],
+#    )

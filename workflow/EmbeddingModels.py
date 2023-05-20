@@ -24,7 +24,7 @@ degree_corrected_gnn_models = [
     "dcEdgeCNN",
     "dcGraphUNet",
 ]
-degree_corrected_gnn_models = []
+#degree_corrected_gnn_models = []
 
 
 def calc_prob_i_j(emb, src, trg, net, model_name):
@@ -191,7 +191,7 @@ def gnn_embedding(
     device=None,
     epochs=1000,
     negative_edge_sampler=None,
-    batch_size=3500 * 3,
+    batch_size=1000,
 ):
     if device is None:
         device = embcom.gnns.get_gpu_id()
@@ -208,10 +208,10 @@ def gnn_embedding(
         negative_edge_sampler=negative_edge_sampler,
         device=device,
         epochs=epochs,
-        # batch_size=batch_size,
+        batch_size=batch_size,
         lr=1e-3,
     )
-    return model, emb
+    return emb
 
 
 @embedding_model
@@ -243,6 +243,7 @@ def GraphSAGE(network, dim, feature_dim=64, device=None, dim_h=128):
             dropout=0.5,
             jk="last",
         ),
+        feature_vec_dim=feature_dim,
         network=network,
     )
 
@@ -276,6 +277,7 @@ def GIN(network, dim, feature_dim=64, device=None, dim_h=128):
             dropout=0.5,
             jk="last",
         ),
+        feature_vec_dim=feature_dim,
         network=network,
     )
 
@@ -352,6 +354,7 @@ def dcGCN(network, dim, feature_dim=64, device=None, dim_h=128):
             jk="last",
         ),
         network=network,
+        feature_vec_dim=feature_dim,
         negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 

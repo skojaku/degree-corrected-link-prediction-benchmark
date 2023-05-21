@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 04:53:21
+# @Last Modified time: 2023-05-20 16:18:50
 """Module for embedding."""
 # %%
 import graph_tool.all as gt
@@ -259,38 +259,6 @@ class ModularitySpectralEmbedding(NodeEmbeddings):
         self.out_vec = u
 
 
-class HighOrderModularitySpectralEmbedding(NodeEmbeddings):
-    def __init__(
-        self,
-        verbose=False,
-        window_length=10,
-    ):
-        self.in_vec = None  # In-vector
-        self.out_vec = None  # Out-vector
-        self.window_length = window_length
-
-    def fit(self, net):
-        A = utils.to_adjacency_matrix(net)
-        self.A = A
-        self.deg = np.array(A.sum(axis=1)).reshape(-1)
-        return self
-
-    def update_embedding(self, dim):
-        stationary_prob = self.deg / np.sum(self.deg)
-
-        P = utils.to_trans_mat(self.A)
-        Q = []
-        for t in range(self.window_length):
-            Q.append(
-                [sparse.diags(stationary_prob / self.window_length) @ P]
-                + [P for _ in range(t)]
-            )
-        Q.append([-stationary_prob.reshape((-1, 1)), stationary_prob.reshape((1, -1))])
-        u, s, v = rsvd.rSVD(Q, dim=dim)
-        self.in_vec = u @ sparse.diags(s)
-        self.out_vec = None
-
-
 class LinearizedNode2Vec(NodeEmbeddings):
     def __init__(self, verbose=False, window_length=10, p=100, q=40):
         self.in_vec = None  # In-vector
@@ -384,90 +352,6 @@ class NonBacktrackingSpectralEmbedding(NodeEmbeddings):
             v = v @ np.diag(1 / c)
 
         self.in_vec = v
-
-
-class Node2VecMatrixFactorization(NodeEmbeddings):
-    def __init__(self, verbose=False, window_length=10, num_blocks=500):
-        self.in_vec = None  # In-vector
-        self.out_vec = None  # Out-vector
-        self.window_length = window_length
-        self.num_blocks = num_blocks
-
-    def fit(self, net):
-        A = utils.to_adjacency_matrix(net)
-
-        self.A = A
-        self.deg = np.array(A.sum(axis=1)).reshape(-1)
-        return self
-
-    def update_embedding(self, dim):
-        P = utils.to_trans_mat(self.A)
-        Ppow = utils.matrix_sum_power(P, self.window_length) / self.window_length
-        stationary_prob = self.deg / np.sum(self.deg)
-        R = np.log(Ppow @ np.diag(1 / stationary_prob))
-
-        # u, s, v = rsvd.rSVD(R, dim=dim)
-        svd = TruncatedSVD(n_components=dim + 1, n_iter=7, random_state=42)
-        u = svd.fit_transform(R)
-        s = svd.singular_values_
-        self.in_vec = u @ sparse.diags(np.sqrt(s))
-        self.out_vec = None
-
-
-class NonBacktrackingNode2Vec(Node2Vec):
-    """A python class for the node2vec.
-
-    Parameters
-    ----------
-    num_walks : int (optional, default 10)
-        Number of walks per node
-    walk_length : int (optional, default 40)
-        Length of walks
-    window_length : int (optional, default 10)
-        Restart probability of a random walker.
-    p : node2vec parameter (TODO: Write doc)
-    q : node2vec parameter (TODO: Write doc)
-    """
-
-    def __init__(self, num_walks=10, walk_length=80, window_length=10, **params):
-        Node2Vec.__init__(
-            self,
-            num_walks=num_walks,
-            walk_length=walk_length,
-            window_length=window_length,
-            **params
-        )
-        self.sampler = samplers.NonBacktrackingWalkSampler(
-            num_walks=num_walks, walk_length=walk_length
-        )
-
-
-class NonBacktrackingDeepWalk(DeepWalk):
-    """A python class for the node2vec.
-
-    Parameters
-    ----------
-    num_walks : int (optional, default 10)
-        Number of walks per node
-    walk_length : int (optional, default 40)
-        Length of walks
-    window_length : int (optional, default 10)
-        Restart probability of a random walker.
-    p : node2vec parameter (TODO: Write doc)
-    q : node2vec parameter (TODO: Write doc)
-    """
-
-    def __init__(self, num_walks=10, walk_length=80, window_length=10, **params):
-        DeepWalk.__init__(
-            self,
-            num_walks=num_walks,
-            walk_length=walk_length,
-            window_length=window_length,
-            **params
-        )
-        self.sampler = samplers.NonBacktrackingWalkSampler(
-            num_walks=num_walks, walk_length=walk_length
-        )
 
 
 class DegreeEmbedding:

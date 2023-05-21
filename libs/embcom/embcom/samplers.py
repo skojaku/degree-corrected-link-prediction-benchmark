@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+# @Author: Sadamori Kojaku
+# @Date:   2023-03-27 17:59:10
+# @Last Modified by:   Sadamori Kojaku
+# @Last Modified time: 2023-05-20 16:55:03
 """This module contains sampler class which generates a sequence of nodes from
 a network using a random walk.
 
@@ -6,6 +11,7 @@ All samplers should be the subclass of NodeSampler class.
 from abc import ABCMeta, abstractmethod
 from numba import njit
 import numpy as np
+
 
 class NodeSampler(metaclass=ABCMeta):
     """Super class for node sampler class.
@@ -28,15 +34,9 @@ class NodeSampler(metaclass=ABCMeta):
             walk[i,j] indicates the jth step for walker i.
         """
 
+
 class Node2VecWalkSampler(NodeSampler):
-    def __init__(
-        self,
-        num_walks=10,
-        walk_length=80,
-        p=1.0,
-        q=1.0,
-        **params
-    ):
+    def __init__(self, num_walks=10, walk_length=80, p=1.0, q=1.0, **params):
         """Noe2VecWalk Sampler
 
         Parameters
@@ -69,22 +69,20 @@ class Node2VecWalkSampler(NodeSampler):
         self.A = net
 
         self.walks = simulate_node2vec_walk(
-            A = self.A,
-            num_walks = self.num_walks,
-            walk_length = self.walk_length,
-            start_node_ids = None,
-            p = self.p,
-            q = self.q,
+            A=self.A,
+            num_walks=self.num_walks,
+            walk_length=self.walk_length,
+            start_node_ids=None,
+            p=self.p,
+            q=self.q,
         )
+
 
 #
 # SimpleWalk Sampler
 #
 class SimpleWalkSampler(Node2VecWalkSampler):
-    def __init__(
-        self,
-        **params
-    ):
+    def __init__(self, **params):
         """Simple walk without bias
 
         Parameters
@@ -108,9 +106,7 @@ class SimpleWalkSampler(Node2VecWalkSampler):
 # Non-backtracking walks
 #
 class NonBacktrackingWalkSampler(NodeSampler):
-    def __init__(
-        self, num_walks=10, walk_length=80, **params
-    ):
+    def __init__(self, num_walks=10, walk_length=80, **params):
         self.num_nodes = -1
         self.num_walks = int(num_walks)
         self.walk_length = walk_length
@@ -131,10 +127,9 @@ class NonBacktrackingWalkSampler(NodeSampler):
             )
             for _walk in _walks:
                 self.walks.append(_walk)
-                total_walk_num+=len(_walk)
+                total_walk_num += len(_walk)
                 if total_walk_num > target_walk_num:
                     break
-
 
 
 #
@@ -144,9 +139,9 @@ def simulate_node2vec_walk(
     A,
     num_walks,
     walk_length,
-    start_node_ids = None,
-    p = 1,
-    q = 1,
+    start_node_ids=None,
+    p=1,
+    q=1,
 ):
     if A.getformat() != "csr":
         raise TypeError("A should be in the scipy.sparse.csc_matrix")
@@ -173,6 +168,7 @@ def simulate_node2vec_walk(
 
     return walks
 
+
 @njit(nogil=True)
 def _csr_row_cumsum(indptr, data):
     out = np.empty_like(data)
@@ -183,6 +179,7 @@ def _csr_row_cumsum(indptr, data):
             out[j] = acc
         out[j] = 1.0
     return out
+
 
 @njit(nogil=True)
 def _neighbors(indptr, indices_or_data, t):
@@ -276,7 +273,7 @@ def simulate_non_backtracking_walk(
     A,
     num_walks,
     walk_length,
-    start_node_ids = None,
+    start_node_ids=None,
 ):
     """Wrapper for."""
 
@@ -300,10 +297,13 @@ def simulate_non_backtracking_walk(
                     A.indptr, A.indices, A.data, walk_length, start
                 )
             else:
-                walk = _non_backtracking_random_walk(A.indptr, A.indices, walk_length, start)
+                walk = _non_backtracking_random_walk(
+                    A.indptr, A.indices, walk_length, start
+                )
             walks.append(walk.tolist())
 
     return walks
+
 
 @njit(nogil=True)
 def _non_backtracking_random_walk(indptr, indices, walk_length, t):

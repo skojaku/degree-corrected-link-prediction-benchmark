@@ -136,6 +136,8 @@ NET_STAT_FILE = j(
    NETWORK_DIR, "network-stats.csv"
 )
 
+COMMON_NEIGHBOR_COVERAGE = j(NETWORK_DIR, "common_neighbor_link_coverage.csv")
+
 #
 # Embedding
 #
@@ -206,6 +208,7 @@ EDGE_CANDIDATES_FILE_OPTIMAL_STACKING = j(
     f"edge_candidates_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.pkl",
 )
 
+
 # ====================
 # Evaluation
 # ====================
@@ -259,6 +262,7 @@ BEST_RF_FEATURES = j(
 
 LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
 
+
 # ====================
 # Output
 # ====================
@@ -303,6 +307,7 @@ rule all:
         # Network stats (Check point 2)
         #
         NET_STAT_FILE,
+        COMMON_NEIGHBOR_COVERAGE,
         #
         # Link ranking (Check point 3)
         #
@@ -356,6 +361,16 @@ rule calc_network_stats:
         output_file = NET_STAT_FILE
     script:
         "workflow/calc-network-stats.py"
+
+
+rule calc_common_neighbor_edge_coverage:
+    input:
+        edge_table_files = expand(TEST_EDGE_TABLE_FILE, data = DATA_LIST, **params_train_test_split),
+        net_files = expand(TRAIN_NET_FILE, data = DATA_LIST, **params_train_test_split)
+    output:
+        output_file = COMMON_NEIGHBOR_COVERAGE 
+    script:
+        "workflow/calc-link-coverage-by-common-neighbors.py"
 
 # ============================
 # Optimal stacking

@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-20 05:50:31
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-20 21:01:26
+# @Last Modified time: 2023-05-22 13:53:33
 from tqdm.auto import tqdm
 import scipy
 from numba import njit
@@ -15,6 +15,96 @@ import torch.utils.data
 from scipy.sparse.csgraph import shortest_path
 import utils
 from torch_geometric.loader import DataLoader
+
+
+# Example
+# import networkx as nx
+# from scipy.sparse.csgraph import shortest_path
+# from scipy import sparse
+# import numpy as np
+# from torch_geometric.data import Data
+# import gnns
+# from torch.utils.data import DataLoader
+#
+# G = nx.karate_club_graph()
+# net = nx.adjacency_matrix(G)
+# net[22, 33] = 0
+# net[33, 22] = 0
+# net = sparse.csr_matrix(net)
+# net.eliminate_zeros()
+# net.data = net.data * 0 + 1
+#
+#
+# def negative_uniform(edge_index, num_nodes, num_neg_samples):
+#    t = np.random.randint(
+#        0, num_nodes, size=num_neg_samples * edge_index.size()[1]
+#    ).reshape((num_neg_samples, edge_index.size()[1]))
+#    return torch.LongTensor(t)
+#
+#
+# def degreeBiasedNegativeEdgeSampling(edge_index, num_nodes, num_neg_samples):
+#    deg = np.bincount(edge_index.reshape(-1).cpu(), minlength=num_nodes).astype(float)
+#    deg /= np.sum(deg)
+#    t = np.random.choice(
+#        num_nodes, p=deg, size=num_neg_samples * edge_index.size()[1]
+#    ).reshape((num_neg_samples, edge_index.size()[1]))
+#    return torch.LongTensor(t)
+#
+#
+# n_nodes = net.shape[0]
+#
+## Convert sparse adjacency matrix to edge list format
+# r, c, _ = sparse.find(net)
+# edge_index = torch.LongTensor(np.array([r.astype(int), c.astype(int)]))
+#
+# feature_vec = gnns.generate_base_embedding(net, 16)
+# feature_vec = torch.FloatTensor(feature_vec)
+#
+# import torch_geometric
+#
+# feature_dim = feature_vec.shape[1] + 1
+# dim_h = 64
+# dim = 64
+# gnn_model = torch_geometric.nn.models.GCN(
+#    in_channels=feature_dim,
+#    hidden_channels=dim_h,
+#    num_layers=2,
+#    out_channels=dim,
+# )
+#
+# gnn_model = SEALTrain(
+#    model=gnn_model,
+#    feature_vec=feature_vec,
+#    net=net,
+#    device="cuda:1",
+#    epochs=100,
+#    hops=2,
+#    feature_vec_dim=64,
+#    #negative_edge_sampler=degreeBiasedNegativeEdgeSampling,
+#    negative_edge_sampler=negative_uniform,
+#    batch_size=50,
+#    lr=0.01,
+# )
+#
+#
+# gnn_model.to("cpu")
+# P = np.zeros(net.shape)
+# for src in range(net.shape[0]):
+#    for trg in range(src, net.shape[0]):
+#        if net[src, trg] != 0:
+#            continue
+#        subnet, sub_x = SEALUtils.generate_input_data(
+#            src, trg, feature_vec, net, hops=2, max_nodes_per_hop=None
+#        )
+#        sub_edge_index = torch.LongTensor(utils.adj2edgeindex(subnet))
+#        emb = gnn_model(sub_x, sub_edge_index)
+#        emb = emb.detach().cpu().numpy()
+#        P[src, trg] = np.sum(emb[0, :] * emb[1, :])
+#        P[trg, src] = P[src, trg]
+# import seaborn as sns
+# import matplotlib.pyplot as plt
+#
+# sns.heatmap(P, cmap="coolwarm", center=0)
 
 
 class SEALUtils:
@@ -318,98 +408,3 @@ def SEALTrain(
     # Set the model in evaluation mode and return
     model.eval()
     return model
-
-
-#
-#import networkx as nx
-#from scipy.sparse.csgraph import shortest_path
-#from scipy import sparse
-#import numpy as np
-#from torch_geometric.data import Data
-#import gnns
-#from torch.utils.data import DataLoader
-#
-#G = nx.karate_club_graph()
-#net = nx.adjacency_matrix(G)
-## labels = np.unique([d[1]['club'] for d in G.nodes(data=True)], return_inverse=True)[1]
-#net[22, 33] = 0
-#net[33, 22] = 0
-#net = sparse.csr_matrix(net)
-#net.eliminate_zeros()
-#net.data = net.data * 0 + 1
-#
-#
-#def negative_uniform(edge_index, num_nodes, num_neg_samples):
-#    t = np.random.randint(
-#        0, num_nodes, size=num_neg_samples * edge_index.size()[1]
-#    ).reshape((num_neg_samples, edge_index.size()[1]))
-#    return torch.LongTensor(t)
-#
-#
-#def degreeBiasedNegativeEdgeSampling(edge_index, num_nodes, num_neg_samples):
-#    deg = np.bincount(edge_index.reshape(-1).cpu(), minlength=num_nodes).astype(float)
-#    deg /= np.sum(deg)
-#    t = np.random.choice(
-#        num_nodes, p=deg, size=num_neg_samples * edge_index.size()[1]
-#    ).reshape((num_neg_samples, edge_index.size()[1]))
-#    return torch.LongTensor(t)
-#
-#
-#n_nodes = net.shape[0]
-#
-## Convert sparse adjacency matrix to edge list format
-#r, c, _ = sparse.find(net)
-#edge_index = torch.LongTensor(np.array([r.astype(int), c.astype(int)]))
-#
-#feature_vec = gnns.generate_base_embedding(net, 16)
-#feature_vec = torch.FloatTensor(feature_vec)
-#
-#import torch_geometric
-#
-#feature_dim = feature_vec.shape[1] + 1
-#dim_h = 64
-#dim = 64
-#gnn_model = torch_geometric.nn.models.GCN(
-#    in_channels=feature_dim,
-#    hidden_channels=dim_h,
-#    num_layers=2,
-#    out_channels=dim,
-#)
-#
-#gnn_model = SEALTrain(
-#    model=gnn_model,
-#    feature_vec=feature_vec,
-#    net=net,
-#    device="cuda:1",
-#    epochs=100,
-#    hops=2,
-#    feature_vec_dim=64,
-#    #negative_edge_sampler=degreeBiasedNegativeEdgeSampling,
-#    negative_edge_sampler=negative_uniform,
-#    batch_size=50,
-#    lr=0.01,
-#)
-#
-#
-#gnn_model.to("cpu")
-#P = np.zeros(net.shape)
-#for src in range(net.shape[0]):
-#    for trg in range(src, net.shape[0]):
-#        if net[src, trg] != 0:
-#            continue
-#        subnet, sub_x = SEALUtils.generate_input_data(
-#            src, trg, feature_vec, net, hops=2, max_nodes_per_hop=None
-#        )
-#        sub_edge_index = torch.LongTensor(utils.adj2edgeindex(subnet))
-#        emb = gnn_model(sub_x, sub_edge_index)
-#        emb = emb.detach().cpu().numpy()
-#        P[src, trg] = np.sum(emb[0, :] * emb[1, :])
-#        P[trg, src] = P[src, trg]
-#import seaborn as sns
-#import matplotlib.pyplot as plt
-#
-#sns.heatmap(P, cmap="coolwarm", center=0)
-## %%
-## np.where(np.max(P) == P)
-#P[22, :]
-#

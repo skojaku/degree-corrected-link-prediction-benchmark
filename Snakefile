@@ -341,6 +341,9 @@ rule figs:
         #FIG_DEGSKEW_AUCDIFF_NODESIZE,
         #FIG_PREC_RECAL_F1
 
+rule _all:
+    input:
+        COMMON_NEIGHBOR_COVERAGE,
 # ============================
 # Cleaning networks
 # Gets edge list of GCC as csv
@@ -370,7 +373,7 @@ rule calc_common_neighbor_edge_coverage:
     output:
         output_file = COMMON_NEIGHBOR_COVERAGE 
     script:
-        "workflow/calc-link-coverage-by-common-neighbors.py"
+        "workflow/calc-link-coverage-by-distance.py"
 
 # ============================
 # Optimal stacking

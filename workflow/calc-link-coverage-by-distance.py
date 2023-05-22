@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-22 13:55:10
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-22 15:00:30
+# @Last Modified time: 2023-05-22 15:02:26
 # %%
 import pathlib
 import numpy as np
@@ -15,7 +15,6 @@ import glob
 if "snakemake" in sys.modules:
     net_files = snakemake.input["net_files"]
     edge_table_files = snakemake.input["edge_table_files"]
-    data_name = snakemake.params["data_name"]
     output_file = snakemake.output["output_file"]
 else:
     net_files = glob.glob(

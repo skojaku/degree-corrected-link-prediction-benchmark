@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-27 17:59:10
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-20 16:55:03
+# @Last Modified time: 2023-05-21 06:23:51
 """This module contains sampler class which generates a sequence of nodes from
 a network using a random walk.
 
@@ -36,7 +36,9 @@ class NodeSampler(metaclass=ABCMeta):
 
 
 class Node2VecWalkSampler(NodeSampler):
-    def __init__(self, num_walks=10, walk_length=80, p=1.0, q=1.0, **params):
+    def __init__(
+        self, num_walks=10, walk_length=80, p=1.0, q=1.0, restart_prob=0, **params
+    ):
         """Noe2VecWalk Sampler
 
         Parameters
@@ -62,6 +64,7 @@ class Node2VecWalkSampler(NodeSampler):
         self.walk_length = walk_length
         self.p = p
         self.q = q
+        self.restart_prob = restart_prob
         self.walks = None
 
     def sampling(self, net):
@@ -75,6 +78,7 @@ class Node2VecWalkSampler(NodeSampler):
             start_node_ids=None,
             p=self.p,
             q=self.q,
+            restart_prob=self.restart_prob,
         )
 
 
@@ -136,12 +140,7 @@ class NonBacktrackingWalkSampler(NodeSampler):
 # node2vec walk
 #
 def simulate_node2vec_walk(
-    A,
-    num_walks,
-    walk_length,
-    start_node_ids=None,
-    p=1,
-    q=1,
+    A, num_walks, walk_length, start_node_ids=None, p=1, q=1, restart_prob=0
 ):
     if A.getformat() != "csr":
         raise TypeError("A should be in the scipy.sparse.csc_matrix")
@@ -158,12 +157,19 @@ def simulate_node2vec_walk(
     walks = []
     for _ in range(num_walks):
         for start in start_node_ids:
+            if callable(restart_prob):
+                _restart_prob = restart_prob()
+            else:
+                _restart_prob = restart_prob
+
             if is_weighted:
                 walk = _random_walk_weighted(
-                    A.indptr, A.indices, A.data, walk_length, p, q, start
+                    A.indptr, A.indices, A.data, walk_length, p, q, _restart_prob, start
                 )
             else:
-                walk = _random_walk(A.indptr, A.indices, walk_length, p, q, start)
+                walk = _random_walk(
+                    A.indptr, A.indices, walk_length, p, q, _restart_prob, start
+                )
             walks.append(walk.tolist())
 
     return walks
@@ -192,7 +198,7 @@ def _isin_sorted(a, x):
 
 
 @njit(nogil=True)
-def _random_walk(indptr, indices, walk_length, p, q, t):
+def _random_walk(indptr, indices, walk_length, p, q, restart_prob, t):
     max_prob = max(1 / p, 1, 1 / q)
     prob_0 = 1 / p / max_prob
     prob_1 = 1 / max_prob
@@ -205,13 +211,19 @@ def _random_walk(indptr, indices, walk_length, p, q, t):
         return walk[:1]
     walk[1] = np.random.choice(_neighbors(indptr, indices, t))
     for j in range(2, walk_length):
-        neighbors = _neighbors(indptr, indices, walk[j - 1])
+        if np.random.rand() < restart_prob:
+            neighbors = _neighbors(indptr, indices, t)
+        else:
+            neighbors = _neighbors(indptr, indices, walk[j - 1])
+
         if not neighbors.size:
             return walk[:j]
+
         if p == q == 1:
             # faster version
             walk[j] = np.random.choice(neighbors)
             continue
+
         while True:
             new_node = np.random.choice(neighbors)
             r = np.random.rand()
@@ -228,7 +240,7 @@ def _random_walk(indptr, indices, walk_length, p, q, t):
 
 
 @njit(nogil=True)
-def _random_walk_weighted(indptr, indices, data, walk_length, p, q, t):
+def _random_walk_weighted(indptr, indices, data, walk_length, p, q, restart_prob, t):
     max_prob = max(1 / p, 1, 1 / q)
     prob_0 = 1 / p / max_prob
     prob_1 = 1 / max_prob
@@ -243,10 +255,17 @@ def _random_walk_weighted(indptr, indices, data, walk_length, p, q, t):
         np.searchsorted(_neighbors(indptr, data, t), np.random.rand())
     ]
     for j in range(2, walk_length):
-        neighbors = _neighbors(indptr, indices, walk[j - 1])
-        if not neighbors.size:
-            return walk[:j]
-        neighbors_p = _neighbors(indptr, data, walk[j - 1])
+        if np.random.rand() < restart_prob:
+            neighbors = _neighbors(indptr, indices, t)
+            if not neighbors.size:
+                return walk[:j]
+            neighbors_p = _neighbors(indptr, data, t)
+        else:
+            neighbors = _neighbors(indptr, indices, walk[j - 1])
+            if not neighbors.size:
+                return walk[:j]
+            neighbors_p = _neighbors(indptr, data, walk[j - 1])
+
         if p == q == 1:
             # faster version
             walk[j] = neighbors[np.searchsorted(neighbors_p, np.random.rand())]

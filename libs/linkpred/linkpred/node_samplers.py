@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-16 17:34:35
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-12 16:48:27
+# @Last Modified time: 2023-06-12 15:41:22
 
 """Graph module to store a network and generate random walks from it."""
 import numpy as np

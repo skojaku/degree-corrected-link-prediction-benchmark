@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-20 05:50:31
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-06-12 17:24:10
+# @Last Modified time: 2023-06-16 17:44:51
 # %%
 from tqdm.auto import tqdm
 import scipy
@@ -18,77 +18,68 @@ from torch_geometric.loader import DataLoader
 from seal import utils
 from seal import gnns
 from seal.node_samplers import negative_uniform
+from collections.abc import Iterable
 
 
 class SEAL(torch.nn.Module):
-    def __init__(
-        self, filename=None, gnn_model=None, feature_vec=None, node_labelling="DRNL"
-    ):
+    def __init__(self, gnn_model, feature_vec):
         super(SEAL, self).__init__()
-        if filename is not None:
-            self.load(filename)
-            return
-
-        node_labelling = {  # to integer code
-            "DRNL": 0,
-            "distance_encoding": 1,
-        }[node_labelling]
-
-        self.add_module("gnn_model", gnn_model)
-        self.register_buffer(name="feature_vec", tensor=torch.FloatTensor([]))
-        self.register_buffer(
-            name="node_labelling", tensor=torch.LongTensor([node_labelling])
-        )
+        self.gnn_model = gnn_model
+        self.feature_vec = torch.FloatTensor(feature_vec)
 
     def forward(self, x, edge_index):
         return self.gnn_model(x, edge_index)
 
-    def predict(self, src, trg, net, feature_vec=None):
+    def predict(self, net, src, trg, feature_vec=None):
         if feature_vec is None:
             feature_vec = self.feature_vec
+        score_list = []
 
-        subnet, sub_x = self.generate_input_data(
-            src,
-            trg,
-            feature_vec,
-            net,
-            hops=2,
-            max_nodes_per_hop=None,
-        )
-        sub_edge_index = torch.LongTensor(utils.adj2edgeindex(subnet))
-        emb = self.gnn_model(sub_x, sub_edge_index)
-        emb = emb.detach().cpu().numpy()
-        return np.sum(emb[0, :] * emb[1, :])
+        if not isinstance(src, Iterable):
+            src, trg = [src], [trg]
+        for _src, _trg in zip(src, trg):
+            subnet, sub_x = generate_input_data(
+                _src,
+                _trg,
+                feature_vec,
+                net,
+                hops=2,
+                max_nodes_per_hop=None,
+            )
+            sub_edge_index = torch.LongTensor(utils.adj2edgeindex(subnet))
+            emb = self.gnn_model(sub_x, sub_edge_index)
+            emb = emb.detach().cpu().numpy()
+            score = np.sum(emb[0, :] * emb[1, :])
+            score_list.append(score)
+        return np.array(score_list)
 
     def set_feature_vectors(self, x):
-        self.feature_vec = torch.FloatTensor(x)
+        self.feature_vec.data = torch.FloatTensor(x)
 
-    def generate_input_data(
-        self,
+
+def generate_input_data(
+    src,
+    trg,
+    x,
+    net,
+    hops,
+    max_nodes_per_hop,
+):
+    nodes = get_enclosing_subgraph(
         src,
         trg,
-        x,
-        net,
-        hops,
-        max_nodes_per_hop,
-    ):
-        nodes = get_enclosing_subgraph(
-            src,
-            trg,
-            hops=hops,
-            net=net,
-            max_nodes_per_hop=max_nodes_per_hop,
-        )
+        hops=hops,
+        net=net,
+        max_nodes_per_hop=max_nodes_per_hop,
+    )
 
-        subnet = net[nodes, :][:, nodes]
-        sub_x = x[nodes, :]
+    subnet = net[nodes, :][:, nodes]
+    sub_x = x[nodes, :]
 
-        # code from here. labelling
-        node_labels = node_labelling_func[self.node_labelling[0].item()](subnet)
-        sub_x = torch.cat(
-            [sub_x, torch.FloatTensor(node_labels).reshape((-1, 1))], dim=-1
-        )
-        return subnet, sub_x
+    # code from here. labelling
+    node_labels = dual_radius_node_labelling(subnet)
+    sub_x = torch.cat([sub_x, torch.FloatTensor(node_labels).reshape((-1, 1))], dim=-1)
+    return subnet, sub_x
 
 
 # ==================
@@ -99,13 +90,12 @@ class SEAL(torch.nn.Module):
 
 
 def train(
-    model: torch.nn.Module,
+    model: torch.nn.Module,  # GNN model
     feature_vec: np.ndarray,
     net: sparse.spmatrix,
     device: str,
     epochs: int,
     hops: int = 2,
-    feature_vec_dim: int = 64,
     negative_edge_sampler=None,
     batch_size: int = 50,
     lr=0.01,
@@ -117,20 +107,12 @@ def train(
     r, c, _ = sparse.find(net)
     edge_index = torch.LongTensor(np.array([r.astype(int), c.astype(int)]))
 
-    # If feature vectors are not provided, generate them using the default method
-    if feature_vec is None:
-        feature_vec = gnns.generate_base_embedding(net, feature_vec_dim)
-        feature_vec = torch.FloatTensor(feature_vec)
-
-    model.set_feature_vectors(feature_vec.clone())
-
     # Use default negative sampling function if none is specified
     if negative_edge_sampler is None:
         negative_edge_sampler = negative_uniform
 
     # Create PyTorch data object with features and edge list
     data = SEALDataset(
-        model=model,
         edge_index=edge_index,
         x=feature_vec,
         n_nodes=net.shape[0],
@@ -193,7 +175,6 @@ def train(
 class SEALDataset(torch.utils.data.Dataset):
     def __init__(
         self,
-        model,
         edge_index,
         x,
         n_nodes,
@@ -202,7 +183,6 @@ class SEALDataset(torch.utils.data.Dataset):
         max_nodes_per_hop=100,
         node_labelling="DRNL",
     ):
-        self.model = model
         self.node_labelling = node_labelling
         # Constructor for SEALClusterData class. Initializes instance variables.
 
@@ -269,7 +249,7 @@ class SEALDataset(torch.utils.data.Dataset):
         edge = self.edge_index[:, idx]
 
         # Generate input data for subgraph surrounding the selected edge
-        subnet, sub_x = self.model.generate_input_data(
+        subnet, sub_x = generate_input_data(
             src=edge[0],
             trg=edge[1],
             x=self.x,
@@ -375,9 +355,6 @@ def dual_radius_node_labelling(subnet):
     node_labels[np.isinf(node_labels)] = 0
     node_labels[np.isnan(node_labels)] = 0
     return node_labels
-
-
-node_labelling_func = {0: dual_radius_node_labelling, 1: distance_encoding}
 
 
 #

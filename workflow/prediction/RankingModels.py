@@ -7,7 +7,7 @@ from scipy import sparse
 import numpy as np
 import faiss
 import pandas as pd
-from NetworkTopologyPredictionModels import *
+from workflow.models.NetworkTopologyPredictionModels import *
 from EmbeddingModels import *
 
 

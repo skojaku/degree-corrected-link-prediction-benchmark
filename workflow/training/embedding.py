@@ -7,7 +7,7 @@
 import sys
 import numpy as np
 from scipy import sparse
-from EmbeddingModels import *
+from workflow.models.EmbeddingModels import *
 
 #
 # Input

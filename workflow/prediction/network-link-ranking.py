@@ -7,7 +7,7 @@ from scipy import sparse
 import numpy as np
 import pandas as pd
 import sys
-from NetworkTopologyPredictionModels import *
+from workflow.models.NetworkTopologyPredictionModels import *
 from RankingModels import *
 
 if "snakemake" in sys.modules:

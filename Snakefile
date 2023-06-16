@@ -22,7 +22,8 @@ DERIVED_DIR = j(DATA_DIR, "derived")
 NETWORK_DIR = j(DERIVED_DIR, "networks")
 RAW_UNPROCESSED_NETWORKS_DIR = j(NETWORK_DIR, "raw")
 RAW_PROCESSED_NETWORKS_DIR = j(NETWORK_DIR, "preprocessed")
-EMB_DIR = j(DERIVED_DIR, "embedding")
+#EMB_DIR = j(DERIVED_DIR, "embedding")
+MODEL_DIR = j(DERIVED_DIR, "models")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
 
@@ -42,47 +43,61 @@ N_ITERATION = 5
 # ====================
 # Configuration
 # ====================
-
 #
-# Negative edge sampler
+# Train test split
 #
 params_train_test_split = {
     "testEdgeFraction": [0.5],
     "sampleId": list(range(N_ITERATION)),
 }
-paramspace_train_test_split = to_paramspace(params_train_test_split)
+paramspace_train_test_split = to_paramspace(paramName = "trainTestSplit", param = params_train_test_split, index=["testEdgeFraction"])
 
 
+#
+# Negative edge sampler
+#
 params_negative_edge_sampler = {
     "negativeEdgeSampler": ["uniform", "degreeBiased"],
 }
-paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
+paramspace_negative_edge_sampler = to_paramspace(paramName = "negativeSampling", param = params_negative_edge_sampler, index ="negativeEdgeSampler")
 
 
 #
 # Network embedding
 #
-params_emb = {"model": list(embedding_models.keys()), "dim": [64]}
-paramspace_emb = to_paramspace(params_emb)
+params_model = [
+    {
+        "model": ["line"],
+        "dim":[64],
+        "num_walks":[40],
+        "modelType":["embedding"]
+    },
+#    {
+#        "model": ["node2vec", "deepwalk", "fastrp"],
+#        "dim":[64],
+#        "num_walks":[40],
+#        "window_length":[5],
+#        "modelType":["embedding"]
+#    },
+#    {
+#        "model": ["leigenmap", "modspec", "nonbacktracking", "SGTLaplacianExp", "SGTLaplacianNeumann", "SGTAdjacencyExp", "SGTAdjacencyNeumann", "SGTNormAdjacencyExp", "STDNormAdjacencyNeumann", "dcSBM"],
+#        "dim":[64],
+#        "modelType":["embedding"]
+#    },
+    {
+        "model": ["GCN", "GIN", "PNA", "EdgeCNN"],
+        "feature_dim":[64],
+        "dim_h":[64],
+        "num_layers":[2],
+        "modelType":["embedding"]
+    },
+    {
+        "model": ["preferentialAttachment", "commonNeighbors", "jaccardIndex", "resourceAllocation", "adamicAdar", "localRandomWalk", "localPathIndex"],
+        "modelType":["network"]
+    }
+]
+paramspace_model= to_paramspace(paramName = "PredictionModel", param = params_model, index = ["model", "modelType"])
 
-
-#
-# Network-based link prediction
-#
-params_net_linkpred = {
-    "model": list(topology_models.keys())
-}
-paramspace_net_linkpred = to_paramspace(params_net_linkpred)
-
-# params_cv_files = {
-#     "xtrain" : "X_trainE_cv",
-#     "fold" : list(range(1,6)),
-#     "negativeEdgeSampler": ["uniform", "degreeBiased"],
-#     "testEdgeFraction": [0.5],
-#     "sampleId": list(range(N_ITERATION)),
-# }
-
-# params_cv_files = to_paramspace(params_cv_files)
 
 # =============================
 # Networks & Benchmark Datasets
@@ -139,39 +154,40 @@ NET_STAT_FILE = j(
 COMMON_NEIGHBOR_COVERAGE = j(NETWORK_DIR, "common_neighbor_link_coverage.csv")
 
 #
-# Embedding
+# Models
 #
-EMB_FILE = j(
-    EMB_DIR,
+MODEL_FILE = j(
+    MODEL_DIR,
     "{data}",
-    f"emb_{paramspace_train_test_split.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.npz",
-)
-# classification
-PRED_SCORE_EMB_FILE = j(
-    PRED_DIR,
-    "{data}",
-    f"score_basedOn~emb_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.csv",
-)
-# ranking
-PRED_RANK_EMB_FILE = j(
-    PRED_DIR,
-    "{data}",
-    f"score_ranking_basedOn~emb_{paramspace_train_test_split.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.npz",
+    f"model_{paramspace_train_test_split.wildcard_pattern}_{paramspace_model.wildcard_pattern}.pickle",
 )
 
-#
-# Topology-based
-#
-PRED_SCORE_NET_FILE = j(
+# classification
+PRED_SCORE_MODEL_FILE = j(
     PRED_DIR,
     "{data}",
-    f"score_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
+    f"score_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_model.wildcard_pattern}.csv",
 )
-PRED_RANK_NET_FILE = j(
+# ranking
+PRED_RANK_MODEL_FILE = j(
     PRED_DIR,
     "{data}",
-    f"score_ranking_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.npz",
+    f"score_ranking_{paramspace_train_test_split.wildcard_pattern}_{paramspace_model.wildcard_pattern}.npz",
 )
+
+##
+## Topology-based
+##
+#PRED_SCORE_NET_FILE = j(
+#    PRED_DIR,
+#    "{data}",
+#    f"score_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
+#)
+#PRED_RANK_NET_FILE = j(
+#    PRED_DIR,
+#    "{data}",
+#    f"score_ranking_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.npz",
+#)
 
 #
 # Optimal Stacking
@@ -215,31 +231,19 @@ EDGE_CANDIDATES_FILE_OPTIMAL_STACKING = j(
 RESULT_DIR = j(DERIVED_DIR, "results")
 
 # Classification
-LP_SCORE_EMB_FILE = j(
+LP_SCORE_MODEL_FILE = j(
     RESULT_DIR,
     "auc-roc",
     "{data}",
-    f"result_basedOn~emb_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.csv",
-)
-LP_SCORE_NET_FILE = j(
-    RESULT_DIR,
-    "auc-roc",
-    "{data}",
-    f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
+    f"result_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_model.wildcard_pattern}.csv",
 )
 
 # Ranking
-RANK_SCORE_EMB_FILE = j(
+RANK_SCORE_MODEL_FILE = j(
     RESULT_DIR,
     "ranking",
     "{data}",
-    f"result_basedOn~emb_{paramspace_train_test_split.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.csv",
-)
-RANK_SCORE_NET_FILE = j(
-    RESULT_DIR,
-    "ranking",
-    "{data}",
-    f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
+    f"result_{paramspace_train_test_split.wildcard_pattern}_{paramspace_model.wildcard_pattern}.csv",
 )
 
 LP_ALL_AUCROC_SCORE_FILE = j(RESULT_DIR, "result_auc_roc.csv")
@@ -279,42 +283,43 @@ FIG_RANKING_SIMILARITY=j(RESULT_DIR, "figs", "ranking-similarity-similarityMetri
 #
 # RULES
 #
+save_param_table(j(DATA_DIR, "parameter_table.csv"))
 rule all:
     input:
         #
         # All results
         #
-        LP_ALL_AUCROC_SCORE_FILE,
-        LP_ALL_RANKING_SCORE_FILE,
+        #LP_ALL_AUCROC_SCORE_FILE,
+        #LP_ALL_RANKING_SCORE_FILE,
         #
         # Link classification (Check point 1)
         #
         expand(
-            LP_SCORE_EMB_FILE,
+            MODEL_FILE,
             data=DATA_LIST,
-            **params_emb,
-            **params_negative_edge_sampler,
-            **params_train_test_split
+            predictionModel= paramspace_model,
+            negativeSampler = paramspace_negative_edge_sampler,
+            trainTestSplit = paramspace_train_test_split
         ),
-        expand(
-            LP_SCORE_NET_FILE,
-            data=DATA_LIST,
-            **params_net_linkpred,
-            **params_negative_edge_sampler,
-            **params_train_test_split
-        ),
+        #expand(
+        #    LP_SCORE_MODEL_FILE,
+        #    data=DATA_LIST,
+        #    predictionModel= paramspace_model,
+        #    negativeSampler = paramspace_negative_edge_sampler,
+        #    trainTestSplit = paramspace_train_test_split
+        #),
         #
         # Network stats (Check point 2)
         #
-        NET_STAT_FILE,
-        COMMON_NEIGHBOR_COVERAGE,
+        #NET_STAT_FILE,
+        #COMMON_NEIGHBOR_COVERAGE,
         #
         # Link ranking (Check point 3)
         #
 #        expand(
-#            RANK_SCORE_EMB_FILE,
+#            RANK_SCORE_MODEL_FILE,
 #            data=DATA_LIST,
-#            **params_emb,
+#            **params_model,
 #            **params_train_test_split
 #        ),
 #        expand(
@@ -326,7 +331,7 @@ rule all:
         #
         # Quantile ranking file (Checkpoint 4)
         #
-        LP_ALL_QUANTILE_RANKING_FILE
+        #LP_ALL_QUANTILE_RANKING_FILE
 
 
 rule figs:
@@ -491,263 +496,290 @@ rule train_test_edge_split:
 # ==============================
 # Prediction based on embedding
 # ==============================
-rule embedding:
+rule train_embedding_model:
     input:
         net_file=TRAIN_NET_FILE,
     params:
-        parameters=paramspace_emb.instance,
+        parameters=paramspace_model.instance,
     output:
-        output_file=EMB_FILE,
+        output_file=MODEL_FILE,
+    wildcard_constraints:
+        modelType = constrain_by(["embedding"])
+    script:
+        "workflow/training/embedding_model.py"
+
+rule train_network_model:
+    input:
+        net_file=TRAIN_NET_FILE,
+    params:
+        parameters=paramspace_model.instance,
+    output:
+        output_file=MODEL_FILE,
+    wildcard_constraints:
+        modelType = constrain_by(["network"])
     script:
         "workflow/training/embedding.py"
 
-
-#
-# Positive vs Negative
-#
-rule embedding_link_prediction:
+rule train_seal_model:
     input:
-        input_file=TARGET_EDGE_TABLE_FILE,
-        emb_file=EMB_FILE,
-        net_file = TRAIN_NET_FILE,
-    params:
-        parameters=paramspace_emb.instance,
-    output:
-        output_file=PRED_SCORE_EMB_FILE,
-    script:
-        "workflow/prediction/embedding-link-prediction.py"
-
-#
-# Ranking
-#
-rule embedding_link_ranking:
-    input:
-        input_file=TEST_EDGE_TABLE_FILE,
-        net_file=TRAIN_NET_FILE,
-        emb_file=EMB_FILE,
-    params:
-        parameters=paramspace_emb.instance,
-        topK = 150
-    output:
-        output_file=PRED_RANK_EMB_FILE,
-    script:
-        "workflow/prediction/embedding-link-ranking.py"
-
-# ==============================
-# Prediction based on networks
-# ==============================
-
-#
-# Positive vs Negative
-#
-rule network_link_prediction:
-    input:
-        input_file=TARGET_EDGE_TABLE_FILE,
         net_file=TRAIN_NET_FILE,
     params:
-        parameters=paramspace_net_linkpred.instance,
+        parameters=paramspace_model.instance,
     output:
-        output_file=PRED_SCORE_NET_FILE,
+        output_file=MODEL_FILE,
+    wildcard_constraints:
+        modelType = constrain_by(["network"])
     script:
-        "workflow/prediction/network-link-prediction.py"
+        "workflow/training/embedding.py"
 
 #
-# Ranking
+##
+## Positive vs Negative
+##
+#rule embedding_link_prediction:
+#    input:
+#        input_file=TARGET_EDGE_TABLE_FILE,
+#        MODEL_FILE=MODEL_FILE,
+#        net_file = TRAIN_NET_FILE,
+#    params:
+#        parameters=paramspace_model.instance,
+#    output:
+#        output_file=PRED_SCORE_MODEL_FILE,
+#    script:
+#        "workflow/prediction/embedding-link-prediction.py"
 #
-rule network_link_ranking:
-    input:
-        input_file=TEST_EDGE_TABLE_FILE,
-        net_file=TRAIN_NET_FILE,
-    params:
-        parameters=paramspace_net_linkpred.instance,
-        topK = 150
-    output:
-        output_file=PRED_RANK_NET_FILE,
-    script:
-        "workflow/prediction/network-link-ranking.py"
-
-# =====================
-# Evaluation
-# =====================
-
-
+##
+## Ranking
+##
+#rule embedding_link_ranking:
+#    input:
+#        input_file=TEST_EDGE_TABLE_FILE,
+#        net_file=TRAIN_NET_FILE,
+#        MODEL_FILE=MODEL_FILE,
+#    params:
+#        parameters=paramspace_model.instance,
+#        topK = 150
+#    output:
+#        output_file=PRED_RANK_MODEL_FILE,
+#    script:
+#        "workflow/prediction/embedding-link-ranking.py"
 #
-# Positive vs Negative edges
+## ==============================
+## Prediction based on networks
+## ==============================
 #
-rule eval_link_prediction_embedding:
-    input:
-        input_file=PRED_SCORE_EMB_FILE,
-    params:
-        data_name=lambda wildcards: wildcards.data,
-    output:
-        output_file=LP_SCORE_EMB_FILE,
-    script:
-        "workflow/evaluation/eval-link-prediction-performance.py"
-
-
-rule eval_link_prediction_networks:
-    input:
-        input_file=PRED_SCORE_NET_FILE,
-    params:
-        data_name=lambda wildcards: wildcards.data,
-    output:
-        output_file=LP_SCORE_NET_FILE,
-    script:
-        "workflow/evaluation/eval-link-prediction-performance.py"
-
+##
+## Positive vs Negative
+##
+#rule network_link_prediction:
+#    input:
+#        input_file=TARGET_EDGE_TABLE_FILE,
+#        net_file=TRAIN_NET_FILE,
+#    params:
+#        parameters=paramspace_net_linkpred.instance,
+#    output:
+#        output_file=PRED_SCORE_NET_FILE,
+#    script:
+#        "workflow/prediction/network-link-prediction.py"
 #
-# Ranking
+##
+## Ranking
+##
+#rule network_link_ranking:
+#    input:
+#        input_file=TEST_EDGE_TABLE_FILE,
+#        net_file=TRAIN_NET_FILE,
+#    params:
+#        parameters=paramspace_net_linkpred.instance,
+#        topK = 150
+#    output:
+#        output_file=PRED_RANK_NET_FILE,
+#    script:
+#        "workflow/prediction/network-link-ranking.py"
 #
-rule eval_link_ranking_embedding:
-    input:
-        ranking_score_file=PRED_RANK_EMB_FILE,
-        edge_table_file = TEST_EDGE_TABLE_FILE
-    params:
-        data_name=lambda wildcards: wildcards.data,
-    output:
-        output_file=RANK_SCORE_EMB_FILE,
-    script:
-        "workflow/evaluation/eval-link-ranking-performance.py"
-
-rule eval_link_ranking_networks:
-    input:
-        ranking_score_file=PRED_RANK_NET_FILE,
-        edge_table_file = TEST_EDGE_TABLE_FILE
-    params:
-        data_name=lambda wildcards: wildcards.data,
-    output:
-        output_file=RANK_SCORE_NET_FILE,
-    script:
-        "workflow/evaluation/eval-link-ranking-performance.py"
-
-
-rule concatenate_aucroc_results:
-    input:
-        input_file_list=expand(
-            LP_SCORE_EMB_FILE,
-            data=DATA_LIST,
-            **params_emb,
-            **params_negative_edge_sampler,
-            **params_train_test_split
-        )
-        + expand(
-            LP_SCORE_NET_FILE,
-            data=DATA_LIST,
-            **params_net_linkpred,
-            **params_negative_edge_sampler,
-            **params_train_test_split
-        )
-    output:
-        output_file=LP_ALL_AUCROC_SCORE_FILE,
-    script:
-        "workflow/concat-results.py"
-
-rule concatenate_ranking_results:
-    input:
-        input_file_list = expand(
-            RANK_SCORE_EMB_FILE,
-            data=DATA_LIST,
-            **params_emb,
-            **params_train_test_split
-        )
-        + expand(
-            RANK_SCORE_NET_FILE,
-            data=DATA_LIST,
-            **params_net_linkpred,
-            **params_train_test_split,
-            **params_negative_edge_sampler,
-        ),
-    output:
-        output_file=LP_ALL_RANKING_SCORE_FILE,
-    script:
-        "workflow/concat-results.py"
-
+## =====================
+## Evaluation
+## =====================
 #
-# Evaluate the quantile
 #
-rule calc_quantiles:
-    input:
-        auc_roc_table_file =  LP_ALL_AUCROC_SCORE_FILE,
-        ranking_table_file = LP_ALL_RANKING_SCORE_FILE,
-        net_stat_file = NET_STAT_FILE
-    output:
-        output_file = LP_ALL_QUANTILE_RANKING_FILE
-    script:
-        "workflow/evaluation/calc-quantiles.py"
-
-# =====================
-# Plot
-# =====================
-
+##
+## Positive vs Negative edges
+##
+#rule eval_link_prediction_embedding:
+#    input:
+#        input_file=PRED_SCORE_MODEL_FILE,
+#    params:
+#        data_name=lambda wildcards: wildcards.data,
+#    output:
+#        output_file=LP_SCORE_MODEL_FILE,
+#    script:
+#        "workflow/evaluation/eval-link-prediction-performance.py"
 #
-# Figure 1 and 2
 #
-rule calc_deg_deg_plot:
-    input:
-        edge_table_file=EDGE_TABLE_FILE.format(data = "airport-rach"),
-    params:
-        negativeEdgeSampler = lambda wildcards: wildcards.negativeEdgeSampler
-    output:
-        output_file=FIG_DEG_DEG_PLOT,
-    script:
-        "workflow/plots/plot-deg-deg-plot.py"
-
-
-rule calc_deg_skewness_plot:
-    input:
-        auc_roc_table_file =  LP_ALL_AUCROC_SCORE_FILE,
-        ranking_table_file = LP_ALL_RANKING_SCORE_FILE,
-        net_stat_file = NET_STAT_FILE
-    output:
-        output_file=FIG_PERF_VS_KURTOSIS_PLOT,
-    script:
-        "workflow/plots/plot-performance-vs-degree-skewness.py"
-
-rule plot_node2vec_vs_pa_ranking:
-    input:
-        input_file=LP_ALL_QUANTILE_RANKING_FILE,
-    params:
-        negativeEdgeSampler = lambda wildcards: wildcards.negativeEdgeSampler
-    output:
-        output_file=FIG_QUANTILE_RANKING,
-    script:
-        "workflow/plots/plot-ranking-pref-vs-node2vec.py"
-
-rule plot_ranking_correlation:
-    input:
-        input_file=LP_ALL_QUANTILE_RANKING_FILE,
-    params:
-        similarityMetric = lambda wildcards: wildcards.similarityMetric
-    output:
-        output_file=FIG_RANKING_SIMILARITY,
-    script:
-        "workflow/plots/plot-ranking-similarity.py"
-
-rule plot_aucroc:
-    input:
-        input_file=LP_ALL_AUCROC_SCORE_FILE,
-    output:
-        output_file=FIG_AUCROC,
-    script:
-        "workflow/plots/plot-auc-roc.py"
-
-
-rule plot_aucdiff:
-    input:
-        auc_results_file=LP_ALL_AUCROC_SCORE_FILE,
-        networks_dir=RAW_PROCESSED_NETWORKS_DIR,
-    output:
-        degskew_outputfile=FIG_DEGSKEW_AUCDIFF,
-        nodes_outputfile=FIG_NODES_AUCDIFF,
-        degskew_nodesize_outputfile = FIG_DEGSKEW_AUCDIFF_NODESIZE,
-    script:
-        "workflow/plots/plot-NetProp-AucDiff.py"
-
-
-rule plot_prec_recal_f1:
-    input:
-        input_file=LP_ALL_RANKING_SCORE_FILE,
-    output:
-        output_file=FIG_PREC_RECAL_F1,
-    script:
-        "workflow/plots/plot-prec-recall-f1.py"
+#rule eval_link_prediction_networks:
+#    input:
+#        input_file=PRED_SCORE_NET_FILE,
+#    params:
+#        data_name=lambda wildcards: wildcards.data,
+#    output:
+#        output_file=LP_SCORE_NET_FILE,
+#    script:
+#        "workflow/evaluation/eval-link-prediction-performance.py"
+#
+##
+## Ranking
+##
+#rule eval_link_ranking_embedding:
+#    input:
+#        ranking_score_file=PRED_RANK_MODEL_FILE,
+#        edge_table_file = TEST_EDGE_TABLE_FILE
+#    params:
+#        data_name=lambda wildcards: wildcards.data,
+#    output:
+#        output_file=RANK_SCORE_MODEL_FILE,
+#    script:
+#        "workflow/evaluation/eval-link-ranking-performance.py"
+#
+#rule eval_link_ranking_networks:
+#    input:
+#        ranking_score_file=PRED_RANK_NET_FILE,
+#        edge_table_file = TEST_EDGE_TABLE_FILE
+#    params:
+#        data_name=lambda wildcards: wildcards.data,
+#    output:
+#        output_file=RANK_SCORE_NET_FILE,
+#    script:
+#        "workflow/evaluation/eval-link-ranking-performance.py"
+#
+#
+#rule concatenate_aucroc_results:
+#    input:
+#        input_file_list=expand(
+#            LP_SCORE_MODEL_FILE,
+#            data=DATA_LIST,
+#            **params_model,
+#            **params_negative_edge_sampler,
+#            **params_train_test_split
+#        )
+#        + expand(
+#            LP_SCORE_NET_FILE,
+#            data=DATA_LIST,
+#            **params_net_linkpred,
+#            **params_negative_edge_sampler,
+#            **params_train_test_split
+#        )
+#    output:
+#        output_file=LP_ALL_AUCROC_SCORE_FILE,
+#    script:
+#        "workflow/concat-results.py"
+#
+#rule concatenate_ranking_results:
+#    input:
+#        input_file_list = expand(
+#            RANK_SCORE_MODEL_FILE,
+#            data=DATA_LIST,
+#            **params_model,
+#            **params_train_test_split
+#        )
+#        + expand(
+#            RANK_SCORE_NET_FILE,
+#            data=DATA_LIST,
+#            **params_net_linkpred,
+#            **params_train_test_split,
+#            **params_negative_edge_sampler,
+#        ),
+#    output:
+#        output_file=LP_ALL_RANKING_SCORE_FILE,
+#    script:
+#        "workflow/concat-results.py"
+#
+##
+## Evaluate the quantile
+##
+#rule calc_quantiles:
+#    input:
+#        auc_roc_table_file =  LP_ALL_AUCROC_SCORE_FILE,
+#        ranking_table_file = LP_ALL_RANKING_SCORE_FILE,
+#        net_stat_file = NET_STAT_FILE
+#    output:
+#        output_file = LP_ALL_QUANTILE_RANKING_FILE
+#    script:
+#        "workflow/evaluation/calc-quantiles.py"
+#
+## =====================
+## Plot
+## =====================
+#
+##
+## Figure 1 and 2
+##
+#rule calc_deg_deg_plot:
+#    input:
+#        edge_table_file=EDGE_TABLE_FILE.format(data = "airport-rach"),
+#    params:
+#        negativeEdgeSampler = lambda wildcards: wildcards.negativeEdgeSampler
+#    output:
+#        output_file=FIG_DEG_DEG_PLOT,
+#    script:
+#        "workflow/plots/plot-deg-deg-plot.py"
+#
+#
+#rule calc_deg_skewness_plot:
+#    input:
+#        auc_roc_table_file =  LP_ALL_AUCROC_SCORE_FILE,
+#        ranking_table_file = LP_ALL_RANKING_SCORE_FILE,
+#        net_stat_file = NET_STAT_FILE
+#    output:
+#        output_file=FIG_PERF_VS_KURTOSIS_PLOT,
+#    script:
+#        "workflow/plots/plot-performance-vs-degree-skewness.py"
+#
+#rule plot_node2vec_vs_pa_ranking:
+#    input:
+#        input_file=LP_ALL_QUANTILE_RANKING_FILE,
+#    params:
+#        negativeEdgeSampler = lambda wildcards: wildcards.negativeEdgeSampler
+#    output:
+#        output_file=FIG_QUANTILE_RANKING,
+#    script:
+#        "workflow/plots/plot-ranking-pref-vs-node2vec.py"
+#
+#rule plot_ranking_correlation:
+#    input:
+#        input_file=LP_ALL_QUANTILE_RANKING_FILE,
+#    params:
+#        similarityMetric = lambda wildcards: wildcards.similarityMetric
+#    output:
+#        output_file=FIG_RANKING_SIMILARITY,
+#    script:
+#        "workflow/plots/plot-ranking-similarity.py"
+#
+#rule plot_aucroc:
+#    input:
+#        input_file=LP_ALL_AUCROC_SCORE_FILE,
+#    output:
+#        output_file=FIG_AUCROC,
+#    script:
+#        "workflow/plots/plot-auc-roc.py"
+#
+#
+#rule plot_aucdiff:
+#    input:
+#        auc_results_file=LP_ALL_AUCROC_SCORE_FILE,
+#        networks_dir=RAW_PROCESSED_NETWORKS_DIR,
+#    output:
+#        degskew_outputfile=FIG_DEGSKEW_AUCDIFF,
+#        nodes_outputfile=FIG_NODES_AUCDIFF,
+#        degskew_nodesize_outputfile = FIG_DEGSKEW_AUCDIFF_NODESIZE,
+#    script:
+#        "workflow/plots/plot-NetProp-AucDiff.py"
+#
+#
+#rule plot_prec_recal_f1:
+#    input:
+#        input_file=LP_ALL_RANKING_SCORE_FILE,
+#    output:
+#        output_file=FIG_PREC_RECAL_F1,
+#    script:
+#        "workflow/plots/plot-prec-recall-f1.py"
+#

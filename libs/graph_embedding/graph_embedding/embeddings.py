@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-20 16:18:50
+# @Last Modified time: 2023-06-16 15:49:52
 """Module for embedding."""
 # %%
 import graph_tool.all as gt
@@ -26,8 +26,6 @@ except ImportError:
 
 
 # Base class
-
-
 class NodeEmbeddings:
     """Super class for node embedding class."""
 

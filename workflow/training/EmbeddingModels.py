@@ -2,10 +2,10 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-20 05:29:58
+# @Last Modified time: 2023-06-16 11:09:45
 
 from sklearn.decomposition import PCA
-import embcom
+import graph_embedding
 import torch
 import numpy as np
 import torch_geometric
@@ -248,8 +248,8 @@ def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=64):
     )
 
 
-#@embedding_model
-#def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=64):
+# @embedding_model
+# def GraphUNet(network, dim, feature_dim=64, device=None, dim_h=64):
 #    return gnn_embedding(
 #        model=torch_geometric.nn.models.GraphUNet(
 #            in_channels=feature_dim,

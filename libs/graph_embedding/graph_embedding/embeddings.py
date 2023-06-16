@@ -12,7 +12,7 @@ import numpy as np
 from scipy import sparse
 from sklearn.decomposition import TruncatedSVD
 import pandas as pd
-from embcom import rsvd, samplers, utils
+from graph_embedding import rsvd, samplers, utils
 from scipy.sparse import csgraph
 from scipy.optimize import minimize
 

@@ -4,7 +4,7 @@
 # @Last Modified by:   Sadamori Kojaku
 # @Last Modified time: 2023-05-13 16:11:03
 # %%
-import embcom
+import graph_embedding
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -54,9 +54,9 @@ embedding_model = lambda f: embedding_models.setdefault(f.__name__, f)
 
 def gnn_embedding(model, network, device=None, epochs=50, negative_edge_sampler=None):
     if device is None:
-        device = embcom.gnns.get_gpu_id()
+        device = graph_embedding.gnns.get_gpu_id()
 
-    model, emb = embcom.gnns.train(
+    model, emb = graph_embedding.gnns.train(
         model=model,
         feature_vec=None,
         net=network,
@@ -77,7 +77,7 @@ def dcGIN(network, dim, feature_dim=64, device=None, dim_h=64):
             out_channels=dim,
         ),
         network=network,
-        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+        negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
 
@@ -100,7 +100,7 @@ def dcPNA(network, dim, feature_dim=64, device=None, dim_h=64):
             deg=torch.FloatTensor(np.bincount(np.array(net.sum(axis=0)).reshape(-1))),
         ),
         network=network,
-        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+        negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
 
@@ -114,7 +114,7 @@ def dcEdgeCNN(network, dim, feature_dim=64, device=None, dim_h=64):
             out_channels=dim,
         ),
         network=network,
-        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+        negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
 
@@ -128,7 +128,7 @@ def dcGraphUNet(network, dim, feature_dim=64, device=None, dim_h=64):
             depth=2,
         ),
         network=network,
-        negative_edge_sampler=embcom.gnns.NegativeEdgeSampler["degreeBiased"],
+        negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["degreeBiased"],
     )
 
 

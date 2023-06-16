@@ -4,16 +4,16 @@ import itertools
 import pandas as pd
 from snakemake.utils import Paramspace
 import os
-from workflow.EmbeddingModels import *
-from workflow.NetworkTopologyPredictionModels import *
+from workflow.training.EmbeddingModels import *
+from workflow.prediction.NetworkTopologyPredictionModels import *
 
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
 
 configfile: "workflow/config.yaml"
 
-# ====================
+# =========================
 # Root folder path setting
-# ====================
+# =========================
 
 # network file
 DATA_DIR = config["data_dir"]  # set test_data for testing
@@ -355,7 +355,7 @@ rule clean_networks:
     output:
         edge_table_file=EDGE_TABLE_FILE,
     script:
-        "workflow/clean_networks.py"
+        "workflow/preprocessing/clean_networks.py"
 
 rule calc_network_stats:
     input:
@@ -363,7 +363,7 @@ rule calc_network_stats:
     output:
         output_file = NET_STAT_FILE
     script:
-        "workflow/calc-network-stats.py"
+        "workflow/preprocessing/calc-network-stats.py"
 
 
 rule calc_common_neighbor_edge_coverage:
@@ -371,9 +371,9 @@ rule calc_common_neighbor_edge_coverage:
         edge_table_files = expand(TEST_EDGE_TABLE_FILE, data = DATA_LIST, **params_train_test_split),
         net_files = expand(TRAIN_NET_FILE, data = DATA_LIST, **params_train_test_split)
     output:
-        output_file = COMMON_NEIGHBOR_COVERAGE 
+        output_file = COMMON_NEIGHBOR_COVERAGE
     script:
-        "workflow/calc-link-coverage-by-distance.py"
+        "workflow/preprocessing/calc-link-coverage-by-distance.py"
 
 # ============================
 # Optimal stacking
@@ -404,7 +404,7 @@ rule optimal_stacking_train_heldout_dataset:
         output_train_net_file=TRAIN_NET_FILE_OPTIMAL_STACKING,
         output_edge_candidates_file=EDGE_CANDIDATES_FILE_OPTIMAL_STACKING,
     script:
-        "workflow/generate-optimal-stacking-train-heldout-networks.py"
+        "workflow/optimal-stacking/generate-optimal-stacking-train-heldout-networks.py"
 
 rule optimal_stacking_generate_features:
     input:
@@ -416,7 +416,7 @@ rule optimal_stacking_generate_features:
         output_heldout_feature=HELDOUT_FEATURE_MATRIX,
         output_train_feature=TRAIN_FEATURE_MATRIX
     script:
-        "workflow/generate-optimal-stacking-topological-features.py"
+        "workflow/optimal-stacking/generate-optimal-stacking-topological-features.py"
 
 rule optimal_stacking_generate_cv_files:
     input:
@@ -425,7 +425,7 @@ rule optimal_stacking_generate_cv_files:
     output:
         output_cv_dir=directory(CV_DIR),
     script:
-        "workflow/generate-optimal-stacking-cv.py"
+        "workflow/optimal-stacking/generate-optimal-stacking-cv.py"
 
 rule optimal_stacking_model_selection:
     input:
@@ -433,7 +433,7 @@ rule optimal_stacking_model_selection:
     output:
         output_best_rf_params=OUT_BEST_RF_PARAMS,
     script:
-        "workflow/optimal-stacking-modelselection.py"
+        "workflow/optimal-stacking/optimal-stacking-modelselection.py"
 
 rule optimal_stacking_performance:
     input:
@@ -445,7 +445,7 @@ rule optimal_stacking_performance:
         output_file=LP_SCORE_OPT_STACK_FILE,
         feature_importance_file=BEST_RF_FEATURES
     script:
-        "workflow/optimal-stacking-performance.py"
+        "workflow/optimal-stacking/optimal-stacking-performance.py"
 
 
 rule optimal_stacking_concatenate_results:
@@ -473,7 +473,7 @@ rule generate_link_prediction_dataset:
         output_train_net_file=TRAIN_NET_FILE,
         output_test_edge_file=TEST_EDGE_TABLE_FILE
     script:
-        "workflow/generate-train-test-edge-split.py"
+        "workflow/preprocessing/generate-train-test-edge-split.py"
 
 rule train_test_edge_split:
     input:
@@ -484,7 +484,7 @@ rule train_test_edge_split:
     output:
         output_target_edge_table_file=TARGET_EDGE_TABLE_FILE,
     script:
-        "workflow/generate-test-edges.py"
+        "workflow/preprocessing/generate-test-edges.py"
 
 
 
@@ -499,7 +499,7 @@ rule embedding:
     output:
         output_file=EMB_FILE,
     script:
-        "workflow/embedding.py"
+        "workflow/training/embedding.py"
 
 
 #
@@ -515,7 +515,7 @@ rule embedding_link_prediction:
     output:
         output_file=PRED_SCORE_EMB_FILE,
     script:
-        "workflow/embedding-link-prediction.py"
+        "workflow/prediction/embedding-link-prediction.py"
 
 #
 # Ranking
@@ -531,7 +531,7 @@ rule embedding_link_ranking:
     output:
         output_file=PRED_RANK_EMB_FILE,
     script:
-        "workflow/embedding-link-ranking.py"
+        "workflow/prediction/embedding-link-ranking.py"
 
 # ==============================
 # Prediction based on networks
@@ -549,7 +549,7 @@ rule network_link_prediction:
     output:
         output_file=PRED_SCORE_NET_FILE,
     script:
-        "workflow/network-link-prediction.py"
+        "workflow/prediction/network-link-prediction.py"
 
 #
 # Ranking
@@ -564,7 +564,7 @@ rule network_link_ranking:
     output:
         output_file=PRED_RANK_NET_FILE,
     script:
-        "workflow/network-link-ranking.py"
+        "workflow/prediction/network-link-ranking.py"
 
 # =====================
 # Evaluation
@@ -582,7 +582,7 @@ rule eval_link_prediction_embedding:
     output:
         output_file=LP_SCORE_EMB_FILE,
     script:
-        "workflow/eval-link-prediction-performance.py"
+        "workflow/evaluation/eval-link-prediction-performance.py"
 
 
 rule eval_link_prediction_networks:
@@ -593,7 +593,7 @@ rule eval_link_prediction_networks:
     output:
         output_file=LP_SCORE_NET_FILE,
     script:
-        "workflow/eval-link-prediction-performance.py"
+        "workflow/evaluation/eval-link-prediction-performance.py"
 
 #
 # Ranking
@@ -607,7 +607,7 @@ rule eval_link_ranking_embedding:
     output:
         output_file=RANK_SCORE_EMB_FILE,
     script:
-        "workflow/eval-link-ranking-performance.py"
+        "workflow/evaluation/eval-link-ranking-performance.py"
 
 rule eval_link_ranking_networks:
     input:
@@ -618,7 +618,7 @@ rule eval_link_ranking_networks:
     output:
         output_file=RANK_SCORE_NET_FILE,
     script:
-        "workflow/eval-link-ranking-performance.py"
+        "workflow/evaluation/eval-link-ranking-performance.py"
 
 
 rule concatenate_aucroc_results:
@@ -673,7 +673,7 @@ rule calc_quantiles:
     output:
         output_file = LP_ALL_QUANTILE_RANKING_FILE
     script:
-        "workflow/calc-quantiles.py"
+        "workflow/evaluation/calc-quantiles.py"
 
 # =====================
 # Plot
@@ -690,7 +690,7 @@ rule calc_deg_deg_plot:
     output:
         output_file=FIG_DEG_DEG_PLOT,
     script:
-        "workflow/plot-deg-deg-plot.py"
+        "workflow/plots/plot-deg-deg-plot.py"
 
 
 rule calc_deg_skewness_plot:
@@ -701,7 +701,7 @@ rule calc_deg_skewness_plot:
     output:
         output_file=FIG_PERF_VS_KURTOSIS_PLOT,
     script:
-        "workflow/plot-performance-vs-degree-skewness.py"
+        "workflow/plots/plot-performance-vs-degree-skewness.py"
 
 rule plot_node2vec_vs_pa_ranking:
     input:
@@ -711,7 +711,7 @@ rule plot_node2vec_vs_pa_ranking:
     output:
         output_file=FIG_QUANTILE_RANKING,
     script:
-        "workflow/plot-ranking-pref-vs-node2vec.py"
+        "workflow/plots/plot-ranking-pref-vs-node2vec.py"
 
 rule plot_ranking_correlation:
     input:
@@ -721,7 +721,7 @@ rule plot_ranking_correlation:
     output:
         output_file=FIG_RANKING_SIMILARITY,
     script:
-        "workflow/plot-ranking-similarity.py"
+        "workflow/plots/plot-ranking-similarity.py"
 
 rule plot_aucroc:
     input:
@@ -729,7 +729,7 @@ rule plot_aucroc:
     output:
         output_file=FIG_AUCROC,
     script:
-        "workflow/plot-auc-roc.py"
+        "workflow/plots/plot-auc-roc.py"
 
 
 rule plot_aucdiff:
@@ -741,7 +741,7 @@ rule plot_aucdiff:
         nodes_outputfile=FIG_NODES_AUCDIFF,
         degskew_nodesize_outputfile = FIG_DEGSKEW_AUCDIFF_NODESIZE,
     script:
-        "workflow/plot-NetProp-AucDiff.py"
+        "workflow/plots/plot-NetProp-AucDiff.py"
 
 
 rule plot_prec_recal_f1:
@@ -750,4 +750,4 @@ rule plot_prec_recal_f1:
     output:
         output_file=FIG_PREC_RECAL_F1,
     script:
-        "workflow/plot-prec-recall-f1.py"
+        "workflow/plots/plot-prec-recall-f1.py"

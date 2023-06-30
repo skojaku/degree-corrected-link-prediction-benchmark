@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-06-16 20:32:00
+# @Last Modified time: 2023-06-30 17:52:03
 # %%
 from sklearn.decomposition import PCA
 import graph_embedding
@@ -10,7 +10,7 @@ import torch
 import numpy as np
 import torch_geometric
 import torch
-from ModelTemplate import LinkPredictor
+from .ModelTemplate import LinkPredictor
 
 
 class EmbeddingLinkPredictor(LinkPredictor):
@@ -42,14 +42,14 @@ embedding_model = lambda f: embedding_models.setdefault(f.__name__, f)
 
 
 @embedding_model
-def line(network, dim, num_walks=40):
+def line(network, dim, num_walks=40, **params):
     model = graph_embedding.embeddings.Node2Vec(window_length=1, num_walks=num_walks)
     model.fit(network)
     return model.transform(dim=dim)
 
 
 @embedding_model
-def node2vec(network, dim, window_length=10, num_walks=40):
+def node2vec(network, dim, window_length=10, num_walks=40, **params):
     model = graph_embedding.embeddings.Node2Vec(
         window_length=window_length, num_walks=num_walks
     )
@@ -58,7 +58,7 @@ def node2vec(network, dim, window_length=10, num_walks=40):
 
 
 @embedding_model
-def deepwalk(network, dim, window_length=10, num_walks=40):
+def deepwalk(network, dim, window_length=10, num_walks=40, **params):
     model = graph_embedding.embeddings.DeepWalk(
         window_length=window_length, num_walks=num_walks
     )
@@ -67,28 +67,28 @@ def deepwalk(network, dim, window_length=10, num_walks=40):
 
 
 @embedding_model
-def leigenmap(network, dim):
+def leigenmap(network, dim, **params):
     model = graph_embedding.embeddings.LaplacianEigenMap()
     model.fit(network)
     return model.transform(dim=dim)
 
 
 @embedding_model
-def modspec(network, dim):
+def modspec(network, dim, **params):
     model = graph_embedding.embeddings.ModularitySpectralEmbedding()
     model.fit(network)
     return model.transform(dim=dim)
 
 
 @embedding_model
-def nonbacktracking(network, dim):
+def nonbacktracking(network, dim, **params):
     model = graph_embedding.embeddings.NonBacktrackingSpectralEmbedding()
     model.fit(network)
     return model.transform(dim=dim)
 
 
 @embedding_model
-def fastrp(network, dim, window_length=5, inner_dim=2048):
+def fastrp(network, dim, window_length=5, inner_dim=2048, **params):
     model = graph_embedding.embeddings.FastRP(window_size=window_length)
     model.fit(network)
     emb = model.transform(dim=inner_dim)
@@ -96,7 +96,7 @@ def fastrp(network, dim, window_length=5, inner_dim=2048):
 
 
 @embedding_model
-def SGTLaplacianExp(network, dim):
+def SGTLaplacianExp(network, dim, **params):
     model = graph_embedding.embeddings.SpectralGraphTransformation(
         kernel_func="exp", kernel_matrix="laplacian"
     )
@@ -106,7 +106,7 @@ def SGTLaplacianExp(network, dim):
 
 
 @embedding_model
-def SGTLaplacianNeumann(network, dim):
+def SGTLaplacianNeumann(network, dim, **params):
     model = graph_embedding.embeddings.SpectralGraphTransformation(
         kernel_func="neu", kernel_matrix="laplacian"
     )
@@ -116,7 +116,7 @@ def SGTLaplacianNeumann(network, dim):
 
 
 @embedding_model
-def SGTAdjacencyExp(network, dim):
+def SGTAdjacencyExp(network, dim, **params):
     model = graph_embedding.embeddings.SpectralGraphTransformation(
         kernel_func="exp", kernel_matrix="A"
     )
@@ -126,7 +126,7 @@ def SGTAdjacencyExp(network, dim):
 
 
 @embedding_model
-def SGTAdjacencyNeumann(network, dim):
+def SGTAdjacencyNeumann(network, dim, **params):
     model = graph_embedding.embeddings.SpectralGraphTransformation(
         kernel_func="neu", kernel_matrix="A"
     )
@@ -136,7 +136,7 @@ def SGTAdjacencyNeumann(network, dim):
 
 
 @embedding_model
-def SGTNormAdjacencyExp(network, dim):
+def SGTNormAdjacencyExp(network, dim, **params):
     model = graph_embedding.embeddings.SpectralGraphTransformation(
         kernel_func="exp", kernel_matrix="normalized_A"
     )
@@ -146,7 +146,7 @@ def SGTNormAdjacencyExp(network, dim):
 
 
 @embedding_model
-def SGTNormAdjacencyNeumann(network, dim):
+def SGTNormAdjacencyNeumann(network, dim, **params):
     model = graph_embedding.embeddings.SpectralGraphTransformation(
         kernel_func="neu", kernel_matrix="normalized_A"
     )
@@ -156,7 +156,7 @@ def SGTNormAdjacencyNeumann(network, dim):
 
 
 @embedding_model
-def dcSBM(network, dim):
+def dcSBM(network, dim, **params):
     model = graph_embedding.embeddings.SBMEmbedding()
     model.fit(network)
     emb = model.transform(dim=dim)
@@ -166,7 +166,9 @@ def dcSBM(network, dim):
 #
 # Generic graph neural networks
 #
-def gnn_embedding(model, network, device=None, epochs=50, negative_edge_sampler=None):
+def gnn_embedding(
+    model, network, device=None, epochs=50, negative_edge_sampler=None, **params
+):
     if device is None:
         device = graph_embedding.gnns.get_gpu_id()
 
@@ -182,12 +184,12 @@ def gnn_embedding(model, network, device=None, epochs=50, negative_edge_sampler=
 
 
 @embedding_model
-def GCN(network, dim, feature_dim=64, device=None, dim_h=64):
+def GCN(network, dim, feature_dim=64, num_layers = 2, device=None, dim_h=64, **params):
     return gnn_embedding(
         model=torch_geometric.nn.models.GCN(
             in_channels=feature_dim,
             hidden_channels=dim_h,
-            num_layers=2,
+            num_layers=num_layers,
             out_channels=dim,
         ),
         network=network,
@@ -196,7 +198,7 @@ def GCN(network, dim, feature_dim=64, device=None, dim_h=64):
 
 
 @embedding_model
-def GIN(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2):
+def GIN(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **params):
     return gnn_embedding(
         model=torch_geometric.nn.models.GIN(
             in_channels=feature_dim,
@@ -210,7 +212,7 @@ def GIN(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2):
 
 
 @embedding_model
-def PNA(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2):
+def PNA(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **params):
     return gnn_embedding(
         model=torch_geometric.nn.models.PNA(
             in_channels=feature_dim,
@@ -235,7 +237,9 @@ def PNA(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2):
 
 
 @embedding_model
-def EdgeCNN(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2):
+def EdgeCNN(
+    network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **params
+):
     return gnn_embedding(
         model=torch_geometric.nn.models.EdgeCNN(
             in_channels=feature_dim,

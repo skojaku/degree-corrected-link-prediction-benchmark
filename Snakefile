@@ -4,8 +4,8 @@ import itertools
 import pandas as pd
 from snakemake.utils import Paramspace
 import os
-from workflow.training.EmbeddingModels import *
-from workflow.prediction.NetworkTopologyPredictionModels import *
+#from workflow.models.EmbeddingModels import *
+#from workflow.prediction.NetworkTopologyPredictionModels import *
 
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
 
@@ -72,34 +72,41 @@ params_model = [
         "num_walks":[40],
         "modelType":["embedding"]
     },
-#    {
-#        "model": ["node2vec", "deepwalk", "fastrp"],
-#        "dim":[64],
-#        "num_walks":[40],
-#        "window_length":[5],
-#        "modelType":["embedding"]
-#    },
-#    {
-#        "model": ["leigenmap", "modspec", "nonbacktracking", "SGTLaplacianExp", "SGTLaplacianNeumann", "SGTAdjacencyExp", "SGTAdjacencyNeumann", "SGTNormAdjacencyExp", "STDNormAdjacencyNeumann", "dcSBM"],
-#        "dim":[64],
-#        "modelType":["embedding"]
-#    },
+    {
+        "model": ["GCN", "GIN", "GAT", "GraphSAGE"],
+        "feature_dim":[64],
+        "dim_h":[64],
+        "num_layers":[2],
+        "in_channels": [64],
+        "hidden_channels": [64],
+        "num_layers": [2],
+        "out_channels": [64],
+        "dim":[64],
+        "modelType":["embedding"]
+    },
     {
         "model": ["seal+GCN", "seal+GIN", "seal+GAT", "seal+GraphSAGE"],
         "feature_dim":[64],
         "dim_h":[64],
         "num_layers":[2],
         "negative_edge_sampler": ["uniform", "degreeBiased"],
-        "epochs": 1,
+        "epochs": 10,
         "hops": 2,
         "batch_size": 50,
-        "lr": 0.01,
-        "gnn_model": "GCN",
+        "lr": 1e-3,
         "in_channels": 64,
         "hidden_channels": 64,
         "num_layers": 2,
         "out_channels": 64,
         "modelType":["seal"]
+    },
+    {
+        "model":["stacklp"],
+        "modelType":["stacklp"],
+        "negative_edge_sampler": ["uniform", "degreeBiased"],
+        "val_edge_frac":[0.2],
+        "n_train_samples":[10000],
+        "n_cv":[5]
     },
     {
         "model": ["preferentialAttachment", "commonNeighbors", "jaccardIndex", "resourceAllocation", "adamicAdar", "localRandomWalk", "localPathIndex"],
@@ -199,40 +206,6 @@ PRED_RANK_MODEL_FILE = j(
 #    f"score_ranking_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.npz",
 #)
 
-#
-# Optimal Stacking
-#
-TRAIN_FEATURE_MATRIX = j(
-    OPT_STACK_DIR,
-    "{data}",
-    "feature_matrices",
-    f"train-feature_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}_.pkl",
-)
-
-HELDOUT_FEATURE_MATRIX = j(
-    OPT_STACK_DIR,
-    "{data}",
-    "feature_matrices",
-    f"heldout-feature_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.pkl",
-)
-
-CV_DIR = j(OPT_STACK_DIR,
-    "{data}",
-    "cv",
-    f"condition_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}",
-)
-
-OUT_BEST_RF_PARAMS = j(
-    OPT_STACK_DIR,
-    "{data}",
-    f"bestparms-rf_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.csv",
-)
-
-EDGE_CANDIDATES_FILE_OPTIMAL_STACKING = j(
-    OPT_STACK_DIR,
-    "{data}",
-    f"edge_candidates_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.pkl",
-)
 
 
 # ====================
@@ -391,92 +364,6 @@ rule calc_common_neighbor_edge_coverage:
         "workflow/preprocessing/calc-link-coverage-by-distance.py"
 
 # ============================
-# Optimal stacking
-# ============================
-rule optimal_stacking_all:
-    input:
-        expand(
-            LP_ALL_SCORE_OPT_STACK_FILE,
-            data=DATA_LIST,
-            **params_negative_edge_sampler,
-            **params_train_test_split,
-        ),
-        expand(
-            BEST_RF_FEATURES,
-            data=DATA_LIST,
-            **params_negative_edge_sampler,
-            **params_train_test_split,
-        ),
-
-rule optimal_stacking_train_heldout_dataset:
-    input:
-        edge_table_file=EDGE_TABLE_FILE,
-    params:
-        edge_fraction_parameters=paramspace_train_test_split.instance,
-        edge_sampler_parameters=paramspace_negative_edge_sampler.instance,
-    output:
-        output_heldout_net_file=HELDOUT_NET_FILE_OPTIMAL_STACKING,
-        output_train_net_file=TRAIN_NET_FILE_OPTIMAL_STACKING,
-        output_edge_candidates_file=EDGE_CANDIDATES_FILE_OPTIMAL_STACKING,
-    script:
-        "workflow/optimal-stacking/generate-optimal-stacking-train-heldout-networks.py"
-
-rule optimal_stacking_generate_features:
-    input:
-        input_original_edge_table_file=EDGE_TABLE_FILE,
-        input_heldout_net_file=HELDOUT_NET_FILE_OPTIMAL_STACKING,
-        input_train_net_file=TRAIN_NET_FILE_OPTIMAL_STACKING,
-        input_edge_candidates_file=EDGE_CANDIDATES_FILE_OPTIMAL_STACKING,
-    output:
-        output_heldout_feature=HELDOUT_FEATURE_MATRIX,
-        output_train_feature=TRAIN_FEATURE_MATRIX
-    script:
-        "workflow/optimal-stacking/generate-optimal-stacking-topological-features.py"
-
-rule optimal_stacking_generate_cv_files:
-    input:
-        input_heldout_feature=HELDOUT_FEATURE_MATRIX,
-        input_train_feature=TRAIN_FEATURE_MATRIX,
-    output:
-        output_cv_dir=directory(CV_DIR),
-    script:
-        "workflow/optimal-stacking/generate-optimal-stacking-cv.py"
-
-rule optimal_stacking_model_selection:
-    input:
-        input_cv_dir=CV_DIR,
-    output:
-        output_best_rf_params=OUT_BEST_RF_PARAMS,
-    script:
-        "workflow/optimal-stacking/optimal-stacking-modelselection.py"
-
-rule optimal_stacking_performance:
-    input:
-        input_best_rf_params=OUT_BEST_RF_PARAMS,
-        input_seen_unseen_data_dir=CV_DIR,
-    params:
-        data_name=lambda wildcards: wildcards.data,
-    output:
-        output_file=LP_SCORE_OPT_STACK_FILE,
-        feature_importance_file=BEST_RF_FEATURES
-    script:
-        "workflow/optimal-stacking/optimal-stacking-performance.py"
-
-
-rule optimal_stacking_concatenate_results:
-    input:
-        input_file_list=expand(
-            LP_SCORE_OPT_STACK_FILE,
-            data=DATA_LIST,
-            **params_train_test_split,
-            **params_negative_edge_sampler
-        )
-    output:
-        output_file=LP_ALL_SCORE_OPT_STACK_FILE,
-    script:
-        "workflow/concat-results.py"
-
-# ============================
 # Generating benchmark dataset
 # ============================
 rule generate_link_prediction_dataset:
@@ -503,44 +390,20 @@ rule train_test_edge_split:
 
 
 
-# ==============================
-# Prediction based on embedding
-# ==============================
-rule train_embedding_model:
-    input:
-        net_file=TRAIN_NET_FILE,
-    params:
-        parameters=paramspace_model.instance,
-    output:
-        output_file=MODEL_FILE,
-    wildcard_constraints:
-        modelType = constrain_by(["embedding"])
-    script:
-        "workflow/training/embedding_model.py"
+# =======================
+# Train prediction models
+# =======================
 
-rule train_network_model:
+rule train_model:
     input:
         net_file=TRAIN_NET_FILE,
     params:
         parameters=paramspace_model.instance,
     output:
         output_file=MODEL_FILE,
-    wildcard_constraints:
-        modelType = constrain_by(["network"])
     script:
-        "workflow/training/embedding.py"
+        "workflow/train-predict/train.py"
 
-rule train_seal_model:
-    input:
-        net_file=TRAIN_NET_FILE,
-    params:
-        parameters=paramspace_model.instance,
-    output:
-        output_file=MODEL_FILE,
-    wildcard_constraints:
-        modelType = constrain_by(["network"])
-    script:
-        "workflow/training/embedding.py"
 
 #
 ##

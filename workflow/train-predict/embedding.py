@@ -2,12 +2,12 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-10 08:46:51
+# @Last Modified time: 2023-06-30 18:25:35
 # %%
 import sys
 import numpy as np
 from scipy import sparse
-from workflow.models.EmbeddingModels import *
+from models.EmbeddingModels import *
 
 #
 # Input

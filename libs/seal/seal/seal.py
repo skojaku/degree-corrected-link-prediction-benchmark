@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-20 05:50:31
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-06-16 17:44:51
+# @Last Modified time: 2023-06-30 18:17:32
 # %%
 from tqdm.auto import tqdm
 import scipy
@@ -100,6 +100,7 @@ def train(
     batch_size: int = 50,
     lr=0.01,
     node_labelling="DRNL",
+    **params,
 ) -> torch.nn.Module:
     n_nodes = net.shape[0]
 
@@ -131,9 +132,9 @@ def train(
     pbar = tqdm(total=epochs)  # create a progress bar to display during training
     loss_func = torch.nn.BCEWithLogitsLoss()  # use binary cross-entropy loss
     for epoch in range(epochs):
-        if epochs != 0:
-            data.regenerate()
-            train_loader = SEALDataloader(data, batch_size=batch_size, shuffle=True)
+        # if epochs != 0:
+        #    data.regenerate()
+        #    train_loader = SEALDataloader(data, batch_size=batch_size, shuffle=True)
 
         ave_loss = 0
         n_iter = 0
@@ -149,9 +150,12 @@ def train(
             # Generate node embeddings for each block in the batch and calculate logits
             emb = model(batch["x"], batch["edge_index"])
 
-            score = (emb[batch["block_ptr"], :] * emb[batch["block_ptr"] + 1, :]).sum(
-                dim=1
+            score = (
+                (emb[batch["block_ptr"], :] * emb[batch["block_ptr"] + 1, :])
+                .sum(dim=1)
+                .clip(-10, 10)
             )
+
             # Compute binary cross-entropy loss and backpropagate gradients
             loss = loss_func(score, batch["y"])
             loss.backward()
@@ -161,11 +165,13 @@ def train(
             with torch.no_grad():
                 ave_loss += loss.item()
                 n_iter += 1
+                print_ave_loss = ave_loss / n_iter
+                pbar.set_description(
+                    f"loss={print_ave_loss:.3f}, iter={n_iter}, epochs={epoch}"
+                )
         # Update progress bar and display current loss and number of iterations per epoch
-
         pbar.update(1)
         ave_loss /= n_iter
-        pbar.set_description(f"loss={ave_loss:.3f} iter/epoch={n_iter}")
 
     # Set the model in evaluation mode and return
     model.eval()
@@ -237,6 +243,9 @@ class SEALDataset(torch.utils.data.Dataset):
         self.hops = hops
         self.max_nodes_per_hop = max_nodes_per_hop
 
+        # Cache
+        self.train_data_cache = {}
+
     def __len__(self):
         # Returns the number of edges (positive + negative) in the dataset
         return self.n_edges
@@ -249,14 +258,19 @@ class SEALDataset(torch.utils.data.Dataset):
         edge = self.edge_index[:, idx]
 
         # Generate input data for subgraph surrounding the selected edge
-        subnet, sub_x = generate_input_data(
-            src=edge[0],
-            trg=edge[1],
-            x=self.x,
-            net=self.net,
-            hops=self.hops,
-            max_nodes_per_hop=self.max_nodes_per_hop,
-        )
+        key_edge = tuple(np.sort(edge))
+        if key_edge not in self.train_data_cache:
+            subnet, sub_x = generate_input_data(
+                src=edge[0],
+                trg=edge[1],
+                x=self.x,
+                net=self.net,
+                hops=self.hops,
+                max_nodes_per_hop=self.max_nodes_per_hop,
+            )
+            self.train_data_cache[key_edge] = (subnet, sub_x)
+        else:
+            subnet, sub_x = self.train_data_cache[key_edge]
 
         # Return dictionary containing the target label, input features, adjacency matrix, and edge index
         return {
@@ -275,9 +289,10 @@ class SEALDataset(torch.utils.data.Dataset):
             sampler=self.negative_edge_sampler,
         )
         self.neg_edge_index = torch.LongTensor(self.neg_edge_index)
+        # self.edge_index = torch.cat([self.pos_edge_index, self.neg_edge_index], dim=-1)
 
         # Concatenate positive and negative edges and set related instance variables
-        # self.edge_index[:, self.n_pos_edges :] = self.neg_edge_index
+        self.edge_index[:, self.n_pos_edges :] = self.neg_edge_index
 
     def __repr__(self):
         # Returns a string representation of the SEALDataset object

@@ -1,0 +1,3 @@
+[submodule "libs/stacklp"]
+	path = libs/stacklp
+	url = https://github.com/skojaku/stacklp.git

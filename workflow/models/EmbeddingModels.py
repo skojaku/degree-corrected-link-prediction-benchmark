@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-06-16 17:04:04
+# @Last Modified time: 2023-06-16 20:32:00
 # %%
 from sklearn.decomposition import PCA
 import graph_embedding
@@ -10,6 +10,29 @@ import torch
 import numpy as np
 import torch_geometric
 import torch
+from ModelTemplate import LinkPredictor
+
+
+class EmbeddingLinkPredictor(LinkPredictor):
+    def __init__(self, model, **params):
+        super().__init__()
+        self.model = model
+        self.params = params
+        self.embedding_models = embedding_models
+
+    def train(self, network, **params):
+        emb_func = embedding_models[self.model]
+        emb = emb_func(network=network, **self.params)
+        self.emb = torch.nn.Parameter(torch.FloatTensor(emb), requires_grad=False)
+
+    def predict(self, network, src, trg, **params):
+        return torch.sum(self.emb[src, :] * self.emb[trg, :], axis=1).reshape(-1)
+
+    def load(self, filename):
+        d = torch.load(filename)
+        self.model = d["model"]
+        self.emb = d["emb"]
+
 
 #
 # Embedding models

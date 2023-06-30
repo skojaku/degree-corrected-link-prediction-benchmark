@@ -7,7 +7,7 @@ from scipy import sparse
 import numpy as np
 import pandas as pd
 import sys
-from workflow.models.NetworkTopologyPredictionModels import *
+from workflow.models.NetworkModels import *
 
 if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]

@@ -85,11 +85,21 @@ params_model = [
 #        "modelType":["embedding"]
 #    },
     {
-        "model": ["GCN", "GIN", "PNA", "EdgeCNN"],
+        "model": ["seal+GCN", "seal+GIN", "seal+GAT", "seal+GraphSAGE"],
         "feature_dim":[64],
         "dim_h":[64],
         "num_layers":[2],
-        "modelType":["embedding"]
+        "negative_edge_sampler": ["uniform", "degreeBiased"],
+        "epochs": 1,
+        "hops": 2,
+        "batch_size": 50,
+        "lr": 0.01,
+        "gnn_model": "GCN",
+        "in_channels": 64,
+        "hidden_channels": 64,
+        "num_layers": 2,
+        "out_channels": 64,
+        "modelType":["seal"]
     },
     {
         "model": ["preferentialAttachment", "commonNeighbors", "jaccardIndex", "resourceAllocation", "adamicAdar", "localRandomWalk", "localPathIndex"],

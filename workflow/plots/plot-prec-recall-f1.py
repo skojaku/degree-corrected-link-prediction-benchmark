@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:06:41
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-07-28 16:27:10
+# @Last Modified time: 2023-08-03 06:57:26
 # %%
 import numpy as np
 import pandas as pd
@@ -21,15 +21,22 @@ else:
 # Load
 # ========================
 data_table = pd.read_csv(input_file)
-
+# %%
+data_table
 # %% ========================
 # Style
 # ========================
 plot_data = data_table.copy()
-plot_data = plot_data[plot_data["metric"].str.contains("@10")]
+plot_data = plot_data[plot_data["metric"].str.contains("@50")]
 plot_data = plot_data[plot_data["metric"].str.contains("micro")]
 plot_data = plot_data.rename(columns={"negativeEdgeSampler": "Sampling"})
-
+# %%
+plot_data.groupby(["model", "metric"]).mean().reset_index().query(
+    "metric == 'microPrec@50'"
+).sort_values(by = "score", ascending = False)
+# %%
+plot_data["metric"].unique()
+# %%
 # palette = {
 #    "Pref. Attach.": "red",
 #    "Uniform": "#adadad",

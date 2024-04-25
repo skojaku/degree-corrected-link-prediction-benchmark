@@ -146,31 +146,32 @@ rule calc_common_neighbor_edge_coverage:
 
 # Prediction model
 params_model = [
-#    {
-#        "model": ["line"],
-#        "dim":[64],
-#        "num_walks":[40],
-#        "modelType":["embedding"]
-#    },
-#    {
-#        "model": ["GCN", "GIN", "GAT", "GraphSAGE"],
-#        "feature_dim":[64],
-#        "dim_h":[64],
-#        "num_layers":[2],
-#        "in_channels": [64],
-#        "hidden_channels": [64],
-#        "num_layers": [2],
-#        "out_channels": [64],
-#        "dim":[64],
-#        "modelType":["embedding"]
-#    },
+    {
+        "model": ["line"],
+        "dim":[64],
+        "num_walks":[40],
+        "modelType":["embedding"]
+    },
+    {
+        "model": ["GCN", "GIN", "GAT", "GraphSAGE"],
+        "feature_dim":[64],
+        "dim_h":[64],
+        "num_layers":[2],
+        "epochs":[50],
+        "in_channels": [64],
+        "hidden_channels": [64],
+        "num_layers": [2],
+        "out_channels": [64],
+        "dim":[64],
+        "modelType":["embedding"]
+    },
     {
         "model": ["seal+GCN", "seal+GIN", "seal+GAT", "seal+GraphSAGE"],
         "feature_dim":[64],
         "dim_h":[64],
         "num_layers":[2],
         "negative_edge_sampler": ["uniform", "degreeBiased"],
-        "epochs": 10,
+        "epochs": 50,
         "hops": 2,
         "batch_size": 50,
         "lr": 1e-3,
@@ -180,18 +181,18 @@ params_model = [
         "out_channels": 64,
         "modelType":["seal"]
     },
-#    {
-#        "model":["stacklp"],
-#        "modelType":["stacklp"],
-#        "negative_edge_sampler": ["uniform", "degreeBiased"],
-#        "val_edge_frac":[0.2],
-#        "n_train_samples":[10000],
-#        "n_cv":[5]
-#    },
-#    {
-#        "model": ["preferentialAttachment", "commonNeighbors", "jaccardIndex", "resourceAllocation", "adamicAdar", "localRandomWalk", "localPathIndex"],
-#        "modelType":["network"]
-#    }
+    {
+        "model":["stacklp"],
+        "modelType":["stacklp"],
+        "negative_edge_sampler": ["uniform", "degreeBiased"],
+        "val_edge_frac":[0.2],
+        "n_train_samples":[10000],
+        "n_cv":[5]
+    },
+    {
+        "model": ["preferentialAttachment", "commonNeighbors", "jaccardIndex", "resourceAllocation", "adamicAdar", "localRandomWalk", "localPathIndex"],
+        "modelType":["network"]
+    }
 ]
 paramspace_model= to_paramspace(paramName = "PredictionModel", param = params_model, index = ["model", "modelType"])
 
@@ -227,7 +228,7 @@ RES_LINK_CLASSIFICATION = j(
 RES_LINK_PREDICTION = j(
     PRED_DIR,
     "{data}",
-    f"score_taks~prediction_{paramspace_train_test_split.wildcard_pattern}_{paramspace_model.wildcard_pattern}.npz",
+    f"score_task~prediction_{paramspace_train_test_split.wildcard_pattern}_{paramspace_model.wildcard_pattern}.npz",
 )
 
 rule link_clasification:

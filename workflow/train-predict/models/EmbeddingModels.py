@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-07-01 09:38:32
+# @Last Modified time: 2023-07-29 06:06:37
 # %%
 from sklearn.decomposition import PCA
 import graph_embedding
@@ -184,7 +184,16 @@ def gnn_embedding(
 
 
 @embedding_model
-def GCN(network, dim, feature_dim=64, num_layers=2, device=None, dim_h=64, **params):
+def GCN(
+    network,
+    dim,
+    feature_dim=64,
+    num_layers=2,
+    device=None,
+    dim_h=64,
+    epochs=50,
+    **params
+):
     return gnn_embedding(
         model=torch_geometric.nn.models.GCN(
             in_channels=feature_dim,
@@ -194,11 +203,21 @@ def GCN(network, dim, feature_dim=64, num_layers=2, device=None, dim_h=64, **par
         ),
         network=network,
         negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
+        epochs=epochs,
     )
 
 
 @embedding_model
-def GIN(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **params):
+def GIN(
+    network,
+    dim,
+    feature_dim=64,
+    device=None,
+    dim_h=64,
+    num_layers=2,
+    epochs=50,
+    **params
+):
     return gnn_embedding(
         model=torch_geometric.nn.models.GIN(
             in_channels=feature_dim,
@@ -209,11 +228,21 @@ def GIN(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **par
         network=network,
         negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
         device=device,
+        epochs=epochs,
     )
 
 
 @embedding_model
-def PNA(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **params):
+def PNA(
+    network,
+    dim,
+    feature_dim=64,
+    device=None,
+    dim_h=64,
+    num_layers=2,
+    epochs=50,
+    **params
+):
     return gnn_embedding(
         model=torch_geometric.nn.models.PNA(
             in_channels=feature_dim,
@@ -235,12 +264,20 @@ def PNA(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **par
         network=network,
         negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
         device=device,
+        epochs=epochs,
     )
 
 
 @embedding_model
 def EdgeCNN(
-    network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **params
+    network,
+    dim,
+    feature_dim=64,
+    device=None,
+    dim_h=64,
+    num_layers=2,
+    epochs=50,
+    **params
 ):
     return gnn_embedding(
         model=torch_geometric.nn.models.EdgeCNN(
@@ -252,12 +289,20 @@ def EdgeCNN(
         network=network,
         negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
         device=device,
+        epochs=epochs,
     )
 
 
 @embedding_model
 def GraphSAGE(
-    network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **params
+    network,
+    dim,
+    feature_dim=64,
+    device=None,
+    dim_h=64,
+    num_layers=2,
+    epochs=50,
+    **params
 ):
     return gnn_embedding(
         model=torch_geometric.nn.models.GraphSAGE(
@@ -269,11 +314,21 @@ def GraphSAGE(
         network=network,
         negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
         device=device,
+        epochs=epochs,
     )
 
 
 @embedding_model
-def GAT(network, dim, feature_dim=64, num_layers=2, device=None, dim_h=64, **params):
+def GAT(
+    network,
+    dim,
+    feature_dim=64,
+    num_layers=2,
+    device=None,
+    dim_h=64,
+    epochs=50,
+    **params
+):
     return gnn_embedding(
         model=torch_geometric.nn.models.GAT(
             in_channels=feature_dim,
@@ -283,4 +338,5 @@ def GAT(network, dim, feature_dim=64, num_layers=2, device=None, dim_h=64, **par
         ),
         network=network,
         negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
+        epochs=epochs,
     )

@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:06:41
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-07-28 16:23:50
+# @Last Modified time: 2023-08-03 07:00:24
 # %%
 import numpy as np
 import pandas as pd
@@ -70,3 +70,5 @@ g.set_ylabels("Model")
 g.fig.savefig(output_file, bbox_inches="tight", dpi=300)
 
 # %%
+
+plot_data.groupby(["model", "Sampling"]).mean().reset_index().sort_values(by = ["Sampling","score"], ascending = False)

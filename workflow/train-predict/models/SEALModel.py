@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-06-16 20:32:43
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-06-30 17:12:00
+# @Last Modified time: 2023-07-28 17:30:45
 import networkx as nx
 from scipy import sparse
 import numpy as np
@@ -22,8 +22,12 @@ class SEALLinkPredictor(LinkPredictor):
         self.device = device
 
     def load_gnn(self, **params):
-        gnn_model = self.model.split("+")[-1]
-        return torch_geometric.nn.models.__dict__[gnn_model](**params)
+        gnn_model_name = self.model.split("+")[-1]
+        gnn_model = torch_geometric.nn.models.__dict__[gnn_model_name](**params)
+        if "gnn_model" in params:
+            if not isinstance(params["gnn_model"], str):
+                gnn_model.load_state_dict(params["gnn_model"])
+        return gnn_model
 
     def train(self, network, **params):
         feature_vec = gnns.generate_base_embedding(network, self.params["in_channels"])
@@ -49,8 +53,12 @@ class SEALLinkPredictor(LinkPredictor):
         self.gnn_model = gnn_model
         self.feature_vec = feature_vec
 
-    def predict(self, network, src, trg, **params):
-        return self.seal_model.predict(network, src, trg, **params)
+    def predict(self, network, src, trg, batch_size=10, **params):
+        device = params.get("device", "cpu")
+        self.seal_model.gnn_model.to(device)
+        return self.seal_model.predict(
+            network, src, trg, device=device, batch_size=batch_size
+        )
 
     def state_dict(self):
         d = super().state_dict()

@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-05 08:44:53
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-12 12:47:08
+# @Last Modified time: 2023-07-28 16:25:26
 # %%
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ if "snakemake" in sys.modules:
     output_file = snakemake.output["output_file"]
 else:
     similarityMetric = "RBO"
-    input_file = "../data/derived/results/_result_quantile_ranking.csv"
+    input_file = "../../data/derived/results/result_quantile_ranking.csv"
     output_file = f"../figs/ranking-similarity-similarityMetric~{similarityMetric}.pdf"
 
 # ========================

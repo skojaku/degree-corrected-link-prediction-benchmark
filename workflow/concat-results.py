@@ -2,8 +2,9 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-01-17 08:42:24
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-03-28 10:05:59
+# @Last Modified time: 2023-07-28 16:22:24
 # %%
+import ast
 import numpy as np
 import pandas as pd
 import sys
@@ -54,6 +55,7 @@ def to_numeric(df, to_int, to_float):
 
 if "snakemake" in sys.modules:
     input_file_list = snakemake.input["input_file_list"]
+    param_file = snakemake.params["param_file"]
     output_file = snakemake.output["output_file"]
 else:
     input_file = "../data/"
@@ -63,4 +65,30 @@ else:
 # Load
 # ========================
 data_table = load_files(input_file_list)
+param_table = pd.read_csv(param_file)
+
+# Append sampleId
+data_table = pd.merge(
+    data_table, param_table, left_on="trainTestSplit", right_on="hash", how="left"
+)
+data_table["sampleId"] = (
+    data_table["paramValue"].apply(ast.literal_eval).apply(lambda x: x["sampleId"])
+)
+data_table = data_table.drop(columns=param_table.columns)
+
+# Add the negtive sampler name used to train the model
+data_table = pd.merge(
+    data_table, param_table, left_on="PredictionModel", right_on="hash", how="left"
+)
+data_table["model"] += (
+    data_table["paramValue"]
+    .apply(ast.literal_eval)
+    .apply(
+        lambda x: "+" + x["negative_edge_sampler"]
+        if "negative_edge_sampler" in x
+        else ""
+    )
+)
+data_table = data_table.drop(columns=param_table.columns)
+
 data_table.to_csv(output_file)

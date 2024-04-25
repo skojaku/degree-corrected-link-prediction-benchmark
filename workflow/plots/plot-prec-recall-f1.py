@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:06:41
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-04-18 11:22:02
+# @Last Modified time: 2023-07-28 16:27:10
 # %%
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/derived/results/result_ranking.csv"
+    input_file = "../../data/derived/results/result_ranking.csv"
     output_file = "../data/"
 
 # ========================

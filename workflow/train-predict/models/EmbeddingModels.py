@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-06-30 17:52:03
+# @Last Modified time: 2023-07-01 09:38:32
 # %%
 from sklearn.decomposition import PCA
 import graph_embedding
@@ -184,7 +184,7 @@ def gnn_embedding(
 
 
 @embedding_model
-def GCN(network, dim, feature_dim=64, num_layers = 2, device=None, dim_h=64, **params):
+def GCN(network, dim, feature_dim=64, num_layers=2, device=None, dim_h=64, **params):
     return gnn_embedding(
         model=torch_geometric.nn.models.GCN(
             in_channels=feature_dim,
@@ -208,6 +208,7 @@ def GIN(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **par
         ),
         network=network,
         negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
+        device=device,
     )
 
 
@@ -233,6 +234,7 @@ def PNA(network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **par
         ),
         network=network,
         negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
+        device=device,
     )
 
 
@@ -242,6 +244,38 @@ def EdgeCNN(
 ):
     return gnn_embedding(
         model=torch_geometric.nn.models.EdgeCNN(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=num_layers,
+            out_channels=dim,
+        ),
+        network=network,
+        negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
+        device=device,
+    )
+
+
+@embedding_model
+def GraphSAGE(
+    network, dim, feature_dim=64, device=None, dim_h=64, num_layers=2, **params
+):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GraphSAGE(
+            in_channels=feature_dim,
+            hidden_channels=dim_h,
+            num_layers=num_layers,
+            out_channels=dim,
+        ),
+        network=network,
+        negative_edge_sampler=graph_embedding.gnns.NegativeEdgeSampler["uniform"],
+        device=device,
+    )
+
+
+@embedding_model
+def GAT(network, dim, feature_dim=64, num_layers=2, device=None, dim_h=64, **params):
+    return gnn_embedding(
+        model=torch_geometric.nn.models.GAT(
             in_channels=feature_dim,
             hidden_channels=dim_h,
             num_layers=num_layers,

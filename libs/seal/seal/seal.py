@@ -2,8 +2,9 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-20 05:50:31
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-06-30 18:17:32
+# @Last Modified time: 2023-07-28 17:28:25
 # %%
+from sklearn.metrics import roc_auc_score
 from tqdm.auto import tqdm
 import scipy
 from numba import njit
@@ -15,6 +16,13 @@ import torch
 import torch.utils.data
 from scipy.sparse.csgraph import shortest_path
 from torch_geometric.loader import DataLoader
+from torch_geometric.data import Data
+from torch.utils.data import Dataset
+
+# import utils
+# import gnns
+# from node_samplers import negative_uniform
+
 from seal import utils
 from seal import gnns
 from seal.node_samplers import negative_uniform
@@ -30,48 +38,47 @@ class SEAL(torch.nn.Module):
     def forward(self, x, edge_index):
         return self.gnn_model(x, edge_index)
 
-    def predict(self, net, src, trg, feature_vec=None):
+    def predict(self, net, src, trg, feature_vec=None, device="cpu", batch_size=10):
         if feature_vec is None:
             feature_vec = self.feature_vec
         score_list = []
 
         if not isinstance(src, Iterable):
             src, trg = [src], [trg]
-        for _src, _trg in zip(src, trg):
-            subnet, sub_x = generate_input_data(
-                _src,
-                _trg,
-                feature_vec,
-                net,
-                hops=2,
-                max_nodes_per_hop=None,
-            )
-            sub_edge_index = torch.LongTensor(utils.adj2edgeindex(subnet))
-            emb = self.gnn_model(sub_x, sub_edge_index)
+        dataset = EnclosedSubgraphDataset(
+            feature_vec, src=src, trg=trg, net=net, hops=2
+        )
+        dataloader = DataLoader(dataset, batch_size=batch_size)
+        pbar = tqdm(total=len(src))
+        for data in dataloader:
+            sub_x = data.x
+            sub_edge_index = data.edge_index
+            sub_y = data.y
+            emb = self.gnn_model(sub_x.to(device), sub_edge_index.to(device))
             emb = emb.detach().cpu().numpy()
-            score = np.sum(emb[0, :] * emb[1, :])
+            emb = emb[sub_y > 0]
+            score = np.array(np.sum(emb[::2] * emb[1::2], axis=1)).reshape(-1)
             score_list.append(score)
-        return np.array(score_list)
+            pbar.update(len(score))
+        return np.concatenate(score_list)
 
     def set_feature_vectors(self, x):
         self.feature_vec.data = torch.FloatTensor(x)
 
 
-def generate_input_data(
-    src,
-    trg,
-    x,
-    net,
-    hops,
-    max_nodes_per_hop,
-):
-    nodes = get_enclosing_subgraph(
-        src,
-        trg,
-        hops=hops,
-        net=net,
-        max_nodes_per_hop=max_nodes_per_hop,
-    )
+def generate_input_data(src, trg, x, net, hops, max_n_nodes, random_sampling=True):
+    if random_sampling:
+        nodes = get_random_enclosing_subgraph(
+            src=src, trg=trg, net=net, hops=hops, max_n_nodes=max_n_nodes
+        )
+    else:
+        nodes = get_enclosing_subgraph(
+            src,
+            trg,
+            hops=hops,
+            net=net,
+            max_n_nodes=max_n_nodes,
+        )
 
     subnet = net[nodes, :][:, nodes]
     sub_x = x[nodes, :]
@@ -163,11 +170,12 @@ def train(
 
             # Compute average loss over the entire dataset
             with torch.no_grad():
+                #score = roc_auc_score(batch["y"].cpu(), score.cpu().detach().numpy())
                 ave_loss += loss.item()
                 n_iter += 1
-                print_ave_loss = ave_loss / n_iter
+                print_loss = loss.item()
                 pbar.set_description(
-                    f"loss={print_ave_loss:.3f}, iter={n_iter}, epochs={epoch}"
+                    f"loss={print_loss:.3f}, iter={n_iter}, epochs={epoch}"
                 )
         # Update progress bar and display current loss and number of iterations per epoch
         pbar.update(1)
@@ -178,6 +186,42 @@ def train(
     return model
 
 
+class EnclosedSubgraphDataset(Dataset):
+    def __init__(
+        self, feature_vec, src, trg, net, hops=2, max_n_nodes=100, random_sampling=True
+    ):
+        self.feature_vec = feature_vec
+        self.src = src
+        self.trg = trg
+        self.net = net
+        self.hops = hops
+        self.n_nodes = net.shape[0]
+        self.idx = 0
+        self.max_n_nodes = max_n_nodes
+        self.random_sampling = random_sampling
+
+    def __len__(self):
+        return len(self.src)
+
+    def __getitem__(self, idx):
+        subnet, sub_x = generate_input_data(
+            self.src[self.idx],
+            self.trg[self.idx],
+            self.feature_vec,
+            self.net,
+            hops=self.hops,
+            max_n_nodes=self.max_n_nodes,
+            random_sampling=self.random_sampling,
+        )
+        sub_edge_index = torch.LongTensor(utils.adj2edgeindex(subnet))
+        y = torch.zeros(sub_x.shape[0])
+        y[:2] = 1
+        data = Data(x=sub_x, edge_index=sub_edge_index, y=y)
+
+        self.idx = (self.idx + 1) % len(self.src)
+        return data
+
+
 class SEALDataset(torch.utils.data.Dataset):
     def __init__(
         self,
@@ -186,8 +230,9 @@ class SEALDataset(torch.utils.data.Dataset):
         n_nodes,
         negative_edge_sampler,
         hops=2,
-        max_nodes_per_hop=100,
+        max_n_nodes=100,
         node_labelling="DRNL",
+        random_sampling=True,
     ):
         self.node_labelling = node_labelling
         # Constructor for SEALClusterData class. Initializes instance variables.
@@ -207,6 +252,7 @@ class SEALDataset(torch.utils.data.Dataset):
         self.n_nodes = n_nodes
         self.pos_edge_index = undirected_edge_index
         self.x = x
+        self.random_sampling = random_sampling
 
         # Sample negative edges using the given sampler
         self.neg_edge_index = utils.sample_unconnected_node_pairs(
@@ -241,7 +287,7 @@ class SEALDataset(torch.utils.data.Dataset):
 
         # Initialize variables with given inputs
         self.hops = hops
-        self.max_nodes_per_hop = max_nodes_per_hop
+        self.max_n_nodes = max_n_nodes
 
         # Cache
         self.train_data_cache = {}
@@ -266,7 +312,8 @@ class SEALDataset(torch.utils.data.Dataset):
                 x=self.x,
                 net=self.net,
                 hops=self.hops,
-                max_nodes_per_hop=self.max_nodes_per_hop,
+                max_n_nodes=self.max_n_nodes,
+                random_sampling=self.random_sampling,
             )
             self.train_data_cache[key_edge] = (subnet, sub_x)
         else:
@@ -375,10 +422,10 @@ def dual_radius_node_labelling(subnet):
 #
 # Enclosing subgraph
 #
-def get_enclosing_subgraph(src, trg, hops, net, max_nodes_per_hop=None):
+def get_enclosing_subgraph(src, trg, hops, net, max_n_nodes=None):
     # Function to return a subgraph containing source and target nodes and their neighbors within a certain number of hops.
-    if max_nodes_per_hop is None:
-        max_nodes_per_hop = net.shape[0]
+    if max_n_nodes is None:
+        max_n_nodes = net.shape[0]
 
     nodes = set([src, trg])
     visited = nodes.copy()
@@ -387,10 +434,8 @@ def get_enclosing_subgraph(src, trg, hops, net, max_nodes_per_hop=None):
         _, neighbors, v = sparse.find(net[np.array(list(nodes)), :].sum(axis=0))
 
         # Limit the number of neighbors to be considered.
-        if len(neighbors) > max_nodes_per_hop:
-            neighbors = np.random.choice(
-                neighbors, size=max_nodes_per_hop, replace=False
-            )
+        if len(neighbors) > max_n_nodes:
+            neighbors = np.random.choice(neighbors, size=max_n_nodes, replace=False)
         visited.update(neighbors)
         nodes = neighbors
 
@@ -404,3 +449,82 @@ def get_enclosing_subgraph(src, trg, hops, net, max_nodes_per_hop=None):
     if j > 1:
         visited[np.array([j, 1])] = visited[np.array([1, j])]
     return visited.astype(int)
+
+
+def get_random_enclosing_subgraph(src, trg, hops, net, max_n_nodes=100):
+    visited = _non_backtracking_random_walk_sampler(
+        indptr=net.indptr,
+        indices=net.indices,
+        max_walk_length=hops,
+        ts=np.array([src, trg]),
+        size=max_n_nodes,
+    )
+
+    visited = np.unique(np.concatenate([np.array([src, trg]), visited]))
+
+    # Ensure that the source and target nodes are included in the subgraph.
+    i = np.searchsorted(visited, src)
+    j = np.searchsorted(visited, trg)
+    if i > 1:
+        visited[np.array([i, 0])] = visited[np.array([0, i])]
+    if j > 1:
+        visited[np.array([j, 1])] = visited[np.array([1, j])]
+    return visited.astype(int)
+
+
+@njit(nogil=True)
+def _non_backtracking_random_walk_sampler(indptr, indices, max_walk_length, ts, size):
+    walk = np.empty(size, dtype=indices.dtype)
+
+    # Initialize ----------------
+    t = _random_sample(ts)
+    walk[0] = _random_sample(_neighbors(indptr, indices, t))
+    prev_visited = t
+    n_walks = 1
+    # ---------------------------
+
+    for j in range(1, size):
+        current_node = walk[j - 1]
+        neighbors = _neighbors(indptr, indices, current_node)
+        n_walks += 1
+
+        if ((neighbors.size == 1) & (neighbors[0] == prev_visited)) or (
+            n_walks > max_walk_length
+        ):
+            # Initialize ----------------
+            t = _random_sample(ts)
+            new_node = _random_sample(_neighbors(indptr, indices, t))
+            prev_visited = t
+            n_walks = 1
+            # ---------------------------
+
+        else:
+            # find a neighbor by a roulette selection
+            max_iter = 10
+            found_new_node = False
+            for _ in range(max_iter):
+                new_node = _random_sample(neighbors)
+                if (new_node != prev_visited) and (new_node != t):
+                    found_new_node = True
+                    break
+
+            if found_new_node is False:
+                # Initialize ----------------
+                t = _random_sample(ts)
+                new_node = _random_sample(_neighbors(indptr, indices, t))
+                prev_visited = t
+                n_walks = 1
+                # ---------------------------
+        prev_visited = current_node
+        walk[j] = new_node
+    return walk
+
+
+@njit(nogil=True)
+def _neighbors(indptr, indices_or_data, t):
+    return indices_or_data[indptr[t] : indptr[t + 1]]
+
+
+@njit(nogil=True)
+def _random_sample(a):
+    return a[np.random.randint(len(a))]

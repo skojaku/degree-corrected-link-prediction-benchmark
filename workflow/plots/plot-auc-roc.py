@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-03-28 10:06:41
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-05-03 08:49:17
+# @Last Modified time: 2023-07-28 16:23:50
 # %%
 import numpy as np
 import pandas as pd
@@ -14,13 +14,14 @@ if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/derived/results/result_auc_roc.csv"
+    input_file = "../../data/derived/results/result_auc_roc.csv"
     output_file = "../data/opt_stack_auc_roc.png"
 
 # ========================
 # Load
 # ========================
 data_table = pd.read_csv(input_file)
+
 # %% ========================
 # Style
 # ========================

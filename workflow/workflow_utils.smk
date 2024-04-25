@@ -2,7 +2,7 @@
 # @Author: Sadamori Kojaku
 # @Date:   2023-05-26 10:25:40
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-06-16 11:39:42
+# @Last Modified time: 2023-07-28 15:58:05
 # %%
 import numpy as np
 from os.path import join as j
@@ -92,12 +92,13 @@ def expand(filename, *args, **params):
 
 def _dict_hash(dictionary) -> str:
     """MD5 hash of a dictionary."""
-    dhash = hashlib.md5()
+    #dhash = hashlib.md5()
+    dhash = hashlib.shake_256()
     # We need to sort arguments so {'a': 1, 'b': 2} is
     # the same as {'b': 2, 'a': 1}
     encoded = json.dumps(dictionary, sort_keys=True).encode()
     dhash.update(encoded)
-    return dhash.hexdigest()
+    return dhash.hexdigest(4)
 
 
 def to_paramspace(index=None, **params):
@@ -170,7 +171,7 @@ def save_param_table(filename):
     for ob in gc.get_objects():
         if not type(ob).__name__ == "ParamspaceExtended":
             continue
-        ob.data_table.to_csv(filename, index = False, mode="w" if firstWrite else "a")
+        ob.data_table[["hash", "paramValue", "paramName"]].to_csv(filename, index = False, mode="w" if firstWrite else "a", header=firstWrite)
         firstWrite = False
 
 #

@@ -2,18 +2,16 @@
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
 # @Last Modified by:   Sadamori Kojaku
-# @Last Modified time: 2023-06-30 18:26:07
+# @Last Modified time: 2023-07-03 14:14:50
 # %%
 import sys
 import numpy as np
 from scipy import sparse
 import GPUtil
+import torch
 
 # sys.path.insert(0, "../..")
-from models.EmbeddingModels import *
-from models.StackingModel import *
-from models.SEALModel import *
-from models.NetworkModels import *
+from models.LinkPredictionModel import link_prediction_models
 
 #
 # Input
@@ -48,21 +46,16 @@ else:
 
 if "device" not in params:
     device = GPUtil.getAvailable(
-        order="first",
+        order="random",
         limit=99,
-        maxMemory=1,
-        maxLoad=1,
-        excludeID=[0, 5],
+        maxMemory=0.5,
+        maxLoad=0.5,
+        excludeID=[6, 7],
     )[0]
     device = f"cuda:{device}"
     params["device"] = device
 
-predictor = {
-    "embedding": EmbeddingLinkPredictor,
-    "seal": SEALLinkPredictor,
-    "stacklp": StackingLinkPredictor,
-    "network": NetworkLinkPredictor,
-}[params["modelType"]](**params)
+predictor = link_prediction_models[params["modelType"]](**params)
 
 net = sparse.load_npz(netfile)
 net = net + net.T

@@ -16,3 +16,13 @@ cd libs/embcom && pip install -e .
 cd libs/gnn-tools && pip install -e .
 cd libs/linkpred && pip install -e .
 ```
+
+
+# TODO
+
+- [x] Fix the bug (duplicated positive/negative edges)
+- [ ] Regenerate the figures
+- [ ] Create a scatter plot of data vs aucroc ratio (where the preferential attachment is the base) for the uniform sampling
+- [ ] Create a scatter plot of data vs aucroc ratio (where the preferential attachment is the base) for the biased sampling
+- [ ] Implement & Run the community detection (LFR & Multi partition model)
+- [ ] Evaluate the community detection benchmark

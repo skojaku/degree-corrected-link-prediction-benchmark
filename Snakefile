@@ -250,7 +250,7 @@ rule all:
         #
         # Generate the link prediction benchmark (Check point 1)
         # [Implement from here] @ vision
-        expand(TARGET_EDGE_TABLE_FILE, data = DATA_LIST, **params_train_test_split),
+        expand(TARGET_EDGE_TABLE_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler),
         #
         # Network stats (Check point 2)
         #

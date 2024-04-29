@@ -230,13 +230,13 @@ LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
 # ====================
 # Output
 # ====================
-FIG_AUCROC = j(RESULT_DIR, "figs", "aucroc.pdf")
-FIG_DEGSKEW_AUCDIFF = j(RESULT_DIR, "figs", "corr_degskew_aucdiff.pdf")
-FIG_NODES_AUCDIFF = j(RESULT_DIR, "figs", "corr_nodes_aucdiff.pdf")
-FIG_DEGSKEW_AUCDIFF_NODESIZE = j(RESULT_DIR, "figs", "corr_degskew_aucdiff_nodesize.pdf")
-FIG_PREC_RECAL_F1 =j(RESULT_DIR, "figs", "prec-recall-f1.pdf")
-FIG_DEG_DEG_PLOT =j(RESULT_DIR, "figs", "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
-FIG_PERF_VS_KURTOSIS_PLOT=j(RESULT_DIR, "figs", "performance_vs_degree_kurtosis.pdf")
+FIG_AUCROC = j(DATA_DIR, "figs", "aucroc.pdf")
+FIG_DEGSKEW_AUCDIFF = j(DATA_DIR, "figs", "corr_degskew_aucdiff.pdf")
+FIG_NODES_AUCDIFF = j(DATA_DIR, "figs", "corr_nodes_aucdiff.pdf")
+FIG_DEGSKEW_AUCDIFF_NODESIZE = j(DATA_DIR, "figs", "corr_degskew_aucdiff_nodesize.pdf")
+FIG_PREC_RECAL_F1 =j(DATA_DIR, "figs", "prec-recall-f1.pdf")
+FIG_DEG_DEG_PLOT =j(DATA_DIR, "figs", "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
+FIG_PERF_VS_KURTOSIS_PLOT=j(DATA_DIR, "figs", "performance_vs_degree_kurtosis.pdf")
 #
 #
 # RULES
@@ -278,8 +278,8 @@ rule all:
 rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
-        FIG_PERF_VS_KURTOSIS_PLOT,
-        FIG_AUCROC,
+        #FIG_PERF_VS_KURTOSIS_PLOT,
+        #FIG_AUCROC,
 
 # ============================
 # Cleaning networks
@@ -547,4 +547,4 @@ rule plot_aucdiff:
         nodes_outputfile=FIG_NODES_AUCDIFF,
         degskew_nodesize_outputfile = FIG_DEGSKEW_AUCDIFF_NODESIZE,
     script:
-        "workflow/plot-NetProp-AucDiff.py"
+        "workflow/plot-NetProp-AucDiffpy"

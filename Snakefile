@@ -249,7 +249,8 @@ rule all:
         #LP_ALL_AUCROC_SCORE_FILE,
         #
         # Generate the link prediction benchmark (Check point 1)
-        # [Implement from here]
+        # [Implement from here] @ vision
+        expand(TARGET_EDGE_TABLE_FILE, xxxxx, xxxx),
         #
         # Network stats (Check point 2)
         #

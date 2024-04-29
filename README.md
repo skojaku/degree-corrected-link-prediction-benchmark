@@ -26,3 +26,7 @@ cd libs/linkpred && pip install -e .
 - [ ] Create a scatter plot of data vs aucroc ratio (where the preferential attachment is the base) for the biased sampling
 - [ ] Implement & Run the community detection (LFR & Multi partition model)
 - [ ] Evaluate the community detection benchmark
+
+# Missing module
+
+-

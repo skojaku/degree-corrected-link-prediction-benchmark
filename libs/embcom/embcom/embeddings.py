@@ -239,7 +239,7 @@ class ModularitySpectralEmbedding(NodeEmbeddings):
 
     def fit(self, net):
         A = utils.to_adjacency_matrix(net)
-        self.A = A
+        self.A = A.asfptype()
         self.deg = np.array(A.sum(axis=1)).reshape(-1)
         return self
 

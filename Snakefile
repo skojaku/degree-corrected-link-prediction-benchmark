@@ -256,7 +256,6 @@ rule all:
         #
         #NET_STAT_FILE,
         #
-        #
         # Link classification (Check point 3)
         #
 #        expand(

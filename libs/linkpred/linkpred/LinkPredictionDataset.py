@@ -162,8 +162,9 @@ class TrainTestEdgeSplitter:
         """
         r, c, _ = sparse.find(A)
         edges = np.unique(pairing(r, c))
-
-        MST = csgraph.minimum_spanning_tree(A + A.T)
+        B = A + A.T
+        B = B.asfptype().astype(int)
+        MST = csgraph.minimum_spanning_tree(B)
         r, c, _ = sparse.find(MST)
         mst_edges = np.unique(pairing(r, c))
         remained_edge_set = np.array(

@@ -5,7 +5,6 @@ import pandas as pd
 from snakemake.utils import Paramspace
 import os
 from gnn_tools.models import embedding_models
-#from workflow.EmbeddingModels import *
 from workflow.NetworkTopologyPredictionModels import *
 
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
@@ -247,28 +246,33 @@ rule all:
         #
         # All results
         #
-        LP_ALL_AUCROC_SCORE_FILE,
+        #LP_ALL_AUCROC_SCORE_FILE,
         #
-        # Link classification (Check point 1)
-        #
-        expand(
-            LP_SCORE_EMB_FILE,
-            data=DATA_LIST,
-            **params_emb,
-            **params_negative_edge_sampler,
-            **params_train_test_split
-        ),
-        expand(
-            LP_SCORE_NET_FILE,
-            data=DATA_LIST,
-            **params_net_linkpred,
-            **params_negative_edge_sampler,
-            **params_train_test_split
-        ),
+        # Generate the link prediction benchmark (Check point 1)
+        # [Implement from here]
         #
         # Network stats (Check point 2)
         #
-        NET_STAT_FILE,
+        #NET_STAT_FILE,
+        #
+        #
+        # Link classification (Check point 3)
+        #
+#        expand(
+#            LP_SCORE_EMB_FILE,
+#            data=DATA_LIST,
+#            **params_emb,
+#            **params_negative_edge_sampler,
+#            **params_train_test_split
+#        ),
+#        expand(
+#            LP_SCORE_NET_FILE,
+#            data=DATA_LIST,
+#            **params_net_linkpred,
+#            **params_negative_edge_sampler,
+#            **params_train_test_split
+#        ),
+        #
 
 
 rule figs:

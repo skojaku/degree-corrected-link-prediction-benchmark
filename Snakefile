@@ -4,7 +4,7 @@ import itertools
 import pandas as pd
 from snakemake.utils import Paramspace
 import os
-from gnn_tools.EmbeddingModels import embedding_models
+from gnn_tools.models import embedding_models
 #from workflow.EmbeddingModels import *
 from workflow.NetworkTopologyPredictionModels import *
 

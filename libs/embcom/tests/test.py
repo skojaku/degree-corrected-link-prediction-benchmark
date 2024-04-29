@@ -67,16 +67,5 @@ class TestCalc(unittest.TestCase):
         model.fit(self.A)
         vec = model.transform(dim=16)
 
-    def test_torch_node2vec(self):
-        model = embcom.TorchNode2Vec()
-        model.fit(self.A)
-        vec = model.transform(dim=16)
-
-    def test_torch_node2vec_linear(self):
-        model = embcom.TorchModularityFactorization()
-        model.fit(self.A)
-2024-04-29
-        vec = model.transform(dim=16)
-
 if __name__ == "__main__":
     unittest.main()

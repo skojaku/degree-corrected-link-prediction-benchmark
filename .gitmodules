@@ -1,0 +1,3 @@
+[submodule "libs/libs/gnn-tools"]
+	path = libs/libs/gnn-tools
+	url = https://github.com/skojaku/gnn-tools

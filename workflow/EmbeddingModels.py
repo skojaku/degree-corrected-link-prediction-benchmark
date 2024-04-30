@@ -28,20 +28,6 @@ degree_corrected_gnn_models = [
 
 def calc_prob_i_j(emb, src, trg, net, model_name):
     score = np.sum(emb[src, :] * emb[trg, :], axis=1).reshape(-1)
-
-    # We want to calculate the probability P(i,j) of
-    # random walks moving from i to j, instead of the dot similarity.
-    # The P(i,j) is given by
-    #    P(i,j) \propto \exp(u[i]^\top u[j] + \ln p0[i] + \ln p0[j])
-    # where p0 is proportional to the degree. In residual2vec paper,
-    # we found that P(i,j) is more predictable of missing edges than
-    # the dot similarity u[i]^\top u[j].
-    if model_name in degree_corrected_gnn_models:
-        deg = np.array(net.sum(axis=1)).reshape(-1)
-        deg = np.maximum(deg, 1)
-        deg = deg / np.sum(deg)
-        log_deg = np.log(deg)
-        score += log_deg[src] + log_deg[trg]
     return score
 
 

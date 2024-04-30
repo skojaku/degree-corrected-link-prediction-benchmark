@@ -7,7 +7,7 @@
 import sys
 import numpy as np
 from scipy import sparse
-from EmbeddingModels import *
+from gnn_tools.models import *
 
 #
 # Input
@@ -19,7 +19,7 @@ if "snakemake" in sys.modules:
 else:
     netfile = "../data/derived/datasets/astro-ph/train-net_testEdgeFraction~0.5_sampleId~0.npz"
     embfile = "tmp.npz"
-    params = {"model": "GCN", "dim": 64}
+    params = {"model": "deepwalk", "dim": 64}
 
 dim = int(params["dim"])
 model_name = params["model"]

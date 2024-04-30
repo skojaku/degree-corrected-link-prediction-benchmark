@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 # @Author: Sadamori Kojaku
 # @Date:   2022-08-26 09:51:23
 # @Last Modified by:   Sadamori Kojaku
@@ -145,7 +145,7 @@ class DeepWalk(Node2Vec):
             "sg": 1,
             "hs": 1,
             "min_count": 0,
-            "workers": 4,
+            "workers": 8,
         }
 
 

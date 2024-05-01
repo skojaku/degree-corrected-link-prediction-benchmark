@@ -47,7 +47,7 @@ N_ITERATION = 1
 # Negative edge sampler
 #
 params_train_test_split = {
-    "testEdgeFraction": [0.5],
+    "testEdgeFraction": [0.25],
     "sampleId": list(range(N_ITERATION)),
 }
 paramspace_train_test_split = to_paramspace(params_train_test_split)

@@ -88,6 +88,10 @@ MPM_EVAL_EMB_FILE = j(MPM_EVAL_DIR, f"score_clus_{paramspace_mpm_com_detect_emb.
 # LFR benchmark
 # ======================================
 
+rule all_mpm:
+    input:
+        expand(MPM_EVAL_EMB_FILE, **params_mpm, **params_emb, **params_clustering)
+
 rule all_lfr:
     input:
         expand(LFR_EVAL_EMB_FILE, **params_lfr, **params_emb, **params_clustering)
@@ -134,12 +138,71 @@ rule kmeans_clustering_lfr:
     script:
         "workflow/kmeans-clustering.py"
 
-rule evaluate_communities:
+rule evaluate_communities_lfr:
     input:
         detected_group_file=LFR_COM_DETECT_EMB_FILE,
         com_file=LFR_NODE_FILE,
     output:
         output_file=LFR_EVAL_EMB_FILE,
+    resources:
+        mem="12G",
+        time="00:10:00",
+    script:
+        "workflow/eval-com-detect-score.py"
+
+# ======================================
+# MPM benchmark
+# ======================================
+
+
+
+rule generate_mpm_net:
+    params:
+        parameters=paramspace_mpm.instance,
+    output:
+        output_file=MPM_NET_FILE,
+        output_node_file=MPM_NODE_FILE,
+    wildcard_constraints:
+        data="mpm"
+    resources:
+        mem="12G",
+        time="04:00:00"
+    script:
+        "workflow/generate-mpm-networks.py"
+
+rule embedding_mpm:
+    input:
+        net_file=MPM_NET_FILE,
+        com_file=MPM_NODE_FILE,
+    output:
+        output_file=MPM_EMB_FILE,
+    params:
+        parameters=paramspace_emb.instance,
+    script:
+        "workflow/embedding.py"
+
+rule kmeans_clustering_mpm:
+    input:
+        emb_file=MPM_EMB_FILE,
+        com_file=MPM_NODE_FILE,
+    output:
+        output_file=MPM_COM_DETECT_EMB_FILE,
+    params:
+        parameters=paramspace_mpm_com_detect_emb.instance,
+    wildcard_constraints:
+        clustering="kmeans",
+    resources:
+        mem="12G",
+        time="01:00:00",
+    script:
+        "workflow/kmeans-clustering.py"
+
+rule evaluate_communities_mpm:
+    input:
+        detected_group_file=MPM_COM_DETECT_EMB_FILE,
+        com_file=MPM_NODE_FILE,
+    output:
+        output_file=MPM_EVAL_EMB_FILE,
     resources:
         mem="12G",
         time="00:10:00",

@@ -76,14 +76,50 @@ params_net_linkpred = {
 }
 paramspace_net_linkpred = to_paramspace(params_net_linkpred)
 
+
+#
+# Community detection
+#
+
+# Multi partition model
+N_SAMPLES = 1
+params_mpm = {
+    "n": [5000],  # Network size
+    "q": [50],  # Number of communities
+    "cave": [10, 50],  # average degree
+    "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
+    "sample": np.arange(N_SAMPLES),  # Number of samples
+}
+
+# Parmaters for the LFR benchmark
+params_lfr = { # LFR
+    "n": [5000],  # Network size
+    "k": [10, 50],  # Average degree
+    "tau": [3],  # degree exponent
+    "tau2": [1],  # community size exponent
+    "minc": [50],  # min community size
+    "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
+    "sample": np.arange(N_SAMPLES),  # Number of samples
+}
+
+params_clustering = {
+    "metric": ["cosine"],
+    "clustering": ["kmeans"],
+}
+
 # =============================
-# Networks & Benchmark Datasets
+# Networks
 # =============================
 
 # Edge table
 EDGE_TABLE_FILE = j(RAW_PROCESSED_NETWORKS_DIR, "{data}", "edge_table.csv")  # train
 
-# Benchmark
+
+# =============================
+# Link Prediction Benchmark Datasets
+# =============================
+
+# Link prediction benchmark
 DATASET_DIR = j(DERIVED_DIR, "datasets")
 TRAIN_NET_FILE = j(
     DATASET_DIR,
@@ -116,6 +152,11 @@ TRAIN_NET_FILE_OPTIMAL_STACKING = j(
     "{data}",
     f"train-net_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.npz",
 )
+
+# ====================
+# Community detection
+# ====================
+include: "./Snakefile_community_detection.smk"
 
 # ====================
 # Intermediate files

@@ -31,6 +31,9 @@ cd libs/LFR-benchmark && python setup.py build && pip install -e .
 - [ ] Create a scatter plot of data vs aucroc ratio (where the preferential attachment is the base) for the uniform sampling
 - [ ] Create a scatter plot of data vs aucroc ratio (where the preferential attachment is the base) for the biased sampling
 - [ ] Implement & Run the community detection (LFR & Multi partition model)
+  - [x] LFR benchamrk implemented
+  - [ ] Running the LFR benchmark
+  - [ ] Collect the results
 - [ ] Evaluate the community detection benchmark
 
 # Missing module

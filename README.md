@@ -19,9 +19,6 @@ cd libs/embcom && pip install -e .
 # GNN tools
 cd libs/gnn-tools && pip install -e .
 
-# Link prediction package
-cd libs/linkpred && pip install -e .
-
 # LFR benchmark
 cd libs/LFR-benchmark && python setup.py build && pip install -e .
 ```

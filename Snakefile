@@ -28,7 +28,7 @@ OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
 
 #All networks
 DATA_LIST = [
-    f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
+    f.split("net_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
 
 # Small networks
@@ -62,7 +62,9 @@ paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 #
 # Network embedding
 #
-params_emb = {"model": list(embedding_models.keys()), "dim": [64]}
+MODEL_LIST = list(embedding_models.keys())
+MODEL_LIST = [m for m in MODEL_LIST if m not in ["EdgeCNN", "dcEdgeCNN"]]
+params_emb = {"model": MODEL_LIST, "dim": [128]}
 paramspace_emb = to_paramspace(params_emb)
 
 
@@ -258,21 +260,20 @@ rule all:
         #
         # Link classification (Check point 3)
         #
-#        expand(
-#            LP_SCORE_EMB_FILE,
-#            data=DATA_LIST,
-#            **params_emb,
-#            **params_negative_edge_sampler,
-#            **params_train_test_split
-#        ),
-#        expand(
-#            LP_SCORE_NET_FILE,
-#            data=DATA_LIST,
-#            **params_net_linkpred,
-#            **params_negative_edge_sampler,
-#            **params_train_test_split
-#        ),
-        #
+        expand(
+            LP_SCORE_EMB_FILE,
+            data=DATA_LIST,
+            **params_emb,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        ),
+        expand(
+            LP_SCORE_NET_FILE,
+            data=DATA_LIST,
+            **params_net_linkpred,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        ),
 
 
 rule figs:
@@ -288,7 +289,7 @@ rule figs:
 rule clean_networks:
     input:
         raw_unprocessed_networks_dir=RAW_UNPROCESSED_NETWORKS_DIR,
-        raw_processed_networks_dir=RAW_PROCESSED_NETWORKS_DIR,
+        #raw_processed_networks_dir=RAW_PROCESSED_NETWORKS_DIR,
     output:
         edge_table_file=EDGE_TABLE_FILE,
     script:

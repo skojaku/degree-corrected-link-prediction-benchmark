@@ -289,7 +289,7 @@ rule all:
         #
         # All results
         #
-        #LP_ALL_AUCROC_SCORE_FILE,
+        LP_ALL_AUCROC_SCORE_FILE,
         #
         # Generate the link prediction benchmark (Check point 1)
         # [Implement from here] @ vision

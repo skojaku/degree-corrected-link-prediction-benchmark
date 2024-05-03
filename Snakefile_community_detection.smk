@@ -90,11 +90,13 @@ MPM_EVAL_EMB_FILE = j(MPM_EVAL_DIR, f"score_clus_{paramspace_mpm_com_detect_emb.
 
 rule all_mpm:
     input:
-        expand(MPM_EVAL_EMB_FILE, **params_mpm, **params_emb, **params_clustering)
+        expand(MPM_EVAL_EMB_FILE, **params_mpm, **params_emb, **params_clustering),
+        j(MPM_EVAL_DIR, "all_scores.csv"),
 
 rule all_lfr:
     input:
-        expand(LFR_EVAL_EMB_FILE, **params_lfr, **params_emb, **params_clustering)
+        expand(LFR_EVAL_EMB_FILE, **params_lfr, **params_emb, **params_clustering),
+        j(LFR_EVAL_DIR, "all_scores.csv"),
 
 
 rule generate_lfr_net:
@@ -149,6 +151,17 @@ rule evaluate_communities_lfr:
         time="00:10:00",
     script:
         "workflow/eval-com-detect-score.py"
+
+rule concatenate_lfr_result:
+    input:
+        input_files = expand(LFR_EVAL_EMB_FILE, **params_lfr, **params_emb, **params_clustering),
+    output:
+        output_file = j(LFR_EVAL_DIR, "all_scores.csv"),
+    params:
+        to_int = ["n", "k", "tau2", "minc", "dim", "sample"],
+        to_float = ["mu", "tau"],
+    script:
+        "workflow/concatenate-com-detect-results.py"
 
 # ======================================
 # MPM benchmark
@@ -208,3 +221,15 @@ rule evaluate_communities_mpm:
         time="00:10:00",
     script:
         "workflow/eval-com-detect-score.py"
+
+rule concatenate_mpm_result:
+    input:
+        input_files = expand(MPM_EVAL_EMB_FILE, **params_mpm, **params_emb, **params_clustering),
+    output:
+        output_file = j(MPM_EVAL_DIR, "all_scores.csv"),
+    params:
+        to_int = ["n", "K", "dim", "sample", "dim", "cave"],
+        to_float = ["mu"]
+    script:
+        "workflow/concatenate-com-detect-results.py"
+

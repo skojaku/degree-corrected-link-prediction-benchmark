@@ -11,8 +11,8 @@ include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemak
 # Multi partition model
 N_SAMPLES = 3
 params_mpm = {
-    "n": [5000],  # Network size
-    "q": [50],  # Number of communities
+    "n": [1000],  # Network size
+    "q": [10],  # Number of communities
     "cave": [10, 50],  # average degree
     "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
     "sample": list(range(N_SAMPLES)),  # Number of samples
@@ -20,7 +20,7 @@ params_mpm = {
 
 # Parmaters for the LFR benchmark
 params_lfr = { # LFR
-    "n": [5000],  # Network size
+    "n": [1000],  # Network size
     "k": [10, 50],  # Average degree
     "tau": [3],  # degree exponent
     "tau2": [1],  # community size exponent

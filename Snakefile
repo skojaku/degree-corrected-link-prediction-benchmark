@@ -36,6 +36,7 @@ DATA_LIST = [
 if config["small_networks"]:
     with open("workflow/small-networks.json", "r") as f:
         DATA_LIST = json.load(f)
+        DATA_LIST = DATA_LIST[:2] ## need to delete after testing 
 
 N_ITERATION = 1
 
@@ -258,20 +259,20 @@ rule all:
         #
         # Link classification (Check point 3)
         #
-#        expand(
-#            LP_SCORE_EMB_FILE,
-#            data=DATA_LIST,
-#            **params_emb,
-#            **params_negative_edge_sampler,
-#            **params_train_test_split
-#        ),
-#        expand(
-#            LP_SCORE_NET_FILE,
-#            data=DATA_LIST,
-#            **params_net_linkpred,
-#            **params_negative_edge_sampler,
-#            **params_train_test_split
-#        ),
+        expand(
+            LP_SCORE_EMB_FILE,
+            data=DATA_LIST,
+            **params_emb,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        ),
+        expand(
+            LP_SCORE_NET_FILE,
+            data=DATA_LIST,
+            **params_net_linkpred,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        ),
         #
 
 

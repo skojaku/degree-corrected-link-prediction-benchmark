@@ -22,8 +22,8 @@ if "snakemake" in sys.modules:
     output_net_file = snakemake.output["output_file"]
     output_node_file = snakemake.output["output_node_file"]
 
-    maxk = None
-    maxc = None
+    maxk = None if "maxk" not in params else params["maxk"]
+    maxc = None if "maxc" not in params else params["maxc"]
 
     if (maxk is None) or (maxk == "None"):
         maxk = int(np.sqrt(10 * N))

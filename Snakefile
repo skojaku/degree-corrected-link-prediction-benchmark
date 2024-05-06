@@ -25,6 +25,7 @@ RAW_PROCESSED_NETWORKS_DIR = j(DATA_DIR, "preprocessed")
 EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
+FIG_DIR =j(DATA_DIR, "figs")
 
 #All networks
 DATA_LIST = [
@@ -77,35 +78,6 @@ params_net_linkpred = {
 paramspace_net_linkpred = to_paramspace(params_net_linkpred)
 
 
-#
-# Community detection
-#
-
-# Multi partition model
-N_SAMPLES = 1
-params_mpm = {
-    "n": [5000],  # Network size
-    "q": [50],  # Number of communities
-    "cave": [10, 50],  # average degree
-    "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
-    "sample": np.arange(N_SAMPLES),  # Number of samples
-}
-
-# Parmaters for the LFR benchmark
-params_lfr = { # LFR
-    "n": [5000],  # Network size
-    "k": [10, 50],  # Average degree
-    "tau": [3],  # degree exponent
-    "tau2": [1],  # community size exponent
-    "minc": [50],  # min community size
-    "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
-    "sample": np.arange(N_SAMPLES),  # Number of samples
-}
-
-params_clustering = {
-    "metric": ["cosine"],
-    "clustering": ["kmeans"],
-}
 
 # =============================
 # Networks
@@ -273,13 +245,13 @@ LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
 # ====================
 # Output
 # ====================
-FIG_AUCROC = j(DATA_DIR, "figs", "aucroc.pdf")
-FIG_DEGSKEW_AUCDIFF = j(DATA_DIR, "figs", "corr_degskew_aucdiff.pdf")
-FIG_NODES_AUCDIFF = j(DATA_DIR, "figs", "corr_nodes_aucdiff.pdf")
-FIG_DEGSKEW_AUCDIFF_NODESIZE = j(DATA_DIR, "figs", "corr_degskew_aucdiff_nodesize.pdf")
-FIG_PREC_RECAL_F1 =j(DATA_DIR, "figs", "prec-recall-f1.pdf")
-FIG_DEG_DEG_PLOT =j(DATA_DIR, "figs", "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
-FIG_PERF_VS_KURTOSIS_PLOT=j(DATA_DIR, "figs", "performance_vs_degree_kurtosis.pdf")
+FIG_AUCROC = j(FIG_DIR, "aucroc.pdf")
+FIG_DEGSKEW_AUCDIFF = j(FIG_DIR, "corr_degskew_aucdiff.pdf")
+FIG_NODES_AUCDIFF = j(FIG_DIR, "corr_nodes_aucdiff.pdf")
+FIG_DEGSKEW_AUCDIFF_NODESIZE = j(FIG_DIR, "corr_degskew_aucdiff_nodesize.pdf")
+FIG_PREC_RECAL_F1 =j(FIG_DIR, "prec-recall-f1.pdf")
+FIG_DEG_DEG_PLOT =j(FIG_DIR, "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
+FIG_PERF_VS_KURTOSIS_PLOT=j(FIG_DIR, "performance_vs_degree_kurtosis.pdf")
 #
 #
 # RULES
@@ -289,7 +261,7 @@ rule all:
         #
         # All results
         #
-        LP_ALL_AUCROC_SCORE_FILE,
+        #LP_ALL_AUCROC_SCORE_FILE,
         #
         # Generate the link prediction benchmark (Check point 1)
         # [Implement from here] @ vision

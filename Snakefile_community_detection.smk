@@ -9,22 +9,43 @@ from gnn_tools.models import embedding_models
 include: "./workflow/workflow_utils.smk"  # not able to merge this with snakemake_utils.py due to some path breakage issues
 
 # Multi partition model
-N_SAMPLES = 3
+N_SAMPLES = 10
+
+#
+# Community detection
+#
+
+# Multi partition model
 params_mpm = {
-    "n": [1000],  # Network size
-    "q": [10],  # Number of communities
+    "n": [5000],  # Network size
+    "q": [50],  # Number of communities
     "cave": [10, 50],  # average degree
     "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
     "sample": list(range(N_SAMPLES)),  # Number of samples
 }
 
 # Parmaters for the LFR benchmark
+#params_lfr = { # LFR
+#    "n": [3000],  # Network size
+#    "k": [25],  # Average degree
+#    "tau": [2.5, 3],  # degree exponent
+#    "tau2": [3],  # community size exponent
+#    "minc": [100],  # min community size
+#    "maxk": [1000], # maximum degree,
+#    "maxc": [1000], # maximum community size
+#    "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 10)],
+#    #"mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
+#    "sample": list(range(N_SAMPLES)),  # Number of samples
+#}
 params_lfr = { # LFR
-    "n": [1000],  # Network size
-    "k": [10, 50],  # Average degree
-    "tau": [3],  # degree exponent
-    "tau2": [1],  # community size exponent
-    "minc": [50],  # min community size
+    "n": [3000],  # Network size
+    "k": [25],  # Average degree
+    "tau": [2.5, 3],  # degree exponent
+    "tau2": [3],  # community size exponent
+    "minc": [100],  # min community size
+    "maxk": [500], # maximum degree,
+    "maxc": [500], # maximum community size
+    #"mu": ["%.2f" % d for d in np.linspace(0.1, 1, 10)],
     "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
     "sample": list(range(N_SAMPLES)),  # Number of samples
 }
@@ -34,6 +55,12 @@ params_clustering = {
     "clustering": ["kmeans"],
 }
 
+params_fig_lfr = {
+    "n": params_lfr["n"],
+    "k": params_lfr["k"],
+    "tau": params_lfr["tau"],
+    "dim": params_emb["dim"],
+}
 
 # ======================================
 # Community Detection Benchmark Datasets
@@ -62,6 +89,10 @@ LFR_COM_DETECT_EMB_FILE = j(
 )
 
 LFR_EVAL_EMB_FILE = j(LFR_EVAL_DIR, f"score_clus_{paramspace_lfr_com_detect_emb.wildcard_pattern}.npz")
+
+# Figure
+FIG_LFR_PERF_CURVE = j(FIG_DIR, "lfr_perf_curve_n~{n}_k~{k}_tau~{tau}_dim~{dim}.pdf")
+FIG_LFR_AUCESIM = j(FIG_DIR, "lfr_aucesim_n~{n}_k~{k}_tau~{tau}_dim~{dim}.pdf")
 
 # Multi partition model
 MPM_DIR = j(CMD_DATASET_DIR, "mpm")
@@ -97,6 +128,11 @@ rule all_lfr:
     input:
         expand(LFR_EVAL_EMB_FILE, **params_lfr, **params_emb, **params_clustering),
         j(LFR_EVAL_DIR, "all_scores.csv"),
+
+rule figs_lfr:
+    input:
+        expand(FIG_LFR_PERF_CURVE, **params_fig_lfr),
+        expand(FIG_LFR_AUCESIM, **params_fig_lfr),
 
 
 rule generate_lfr_net:
@@ -163,11 +199,27 @@ rule concatenate_lfr_result:
     script:
         "workflow/concatenate-com-detect-results.py"
 
+rule plot_lfr_result:
+    input:
+        input_file = j(LFR_EVAL_DIR, "all_scores.csv"),
+    output:
+        output_file_performance = FIG_LFR_PERF_CURVE,
+        output_file_aucesim = FIG_LFR_AUCESIM,
+    params:
+        model = ["GIN", "GCN", "GAT", "GraphSAGE", "dcGIN", "dcGCN", "dcGAT", "dcGraphSAGE"],
+        clustering = "kmeans",
+        metric = "cosine",
+        score_type = "esim",
+        tau = lambda wildcards: float(wildcards.tau),
+        k = lambda wildcards: int(wildcards.k),
+        n = lambda wildcards: int(wildcards.n),
+        dim = lambda wildcards: int(wildcards.dim),
+    script:
+        "workflow/plot_lfr_scores.py"
+
 # ======================================
 # MPM benchmark
 # ======================================
-
-
 
 rule generate_mpm_net:
     params:

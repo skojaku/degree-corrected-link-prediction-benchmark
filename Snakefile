@@ -25,6 +25,7 @@ RAW_PROCESSED_NETWORKS_DIR = j(DATA_DIR, "preprocessed")
 EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
+FIG_DIR =j("figs")
 
 #All networks
 DATA_LIST = [
@@ -76,14 +77,21 @@ params_net_linkpred = {
 }
 paramspace_net_linkpred = to_paramspace(params_net_linkpred)
 
+
+
 # =============================
-# Networks & Benchmark Datasets
+# Networks
 # =============================
 
 # Edge table
 EDGE_TABLE_FILE = j(RAW_PROCESSED_NETWORKS_DIR, "{data}", "edge_table.csv")  # train
 
-# Benchmark
+
+# =============================
+# Link Prediction Benchmark Datasets
+# =============================
+
+# Link prediction benchmark
 DATASET_DIR = j(DERIVED_DIR, "datasets")
 TRAIN_NET_FILE = j(
     DATASET_DIR,
@@ -116,6 +124,11 @@ TRAIN_NET_FILE_OPTIMAL_STACKING = j(
     "{data}",
     f"train-net_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.npz",
 )
+
+# ====================
+# Community detection
+# ====================
+include: "./Snakefile_community_detection.smk"
 
 # ====================
 # Intermediate files
@@ -232,13 +245,13 @@ LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
 # ====================
 # Output
 # ====================
-FIG_AUCROC = j(DATA_DIR, "figs", "aucroc.pdf")
-FIG_DEGSKEW_AUCDIFF = j(DATA_DIR, "figs", "corr_degskew_aucdiff.pdf")
-FIG_NODES_AUCDIFF = j(DATA_DIR, "figs", "corr_nodes_aucdiff.pdf")
-FIG_DEGSKEW_AUCDIFF_NODESIZE = j(DATA_DIR, "figs", "corr_degskew_aucdiff_nodesize.pdf")
-FIG_PREC_RECAL_F1 =j(DATA_DIR, "figs", "prec-recall-f1.pdf")
-FIG_DEG_DEG_PLOT =j(DATA_DIR, "figs", "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
-FIG_PERF_VS_KURTOSIS_PLOT=j(DATA_DIR, "figs", "performance_vs_degree_kurtosis.pdf")
+FIG_AUCROC = j(FIG_DIR, "aucroc.pdf")
+FIG_DEGSKEW_AUCDIFF = j(FIG_DIR, "corr_degskew_aucdiff.pdf")
+FIG_NODES_AUCDIFF = j(FIG_DIR, "corr_nodes_aucdiff.pdf")
+FIG_DEGSKEW_AUCDIFF_NODESIZE = j(FIG_DIR, "corr_degskew_aucdiff_nodesize.pdf")
+FIG_PREC_RECAL_F1 =j(FIG_DIR, "prec-recall-f1.pdf")
+FIG_DEG_DEG_PLOT =j(FIG_DIR, "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
+FIG_PERF_VS_KURTOSIS_PLOT=j(FIG_DIR, "performance_vs_degree_kurtosis.pdf")
 #
 #
 # RULES

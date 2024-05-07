@@ -36,7 +36,7 @@ net.data = net.data * 0.0 + 1.0
 net = sparse.csr_matrix(net)
 
 # Embedding
-dim = np.minimum(dim, net.shape[0]-2)
+dim = np.minimum(dim, net.shape[0]-5)
 emb = embedding_models[model_name](net, dim=dim)
 
 # %%

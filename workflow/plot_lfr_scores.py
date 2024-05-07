@@ -4,6 +4,7 @@
 # @Last Modified by:   Sadamori Kojaku
 # @Last Modified time: 2023-05-25 16:11:17
 # %%
+
 import sys
 import textwrap
 
@@ -17,9 +18,8 @@ if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
     output_file_performance = snakemake.output["output_file_performance"]
     output_file_aucesim = snakemake.output["output_file_aucesim"]
-    params = snakemake.params["parameters"]
-    model_names = snakemake.params["model_names"]
-    params["model"] = model_names
+    params = snakemake.params
+    model_names = snakemake.params["model"]
     title = (
         snakemake.params["title"] if "title" in list(snakemake.params.keys()) else None
     )
@@ -106,7 +106,7 @@ for k in list(model_colors.keys()):
     model_linestyles["dc" + k] = None
     model_marker_size["dc" + k] = 10
 
-marker_edge_color = {
+model_edge_color = {
     k: sns.dark_palette(model_colors[k], 3)[0] for k in model_colors.keys()
 }  # Using hex code for black for clarity
 model_list_order = list(model_colors.keys())
@@ -145,7 +145,7 @@ for name in model_list_order:
         label=name,
         ax=ax,
     )
-(dummy,) = ax.plot([0.5], [0.5], marker="None", linestyle="None", label="dummy-tophead")
+# (dummy,) = ax.plot([0.5], [0.5], marker="None", linestyle="None", label="dummy-tophead")
 
 ax.set_xlabel(r"Mixing rate, $\mu$")
 
@@ -163,26 +163,22 @@ ax.set_xticklabels(xtick_labels)
 ax.set_yticks(xtick_loc)
 ax.set_yticklabels(xtick_labels)
 
-current_handles, current_labels = ax.get_legend_handles_labels()
-new_handles = []
-new_labels = []
-for i, l in enumerate(current_labels):
-    if l not in model_groups:
-        continue
-    new_handles.append(current_handles[i])
-    new_labels.append(model_names[l] if l in model_names else l)
+# current_handles, current_labels = ax.get_legend_handles_labels()
+# new_handles = []
+# new_labels = []
+# for i, l in enumerate(current_labels):
+#    new_handles.append(current_handles[i])
+#    new_labels.append(model_names[l] if l in model_names else l)
 
 if with_legend:
     lgd = ax.legend(
-        new_handles[::-1],
-        new_labels[::-1],
+        # new_handles[::-1],
+        # new_labels[::-1],
         frameon=False,
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.1),
+        bbox_to_anchor=(0.5, -0.15),
         ncol=2,
-        fontsize=10,
     )
-    ax.set_xlabel("")
 else:
     ax.legend().remove()
 sns.despine()
@@ -234,3 +230,5 @@ ax.set_ylabel("AUC of performance curve")
 ax.legend(frameon=False)
 
 fig.savefig(output_file_aucesim, bbox_inches="tight", dpi=300)
+
+# %%

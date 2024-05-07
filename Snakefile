@@ -25,7 +25,7 @@ RAW_PROCESSED_NETWORKS_DIR = j(DATA_DIR, "preprocessed")
 EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
-FIG_DIR =j(DATA_DIR, "figs")
+FIG_DIR =j("figs")
 
 #All networks
 DATA_LIST = [

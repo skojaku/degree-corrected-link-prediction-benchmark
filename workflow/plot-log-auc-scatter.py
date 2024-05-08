@@ -11,6 +11,7 @@ if "snakemake" in sys.modules:
 else:
     auc_roc_table_file = "../data/derived/results/result_auc_roc.csv"
     output_file = "../figs/log_auc_scatter_plot.pdf"
+    output_file_uniform = "../figs/log_auc_scatter_plot_uniform.pdf"
 
 
 def auc_by_model(model, df, ref_data_list=None):
@@ -105,6 +106,20 @@ plot_data = get_joint_df_plot(df_uniform, df_degreeBiased, n_model)
 score_max = plot_data["Score"].values.max()
 score_min = plot_data["Score"].values.min()
 
+# Let's focus on the "learning" methods
+exclude = [
+    "dcGCN",
+    "dcGAT",
+    "dcGraphSAGE",
+    "dcGIN",
+    "jaccardIndex",
+    "commonNeighbors",
+    "resourceAllocation",
+    "localPathIndex",
+    "localRandomWalk",
+]
+plot_data = plot_data[~plot_data["model"].isin(exclude)]
+
 # %% ========================
 # Plot
 # ========================
@@ -114,22 +129,58 @@ sns.set(font_scale=1.2)
 sns.set_style("ticks")
 
 g = sns.jointplot(
-    data=plot_data,
+    data=plot_data.sort_values("negativeEdgeSampler", ascending=False),
     x="data_code",
     y="Score",
     kind="scatter",
     joint_kws={"s": 23, "alpha": 0.35, "linewidth": 0},
     hue="negativeEdgeSampler",
+    palette={"Uniform": "grey", "Biased": sns.color_palette("bright")[1]},
 )
 g.fig.set_figwidth(9)
 g.fig.set_figheight(5)
 g.ax_marg_x.remove()
 g.ax_joint.tick_params(labelbottom=False)
-g.ax_joint.set(
-    xlabel="Data",
-    ylabel="Relative performance to Preferential Attachment",
-)
+g.ax_joint.set_ylabel("Logarithmic AUC-ROC relative to\nPreferential Attachment")
+g.ax_joint.set_xlabel("Networks")
 g.ax_joint.axhline(y=0, linewidth=1.5, color="black", linestyle="--")
+g.ax_marg_y.axhline(y=0, linewidth=1.5, color="black", linestyle="--")
 g.ax_joint.set(xlim=(0, 92), ylim=(score_min - 0.1, score_max + 0.1))
-g.ax_joint.legend(frameon=False, loc="lower left")
+g.ax_joint.legend(frameon=False, loc="lower left", handletextpad=0.1, markerscale=2)
 g.savefig(output_file, bbox_inches="tight", dpi=300)
+
+# %%
+
+
+sns.set_style("white")
+sns.set(font_scale=1.2)
+sns.set_style("ticks")
+
+g = sns.jointplot(
+    data=plot_data.query("negativeEdgeSampler == 'Uniform'"),
+    x="data_code",
+    y="Score",
+    kind="scatter",
+    joint_kws={"s": 23, "alpha": 0.35, "linewidth": 0},
+    hue="negativeEdgeSampler",
+    palette={"Uniform": "grey", "Biased": sns.color_palette()[1]},
+)
+g.fig.set_figwidth(8)
+g.fig.set_figheight(5)
+g.ax_marg_x.remove()
+g.ax_joint.tick_params(labelbottom=False)
+g.ax_joint.set_ylabel("Logarithmic AUC-ROC relative to\nPreferential Attachment")
+g.ax_joint.set_xlabel("Networks")
+g.ax_joint.axhline(y=0, linewidth=1.5, color="black", linestyle="--")
+g.ax_marg_y.axhline(y=0, linewidth=1.5, color="black", linestyle="--")
+
+g.ax_joint.set(xlim=(0, 92), ylim=(score_min - 0.1, score_max + 0.1))
+g.ax_joint.legend(
+    frameon=False, loc="lower left", handletextpad=0.1, markerscale=2
+).remove()
+g.savefig(output_file_uniform, bbox_inches="tight", dpi=300)
+# %%
+
+# plot_data.query("negativeEdgeSampler == 'Biased' and Score <=0").shape[
+#    0
+# ] / plot_data.query("negativeEdgeSampler == 'Biased'").shape[0]

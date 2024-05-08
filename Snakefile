@@ -37,7 +37,6 @@ DATA_LIST = [
 if config["small_networks"]:
     with open("workflow/small-networks.json", "r") as f:
         DATA_LIST = json.load(f)
-        DATA_LIST = DATA_LIST[:2] ## need to delete after testing
 
 N_ITERATION = 1
 
@@ -247,6 +246,7 @@ LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
 # Output
 # ====================
 FIG_AUCROC = j(FIG_DIR, "aucroc.pdf")
+FIG_AUCROC_UNIFORM = j(FIG_DIR, "aucroc_uniform.pdf")
 FIG_DEGSKEW_AUCDIFF = j(FIG_DIR, "corr_degskew_aucdiff.pdf")
 FIG_NODES_AUCDIFF = j(FIG_DIR, "corr_nodes_aucdiff.pdf")
 FIG_DEGSKEW_AUCDIFF_NODESIZE = j(FIG_DIR, "corr_degskew_aucdiff_nodesize.pdf")
@@ -288,7 +288,6 @@ rule all:
             **params_negative_edge_sampler,
             **params_train_test_split
         ),
-        #
 
 
 rule figs:
@@ -550,6 +549,7 @@ rule plot_aucroc:
         input_file=LP_ALL_AUCROC_SCORE_FILE,
     output:
         output_file=FIG_AUCROC,
+        output_file_uniform=FIG_AUCROC_UNIFORM,
     script:
         "workflow/plot-auc-roc.py"
 

@@ -78,7 +78,6 @@ def get_joint_df_plot(df_uniform, df_biased, n_model):
 df_result_auc_roc = pd.read_csv(
     auc_roc_table_file,
 )
-df_result_auc_roc
 
 # ========================
 # Preprocessing
@@ -94,13 +93,16 @@ n_model = len(model_list)
 
 plot_data = get_joint_df_plot(df_uniform, df_degreeBiased, n_model)
 
-# ========================
-# Plot
-# ========================
 score_max = plot_data["Score"].values.max()
 score_min = plot_data["Score"].values.min()
 
+# %% ========================
+# Plot
+# ========================
 # Create a scatter plot
+sns.set_style("white")
+sns.set(font_scale=1.2)
+sns.set_style("ticks")
 
 g = sns.jointplot(
     data=plot_data,

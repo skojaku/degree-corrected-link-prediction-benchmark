@@ -112,7 +112,7 @@ g = sns.jointplot(
     joint_kws={"s": 23, "alpha": 0.35, "linewidth": 0},
     hue="negativeEdgeSampler",
 )
-g.fig.set_figwidth(8)
+g.fig.set_figwidth(9)
 g.fig.set_figheight(5)
 g.ax_marg_x.remove()
 g.ax_joint.tick_params(labelbottom=False)
@@ -120,9 +120,7 @@ g.ax_joint.set(
     xlabel="Data",
     ylabel="Relative performance to Preferential Attachment",
 )
-g.ax_joint.axhline(y=0, linewidth=1, color="black", linestyle="--")
+g.ax_joint.axhline(y=0, linewidth=1.5, color="black", linestyle="--")
 g.ax_joint.set(xlim=(0, 92), ylim=(score_min - 0.1, score_max + 0.1))
 g.ax_joint.legend(frameon=False, loc="lower left")
 g.savefig(output_file, bbox_inches="tight", dpi=300)
-
-# %%

@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
@@ -17,9 +18,9 @@ if "snakemake" in sys.modules:
     embfile = snakemake.output["output_file"]
     params = snakemake.params["parameters"]
 else:
-    netfile = "../data/derived/datasets/astro-ph/train-net_testEdgeFraction~0.5_sampleId~0.npz"
+    netfile = "../data/derived/datasets/Lehigh96/train-net_testEdgeFraction~0.25_sampleId~0.npz"
     embfile = "tmp.npz"
-    params = {"model": "deepwalk", "dim": 64}
+    params = {"model": "GraphSAGE", "dim": 128}
 
 dim = int(params["dim"])
 model_name = params["model"]
@@ -35,6 +36,7 @@ net.data = net.data * 0.0 + 1.0
 net = sparse.csr_matrix(net)
 
 # Embedding
+dim = np.minimum(dim, net.shape[0]-5)
 emb = embedding_models[model_name](net, dim=dim)
 
 # %%
@@ -47,3 +49,5 @@ np.savez_compressed(
     dim=dim,
     model_name=model_name,
 )
+
+# %%

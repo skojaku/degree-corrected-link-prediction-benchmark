@@ -1,4 +1,0 @@
-# set the directories below and copy this file as `workflow/config.yaml`
-data_dir: "data/"
-paper_dir: "./paper/current/"
-small_networks: False 

@@ -9,7 +9,7 @@ import pandas as pd
 from scipy import sparse
 import sys
 from tqdm import tqdm
-from linkpred.LinkPredictionDataset import NegativeEdgeSampler
+from gnn_tools.LinkPredictionDataset import NegativeEdgeSampler
 import utils
 
 if "snakemake" in sys.modules:

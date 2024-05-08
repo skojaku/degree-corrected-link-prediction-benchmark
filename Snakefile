@@ -25,10 +25,11 @@ RAW_PROCESSED_NETWORKS_DIR = j(DATA_DIR, "preprocessed")
 EMB_DIR = j(DERIVED_DIR, "embedding")
 PRED_DIR = j(DERIVED_DIR, "link-prediction")
 OPT_STACK_DIR = j(DERIVED_DIR, "optimal_stacking")
+FIG_DIR =j("figs")
 
 #All networks
 DATA_LIST = [
-    f.split("_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
+    f.split("net_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
 
 # Small networks
@@ -47,7 +48,7 @@ N_ITERATION = 1
 # Negative edge sampler
 #
 params_train_test_split = {
-    "testEdgeFraction": [0.5],
+    "testEdgeFraction": [0.25],
     "sampleId": list(range(N_ITERATION)),
 }
 paramspace_train_test_split = to_paramspace(params_train_test_split)
@@ -62,7 +63,9 @@ paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 #
 # Network embedding
 #
-params_emb = {"model": list(embedding_models.keys()), "dim": [64]}
+MODEL_LIST = list(embedding_models.keys())
+MODEL_LIST = [m for m in MODEL_LIST if m not in ["EdgeCNN", "dcEdgeCNN"]]
+params_emb = {"model": MODEL_LIST, "dim": [128]}
 paramspace_emb = to_paramspace(params_emb)
 
 
@@ -74,14 +77,21 @@ params_net_linkpred = {
 }
 paramspace_net_linkpred = to_paramspace(params_net_linkpred)
 
+
+
 # =============================
-# Networks & Benchmark Datasets
+# Networks
 # =============================
 
 # Edge table
 EDGE_TABLE_FILE = j(RAW_PROCESSED_NETWORKS_DIR, "{data}", "edge_table.csv")  # train
 
-# Benchmark
+
+# =============================
+# Link Prediction Benchmark Datasets
+# =============================
+
+# Link prediction benchmark
 DATASET_DIR = j(DERIVED_DIR, "datasets")
 TRAIN_NET_FILE = j(
     DATASET_DIR,
@@ -116,6 +126,11 @@ TRAIN_NET_FILE_OPTIMAL_STACKING = j(
 )
 
 # ====================
+# Community detection
+# ====================
+include: "./Snakefile_community_detection.smk"
+
+# ====================
 # Intermediate files
 # ====================
 
@@ -148,11 +163,6 @@ PRED_SCORE_NET_FILE = j(
     PRED_DIR,
     "{data}",
     f"score_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
-)
-PRED_RANK_NET_FILE = j(
-    PRED_DIR,
-    "{data}",
-    f"score_ranking_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.npz",
 )
 
 #
@@ -230,13 +240,14 @@ LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
 # ====================
 # Output
 # ====================
-FIG_AUCROC = j(DATA_DIR, "figs", "aucroc.pdf")
-FIG_DEGSKEW_AUCDIFF = j(DATA_DIR, "figs", "corr_degskew_aucdiff.pdf")
-FIG_NODES_AUCDIFF = j(DATA_DIR, "figs", "corr_nodes_aucdiff.pdf")
-FIG_DEGSKEW_AUCDIFF_NODESIZE = j(DATA_DIR, "figs", "corr_degskew_aucdiff_nodesize.pdf")
-FIG_PREC_RECAL_F1 =j(DATA_DIR, "figs", "prec-recall-f1.pdf")
-FIG_DEG_DEG_PLOT =j(DATA_DIR, "figs", "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
-FIG_PERF_VS_KURTOSIS_PLOT=j(DATA_DIR, "figs", "performance_vs_degree_kurtosis.pdf")
+FIG_AUCROC = j(FIG_DIR, "aucroc.pdf")
+FIG_AUCROC_UNIFORM = j(FIG_DIR, "aucroc_uniform.pdf")
+FIG_DEGSKEW_AUCDIFF = j(FIG_DIR, "corr_degskew_aucdiff.pdf")
+FIG_NODES_AUCDIFF = j(FIG_DIR, "corr_nodes_aucdiff.pdf")
+FIG_DEGSKEW_AUCDIFF_NODESIZE = j(FIG_DIR, "corr_degskew_aucdiff_nodesize.pdf")
+FIG_PREC_RECAL_F1 =j(FIG_DIR, "prec-recall-f1.pdf")
+FIG_DEG_DEG_PLOT =j(FIG_DIR, "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
+FIG_PERF_VS_KURTOSIS_PLOT=j(FIG_DIR, "performance_vs_degree_kurtosis.pdf")
 #
 #
 # RULES
@@ -246,7 +257,7 @@ rule all:
         #
         # All results
         #
-        #LP_ALL_AUCROC_SCORE_FILE,
+        LP_ALL_AUCROC_SCORE_FILE,
         #
         # Generate the link prediction benchmark (Check point 1)
         # [Implement from here] @ vision
@@ -254,32 +265,31 @@ rule all:
         #
         # Network stats (Check point 2)
         #
-        #NET_STAT_FILE,
+        NET_STAT_FILE,
         #
         # Link classification (Check point 3)
         #
-#        expand(
-#            LP_SCORE_EMB_FILE,
-#            data=DATA_LIST,
-#            **params_emb,
-#            **params_negative_edge_sampler,
-#            **params_train_test_split
-#        ),
-#        expand(
-#            LP_SCORE_NET_FILE,
-#            data=DATA_LIST,
-#            **params_net_linkpred,
-#            **params_negative_edge_sampler,
-#            **params_train_test_split
-#        ),
-        #
+        expand(
+            LP_SCORE_EMB_FILE,
+            data=DATA_LIST,
+            **params_emb,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        ),
+        expand(
+            LP_SCORE_NET_FILE,
+            data=DATA_LIST,
+            **params_net_linkpred,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        ),
 
 
 rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
+        FIG_AUCROC,
         #FIG_PERF_VS_KURTOSIS_PLOT,
-        #FIG_AUCROC,
 
 # ============================
 # Cleaning networks
@@ -288,7 +298,7 @@ rule figs:
 rule clean_networks:
     input:
         raw_unprocessed_networks_dir=RAW_UNPROCESSED_NETWORKS_DIR,
-        raw_processed_networks_dir=RAW_PROCESSED_NETWORKS_DIR,
+        #raw_processed_networks_dir=RAW_PROCESSED_NETWORKS_DIR,
     output:
         edge_table_file=EDGE_TABLE_FILE,
     script:
@@ -531,20 +541,9 @@ rule calc_deg_deg_plot:
 
 rule plot_aucroc:
     input:
-        input_file=LP_ALL_AUCROC_SCORE_FILE,
+        auc_roc_table_file=LP_ALL_AUCROC_SCORE_FILE,
     output:
         output_file=FIG_AUCROC,
+        output_file_uniform=FIG_AUCROC_UNIFORM,
     script:
         "workflow/plot-auc-roc.py"
-
-
-rule plot_aucdiff:
-    input:
-        auc_results_file=LP_ALL_AUCROC_SCORE_FILE,
-        networks_dir=RAW_PROCESSED_NETWORKS_DIR,
-    output:
-        degskew_outputfile=FIG_DEGSKEW_AUCDIFF,
-        nodes_outputfile=FIG_NODES_AUCDIFF,
-        degskew_nodesize_outputfile = FIG_DEGSKEW_AUCDIFF_NODESIZE,
-    script:
-        "workflow/plot-NetProp-AucDiffpy"

@@ -547,15 +547,3 @@ rule plot_aucroc:
         output_file_uniform=FIG_AUCROC_UNIFORM,
     script:
         "workflow/plot-auc-roc.py"
-
-
-rule plot_aucdiff:
-    input:
-        auc_results_file=LP_ALL_AUCROC_SCORE_FILE,
-        networks_dir=RAW_PROCESSED_NETWORKS_DIR,
-    output:
-        degskew_outputfile=FIG_DEGSKEW_AUCDIFF,
-        nodes_outputfile=FIG_NODES_AUCDIFF,
-        degskew_nodesize_outputfile = FIG_DEGSKEW_AUCDIFF_NODESIZE,
-    script:
-        "workflow/plot-NetProp-AucDiffpy"

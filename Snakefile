@@ -261,7 +261,7 @@ rule all:
         #
         # All results
         #
-        #LP_ALL_AUCROC_SCORE_FILE,
+        LP_ALL_AUCROC_SCORE_FILE,
         #
         # Generate the link prediction benchmark (Check point 1)
         # [Implement from here] @ vision
@@ -269,7 +269,7 @@ rule all:
         #
         # Network stats (Check point 2)
         #
-        #NET_STAT_FILE,
+        NET_STAT_FILE,
         #
         # Link classification (Check point 3)
         #

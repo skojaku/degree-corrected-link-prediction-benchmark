@@ -164,11 +164,6 @@ PRED_SCORE_NET_FILE = j(
     "{data}",
     f"score_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
 )
-PRED_RANK_NET_FILE = j(
-    PRED_DIR,
-    "{data}",
-    f"score_ranking_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.npz",
-)
 
 #
 # Optimal Stacking

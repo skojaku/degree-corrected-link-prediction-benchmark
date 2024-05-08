@@ -246,6 +246,7 @@ LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
 # Output
 # ====================
 FIG_AUCROC = j(FIG_DIR, "aucroc.pdf")
+FIG_AUCROC_UNIFORM = j(FIG_DIR, "aucroc_uniform.pdf")
 FIG_DEGSKEW_AUCDIFF = j(FIG_DIR, "corr_degskew_aucdiff.pdf")
 FIG_NODES_AUCDIFF = j(FIG_DIR, "corr_nodes_aucdiff.pdf")
 FIG_DEGSKEW_AUCDIFF_NODESIZE = j(FIG_DIR, "corr_degskew_aucdiff_nodesize.pdf")
@@ -292,8 +293,8 @@ rule all:
 rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
+        FIG_AUCROC,
         #FIG_PERF_VS_KURTOSIS_PLOT,
-        #FIG_AUCROC,
 
 # ============================
 # Cleaning networks
@@ -545,9 +546,10 @@ rule calc_deg_deg_plot:
 
 rule plot_aucroc:
     input:
-        input_file=LP_ALL_AUCROC_SCORE_FILE,
+        auc_roc_table_file=LP_ALL_AUCROC_SCORE_FILE,
     output:
         output_file=FIG_AUCROC,
+        output_file_uniform=FIG_AUCROC_UNIFORM,
     script:
         "workflow/plot-auc-roc.py"
 

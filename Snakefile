@@ -293,8 +293,8 @@ rule all:
 rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
+        FIG_AUCROC,
         #FIG_PERF_VS_KURTOSIS_PLOT,
-        #FIG_AUCROC,
 
 # ============================
 # Cleaning networks
@@ -546,7 +546,7 @@ rule calc_deg_deg_plot:
 
 rule plot_aucroc:
     input:
-        input_file=LP_ALL_AUCROC_SCORE_FILE,
+        auc_roc_table_file=LP_ALL_AUCROC_SCORE_FILE,
     output:
         output_file=FIG_AUCROC,
         output_file_uniform=FIG_AUCROC_UNIFORM,

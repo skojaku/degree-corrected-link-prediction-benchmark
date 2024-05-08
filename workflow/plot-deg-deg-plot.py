@@ -41,7 +41,7 @@ n = int(np.maximum(np.max(src), np.max(trg)) + 1)
 net = sparse.csr_matrix((np.ones_like(src), (src, trg)), shape=(n, n))
 
 
-model = gnn_tools.LinkPredictionDataset.LinkPredictionDataset(
+model = gnn_tools.LinkPredictionDataset(
     testEdgeFraction=0.5, negative_edge_sampler=f"{negativeEdgeSampler}"
 )
 model.fit(net)

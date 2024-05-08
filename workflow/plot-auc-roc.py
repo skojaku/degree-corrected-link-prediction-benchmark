@@ -8,6 +8,7 @@ import sys
 if "snakemake" in sys.modules:
     auc_roc_table_file = snakemake.input["auc_roc_table_file"]
     output_file = snakemake.output["output_file"]
+    output_file_uniform = snakemake.output["output_file_uniform"]
 else:
     auc_roc_table_file = "../data/derived/results/result_auc_roc.csv"
     output_file = "../figs/log_auc_scatter_plot.pdf"

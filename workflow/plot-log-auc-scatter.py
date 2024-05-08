@@ -13,7 +13,7 @@ else:
     output_file = "../figs/log_auc_scatter_plot.pdf"
 
 
-def auc_by_model(model, df):
+def auc_by_model(model, df, ref_data_list=None):
     """
     Extracts the AUC scores for a specified model from the dataframe.
 
@@ -28,6 +28,11 @@ def auc_by_model(model, df):
     """
     AUCs = df.loc[df["model"] == model].sort_values("data")
     data_list = AUCs["data"].to_list()
+
+    # Check if all data identifiers are the same
+    if ref_data_list is not None:
+        assert all(d == ref_data_list[i] for i, d in enumerate(data_list))
+
     AUCs = AUCs["log_score"].values
     if model == "preferentialAttachment":
         return AUCs, data_list
@@ -42,7 +47,10 @@ def cal_auc_ratio(df, n_model):
         PA_auc_arr, data_list = auc_by_model("preferentialAttachment", dg)
 
         diff_arr = np.array(
-            [auc_by_model(model, df) - PA_auc_arr for model in model_list]
+            [
+                auc_by_model(model, df, ref_data_list=data_list) - PA_auc_arr
+                for model in model_list
+            ]
         )
         diff_arr = diff_arr.reshape(-1)
         df_plot_list.append(
@@ -51,6 +59,7 @@ def cal_auc_ratio(df, n_model):
                     "Score": diff_arr,
                     "Data": data_list * n_model,
                     "sample": sample_id,
+                    "model": sum([[m] * len(data_list) for m in model_list], []),
                 }
             )
         )

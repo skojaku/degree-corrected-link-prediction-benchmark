@@ -1,6 +1,6 @@
+# %%
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
@@ -11,17 +11,6 @@ if "snakemake" in sys.modules:
 else:
     auc_roc_table_file = "../data/derived/results/result_auc_roc.csv"
     output_file = "../figs/log_auc_scatter_plot.pdf"
-
-# ========================
-# Load
-# ========================
-aucroc_table = pd.read_csv(
-    auc_roc_table_file,
-)
-
-# ========================
-# Scatter plot
-# ========================
 
 
 def auc_by_model(model, df):
@@ -49,7 +38,7 @@ def auc_by_model(model, df):
 def cal_auc_ratio(df, n_model):
 
     df_plot_list = []
-    for sample_id, dg in df.groupby("sample"):
+    for sample_id, dg in df.groupby("sampleId"):
         PA_auc_arr, data_list = auc_by_model("preferentialAttachment", dg)
 
         diff_arr = np.array(
@@ -84,9 +73,12 @@ def get_joint_df_plot(df_uniform, df_biased, n_model):
 
 
 # ========================
-# Loading
+# Load
 # ========================
-df_result_auc_roc = pd.read_csv("result_auc_roc.csv")
+df_result_auc_roc = pd.read_csv(
+    auc_roc_table_file,
+)
+df_result_auc_roc
 
 # ========================
 # Preprocessing
@@ -130,3 +122,5 @@ g.ax_joint.axhline(y=0, linewidth=1, color="black", linestyle="--")
 g.ax_joint.set(xlim=(0, 92), ylim=(score_min - 0.1, score_max + 0.1))
 g.ax_joint.legend(frameon=False, loc="lower left")
 g.savefig(output_file, bbox_inches="tight", dpi=300)
+
+# %%

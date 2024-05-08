@@ -8,7 +8,7 @@ import pandas as pd
 from scipy import sparse
 import sys
 from tqdm import tqdm
-from linkpred.LinkPredictionDataset import TrainTestEdgeSplitter
+from gnn_tools.LinkPredictionDataset import TrainTestEdgeSplitter
 import utils
 
 if "snakemake" in sys.modules:

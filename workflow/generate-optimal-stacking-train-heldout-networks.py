@@ -2,7 +2,7 @@
 #  * @Author: Rachith Aiyappa
 #  * @Date: 2023-04-03 09:43:13
 #  * @Last Modified by: Rachith
-#  * @Last Modified time: 2023-04-19 12:44:02 
+#  * @Last Modified time: 2023-04-19 12:44:02
 #  */
 
 """
@@ -14,7 +14,7 @@ import pandas as pd
 from scipy import sparse
 import sys
 from tqdm import tqdm
-from linkpred.LinkPredictionDataset import LinkPredictionDataset
+from gnn_tools.LinkPredictionDataset import LinkPredictionDataset
 import pickle as pkl
 
 if "snakemake" in sys.modules:

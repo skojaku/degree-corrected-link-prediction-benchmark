@@ -16,7 +16,7 @@ import sys
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy import sparse
-import linkpred
+import gnn_tools
 
 if "snakemake" in sys.modules:
     edge_table_file = snakemake.input["edge_table_file"]
@@ -41,7 +41,7 @@ n = int(np.maximum(np.max(src), np.max(trg)) + 1)
 net = sparse.csr_matrix((np.ones_like(src), (src, trg)), shape=(n, n))
 
 
-model = linkpred.LinkPredictionDataset.LinkPredictionDataset(
+model = gnn_tools.LinkPredictionDataset.LinkPredictionDataset(
     testEdgeFraction=0.5, negative_edge_sampler=f"{negativeEdgeSampler}"
 )
 model.fit(net)

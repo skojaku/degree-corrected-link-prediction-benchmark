@@ -8,7 +8,7 @@ import pandas as pd
 from scipy import sparse
 import sys
 from tqdm import tqdm
-from linkpred.LinkPredictionDataset import LinkPredictionDataset
+from gnn_tools.LinkPredictionDataset import LinkPredictionDataset
 
 if "snakemake" in sys.modules:
     edge_table_file = snakemake.input["edge_table_file"]

@@ -1,6 +1,6 @@
 # @Author: Rachith Aiyappa
 # @Date: 2024-05-10 12:10:12
-
+# %%
 import numpy as np
 import pandas as pd
 import sys
@@ -12,8 +12,8 @@ if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../notebooks/rachith/result_auc_roc.csv"
-    output_file = "../notebooks/rachith/"
+    input_file = "../data/derived/results/result_auc_roc.csv"
+    output_file = "../figs/rank-change.pdf"
 
 
 def rankchangechart(
@@ -179,3 +179,5 @@ rankchangechart(
 
 # save chart
 plt.savefig(output_file, bbox_inches="tight")
+
+# %%

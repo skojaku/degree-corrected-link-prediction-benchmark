@@ -248,6 +248,8 @@ FIG_DEGSKEW_AUCDIFF_NODESIZE = j(FIG_DIR, "corr_degskew_aucdiff_nodesize.pdf")
 FIG_PREC_RECAL_F1 =j(FIG_DIR, "prec-recall-f1.pdf")
 FIG_DEG_DEG_PLOT =j(FIG_DIR, "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
 FIG_PERF_VS_KURTOSIS_PLOT=j(FIG_DIR, "performance_vs_degree_kurtosis.pdf")
+FIG_RANK_CHANGE = j(FIG_DIR, "rank-change.pdf")
+
 #
 #
 # RULES
@@ -289,6 +291,7 @@ rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
         FIG_AUCROC,
+        FIG_RANK_CHANGE
         #FIG_PERF_VS_KURTOSIS_PLOT,
 
 # ============================
@@ -547,3 +550,12 @@ rule plot_aucroc:
         output_file_uniform=FIG_AUCROC_UNIFORM,
     script:
         "workflow/plot-auc-roc.py"
+
+rule plot_rank_change:
+    input:
+        input_file = LP_ALL_SCORE_OPT_STACK_FILE
+    output:
+        output_file = FIG_RANK_CHANGE
+    script:
+        "workflow/plot-rank-change.py"
+

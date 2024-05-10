@@ -219,6 +219,23 @@ LP_SCORE_NET_FILE = j(
     f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
 )
 
+# Retrieval task
+RT_SCORE_EMB_FILE = j(
+    RESULT_DIR,
+    "retrieval",
+    "{data}",
+    f"result_basedOn~emb_{paramspace_train_test_split.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.csv",
+)
+RT_SCORE_NET_FILE = j(
+    RESULT_DIR,
+    "retrieval",
+    "{data}",
+    f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
+)
+
+RT_ALL_SCORE_FILE = j(RESULT_DIR, "result_retrieval.csv")
+
+# Concatenated results
 LP_ALL_AUCROC_SCORE_FILE = j(RESULT_DIR, "result_auc_roc.csv")
 
 LP_SCORE_OPT_STACK_FILE = j(
@@ -249,6 +266,15 @@ FIG_PREC_RECAL_F1 =j(FIG_DIR, "prec-recall-f1.pdf")
 FIG_DEG_DEG_PLOT =j(FIG_DIR, "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
 FIG_PERF_VS_KURTOSIS_PLOT=j(FIG_DIR, "performance_vs_degree_kurtosis.pdf")
 FIG_RANK_CHANGE = j(FIG_DIR, "rank-change.pdf")
+
+params_rbo = {
+    "rbop": ["0.1", "0.25", "0.5", "0.75", "0.9", "1"],
+    "topk": ["10", "50", "100"],
+    "focal_score": ["vp", "prec", "rec"],
+}
+paramspace_rbo = to_paramspace(params_rbo)
+FIG_RBO = j(FIG_DIR, f"rbo-{paramspace_rbo.wildcard_pattern}.pdf")
+
 
 #
 #
@@ -291,7 +317,8 @@ rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
         FIG_AUCROC,
-        FIG_RANK_CHANGE
+        FIG_RANK_CHANGE,
+        expand(FIG_RBO, **paramspace_rbo),
         #FIG_PERF_VS_KURTOSIS_PLOT,
 
 # ============================
@@ -558,4 +585,17 @@ rule plot_rank_change:
         output_file = FIG_RANK_CHANGE
     script:
         "workflow/plot-rank-change.py"
+
+rule plot_rbo:
+    input:
+        retrieval_result = RT_ALL_SCORE_FILE,
+        classification_result = LP_ALL_AUCROC_SCORE_FILE
+    params:
+        rbop = lambda wildcards: wildcards.rbop,
+        topk = lambda wildcards: wildcards.topk,
+        focal_score = lambda wildcards: wildcards.focal_score
+    output:
+        output_file = FIG_RBO
+    script:
+        "workflow/plot-rbo.py"
 

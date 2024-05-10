@@ -33,7 +33,7 @@ src, trg, y = (
 )
 
 
-ypred = topology_models[model](net, src, trg)
+ypred = topology_models[model](network=net, src=src, trg=trg)
 
 # ========================
 # Save

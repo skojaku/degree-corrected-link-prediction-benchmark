@@ -219,6 +219,23 @@ LP_SCORE_NET_FILE = j(
     f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
 )
 
+# Retrieval task
+RT_SCORE_EMB_FILE = j(
+    RESULT_DIR,
+    "retrieval",
+    "{data}",
+    f"result_basedOn~emb_{paramspace_train_test_split.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.csv",
+)
+RT_SCORE_NET_FILE = j(
+    RESULT_DIR,
+    "retrieval",
+    "{data}",
+    f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
+)
+
+RT_ALL_SCORE_FILE = j(RESULT_DIR, "result_retrieval.csv")
+
+# Concatenated results
 LP_ALL_AUCROC_SCORE_FILE = j(RESULT_DIR, "result_auc_roc.csv")
 
 LP_SCORE_OPT_STACK_FILE = j(
@@ -478,7 +495,7 @@ rule network_link_prediction:
 
 
 #
-# Positive vs Negative edges
+# AUC-ROC
 #
 rule eval_link_prediction_embedding:
     input:
@@ -519,6 +536,48 @@ rule concatenate_aucroc_results:
         )
     output:
         output_file=LP_ALL_AUCROC_SCORE_FILE,
+    script:
+        "workflow/concat-results.py"
+
+#
+# Retrieval task
+#
+rule eval_link_retrieval_embedding:
+    input:
+        train_net_file = TRAIN_NET_FILE,
+        test_edge_file = TEST_EDGE_TABLE_FILE,
+        emb_file = EMB_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+        model=lambda wildcards: wildcards.model,
+        model_type="embedding",
+    output:
+        output_file=RT_SCORE_EMB_FILE,
+    script:
+        "workflow/run-link-retrieval-benchmark.py"
+
+rule eval_link_retrieval_networks:
+    input:
+        train_net_file = TRAIN_NET_FILE,
+        test_edge_file = TEST_EDGE_TABLE_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+        model=lambda wildcards: wildcards.model,
+        model_type="topology",
+    output:
+        output_file=RT_SCORE_NET_FILE,
+    script:
+        "workflow/run-link-retrieval-benchmark.py"
+
+rule all_retrieval:
+    input:
+        RT_ALL_SCORE_FILE,
+
+rule concatenate_results_retrieval:
+    input:
+        input_file_list=expand(RT_SCORE_EMB_FILE, data=DATA_LIST, **params_emb, **params_train_test_split) + expand(RT_SCORE_NET_FILE, data=DATA_LIST, **params_net_linkpred, **params_train_test_split),
+    output:
+        output_file=RT_ALL_SCORE_FILE,
     script:
         "workflow/concat-results.py"
 

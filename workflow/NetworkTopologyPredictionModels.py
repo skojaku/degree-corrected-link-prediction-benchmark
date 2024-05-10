@@ -14,7 +14,7 @@ topology_model = lambda f: topology_models.setdefault(f.__name__, f)
 def preferentialAttachment(network, src=None, trg=None, maxk=None):
     deg = np.array(network.sum(axis=1)).reshape(-1)
     n_nodes = len(deg)
-    if src is not None or trg is not None:
+    if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
         scores = np.outer(deg, np.sort(deg)[::-1][:maxk])
         indices = np.outer(np.ones(n_nodes, dtype=int), np.argsort(deg)[::-1][:maxk])
@@ -25,7 +25,7 @@ def preferentialAttachment(network, src=None, trg=None, maxk=None):
 
 @topology_model
 def commonNeighbors(network, src=None, trg=None, maxk=None):
-    if src is not None or trg is not None:
+    if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
         S = network @ network
         S = S - S.multiply(network)
@@ -39,7 +39,7 @@ def commonNeighbors(network, src=None, trg=None, maxk=None):
 def jaccardIndex(network, src=None, trg=None, maxk=None):
     deg = np.array(network.sum(axis=1)).reshape(-1)
 
-    if src is not None or trg is not None:
+    if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
         S = network @ network
         S = S - S.multiply(network)
@@ -62,7 +62,7 @@ def resourceAllocation(network, src=None, trg=None, maxk=None):
     deg = np.array(network.sum(axis=1)).reshape(-1)
     deg_inv = 1 / np.maximum(deg, 1)
     deg_inv[deg == 0] = 0
-    if src is not None or trg is not None:
+    if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
         S = network @ sparse.diags(deg_inv) @ network
         S = S - S.multiply(network)
@@ -80,7 +80,7 @@ def adamicAdar(network, src=None, trg=None, maxk=None):
     deg = np.array(network.sum(axis=1)).reshape(-1)
     log_deg_inv = 1 / np.maximum(np.log(np.maximum(deg, 1)), 1)
     log_deg_inv[deg == 0] = 0
-    if src is not None or trg is not None:
+    if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
         S = network @ sparse.diags(log_deg_inv) @ network
         S = S - S.multiply(network)
@@ -103,7 +103,7 @@ def localRandomWalk(network, src=None, trg=None, maxk=None):
     S = P + PP + PPP
     S = sparse.diags(deg / np.sum(deg)) @ S
 
-    if src is not None or trg is not None:
+    if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
         S = S - S.multiply(network)
         scores, indices = find_k_largest_elements(S, maxk)
@@ -117,7 +117,7 @@ def localPathIndex(network, src=None, trg=None, maxk=None, epsilon=1e-3):
     AA = A @ A
     AAA = AA @ A
     S = AA + epsilon * AAA
-    if src is not None or trg is not None:
+    if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
         S = S - S.multiply(network)
         scores, indices = find_k_largest_elements(S, maxk)

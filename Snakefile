@@ -267,6 +267,15 @@ FIG_DEG_DEG_PLOT =j(FIG_DIR, "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSamp
 FIG_PERF_VS_KURTOSIS_PLOT=j(FIG_DIR, "performance_vs_degree_kurtosis.pdf")
 FIG_RANK_CHANGE = j(FIG_DIR, "rank-change.pdf")
 
+params_rbo = {
+    "rbop": ["0.1", "0.25", "0.5", "0.75", "0.9", "1"],
+    "topk": ["10", "50", "100"],
+    "focal_score": ["vp", "prec", "rec"],
+}
+paramspace_rbo = to_paramspace(params_rbo)
+FIG_RBO = j(FIG_DIR, f"rbo-{paramspace_rbo.wildcard_pattern}.pdf")
+
+
 #
 #
 # RULES
@@ -308,7 +317,8 @@ rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
         FIG_AUCROC,
-        FIG_RANK_CHANGE
+        FIG_RANK_CHANGE,
+        expand(FIG_RBO, **paramspace_rbo),
         #FIG_PERF_VS_KURTOSIS_PLOT,
 
 # ============================
@@ -498,7 +508,7 @@ rule network_link_prediction:
 
 
 #
-# AUC-ROC
+# Positive vs Negative edges
 #
 rule eval_link_prediction_embedding:
     input:
@@ -542,48 +552,6 @@ rule concatenate_aucroc_results:
     script:
         "workflow/concat-results.py"
 
-#
-# Retrieval task
-#
-rule eval_link_retrieval_embedding:
-    input:
-        train_net_file = TRAIN_NET_FILE,
-        test_edge_file = TEST_EDGE_TABLE_FILE,
-        emb_file = EMB_FILE,
-    params:
-        data_name=lambda wildcards: wildcards.data,
-        model=lambda wildcards: wildcards.model,
-        model_type="embedding",
-    output:
-        output_file=RT_SCORE_EMB_FILE,
-    script:
-        "workflow/run-link-retrieval-benchmark.py"
-
-rule eval_link_retrieval_networks:
-    input:
-        train_net_file = TRAIN_NET_FILE,
-        test_edge_file = TEST_EDGE_TABLE_FILE,
-    params:
-        data_name=lambda wildcards: wildcards.data,
-        model=lambda wildcards: wildcards.model,
-        model_type="topology",
-    output:
-        output_file=RT_SCORE_NET_FILE,
-    script:
-        "workflow/run-link-retrieval-benchmark.py"
-
-rule all_retrieval:
-    input:
-        RT_ALL_SCORE_FILE,
-
-rule concatenate_results_retrieval:
-    input:
-        input_file_list=expand(RT_SCORE_EMB_FILE, data=DATA_LIST, **params_emb, **params_train_test_split) + expand(RT_SCORE_NET_FILE, data=DATA_LIST, **params_net_linkpred, **params_train_test_split),
-    output:
-        output_file=RT_ALL_SCORE_FILE,
-    script:
-        "workflow/concat-results.py"
-
 # =====================
 # Plot
 # =====================
@@ -617,4 +585,17 @@ rule plot_rank_change:
         output_file = FIG_RANK_CHANGE
     script:
         "workflow/plot-rank-change.py"
+
+rule plot_rbo:
+    input:
+        retrieval_result = RT_ALL_SCORE_FILE,
+        classification_result = LP_ALL_AUCROC_SCORE_FILE
+    params:
+        rbop = lambda wildcards: wildcards.rbop,
+        topk = lambda wildcards: wildcards.topk,
+        focal_score = lambda wildcards: wildcards.focal_score
+    output:
+        output_file = FIG_RBO
+    script:
+        "workflow/plot-rbo.py"
 

@@ -311,6 +311,10 @@ rule all:
             **params_negative_edge_sampler,
             **params_train_test_split
         ),
+        #
+        # Link retrieval (Check point 4) 
+        #
+
 
 
 rule figs:

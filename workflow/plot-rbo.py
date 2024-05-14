@@ -61,9 +61,8 @@ else:
     focal_score = "vp"
     output_file = "../../figs/rbo.pdf"
 
-retrieval_task_data_table = pd.read_csv(retrieval_result_file)
 
-classification_result_file = "../../data/derived/results/result_auc_roc.csv"
+retrieval_task_data_table = pd.read_csv(retrieval_result_file)
 classification_task_data_table = pd.read_csv(classification_result_file)
 
 
@@ -108,6 +107,7 @@ sns.set(font_scale=1.2)
 sns.set_style("ticks")
 fig, ax = plt.subplots(figsize=(4, 5))
 
+color_palette = sns.color_palette().as_hex()
 baseline_color = sns.desaturate(color_palette[0], 0.24)
 focal_color = sns.color_palette("bright").as_hex()[1]
 

@@ -39,7 +39,7 @@ params_mpm = {
 #}
 params_lfr = { # LFR
     "n": [3000],  # Network size
-    "k": [25],  # Average degree
+    "k": [10, 25],  # Average degree
     "tau": [2.5, 3],  # degree exponent
     "tau2": [3],  # community size exponent
     "minc": [100],  # min community size

@@ -4,8 +4,8 @@ from scipy import sparse, special
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-import igraph
 from tqdm import tqdm
+import sys
 
 
 # Price model
@@ -44,12 +44,15 @@ def price_model(m, k0, n_nodes):
 
 
 # %%
-output_file = snakemake.output["output_file"]
+if "snakemake" in sys.modules:
+    output_file = snakemake.output["output_file"]
+else:
+    output_file = "../figs/deg-pos-neg-edges.pdf"
 
 # %% generate networks
 k0 = 10
 m = 10
-n_nodes = 50000
+n_nodes = 10000
 alpha = 2 + k0 / m
 net = price_model(m, k0, n_nodes)
 indeg = np.array(net.sum(axis=0)).reshape(-1)
@@ -87,16 +90,16 @@ pneg_k = np.insert(np.cumsum(pk.copy()), 0, 0)[:-1]
 
 # %% plot
 sns.set_style("white")
-sns.set(font_scale=1.2)
+sns.set(font_scale=1.6)
 sns.set_style("ticks")
 fig, ax = plt.subplots(figsize=(5, 5))
 
 
 ax = sns.ecdfplot(
-    pos_deg, complementary=True, log_scale=(True, True), ax=ax, label="Positive edge"
+    neg_deg, complementary=True, log_scale=(True, True), ax=ax, label="Negative edge", lw = 2
 )
 ax = sns.ecdfplot(
-    neg_deg, complementary=True, log_scale=(True, True), ax=ax, label="Negative edge"
+    pos_deg, complementary=True, log_scale=(True, True), ax=ax, label="Positive edge", lw = 2,
 )
 # ax = sns.ecdfplot(indeg, complementary=True, log_scale=(True, True), ax=ax)
 ax = sns.lineplot(
@@ -124,3 +127,5 @@ sns.despine()
 
 # save figure
 fig.savefig(output_file, bbox_inches="tight", dpi=300)
+
+# %%

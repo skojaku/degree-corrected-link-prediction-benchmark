@@ -104,6 +104,23 @@ n_model = len(model_list)
 
 plot_data = get_joint_df_plot(df_uniform, df_degreeBiased, n_model)
 
+df = (
+    plot_data.query("negativeEdgeSampler == 'Uniform'")
+    .groupby("Data")[["Score"]]
+    .mean()
+    .reset_index()
+    .sort_values(by="Score")
+)
+df["data_code_sorted"] = np.arange(df.shape[0], dtype="int")
+plot_data = pd.merge(plot_data, df.drop(columns="Score"), on="Data")
+plot_data = plot_data.drop(columns="data_code").rename(
+    columns={"data_code_sorted": "data_code"}
+)
+plot_data["negativeEdgeSampler"] = plot_data["negativeEdgeSampler"].map(
+    lambda x: "Bias aligned" if x == "Biased" else x
+)
+
+
 score_max = plot_data["Score"].values.max()
 score_min = plot_data["Score"].values.min()
 
@@ -113,11 +130,11 @@ exclude = [
     "dcGAT",
     "dcGraphSAGE",
     "dcGIN",
-    "jaccardIndex",
-    "commonNeighbors",
-    "resourceAllocation",
-    "localPathIndex",
-    "localRandomWalk",
+    #    "jaccardIndex",
+    #    "commonNeighbors",
+    #    "resourceAllocation",
+    #    "localPathIndex",
+    #    "localRandomWalk",
 ]
 plot_data = plot_data[~plot_data["model"].isin(exclude)]
 
@@ -126,62 +143,107 @@ plot_data = plot_data[~plot_data["model"].isin(exclude)]
 # ========================
 # Create a scatter plot
 sns.set_style("white")
-sns.set(font_scale=1.2)
+sns.set(font_scale=1.4)
 sns.set_style("ticks")
 
+df = plot_data.query("Score > -1.1 and Score < 1.1").copy()
+df["Score"] = np.exp(df["Score"].values)
+
 g = sns.jointplot(
-    data=plot_data.sort_values("negativeEdgeSampler", ascending=False),
+    data=df.sort_values("negativeEdgeSampler", ascending=False),
     x="data_code",
     y="Score",
     kind="scatter",
     joint_kws={"s": 23, "alpha": 0.35, "linewidth": 0},
+    marginal_kws={"log_scale": True},
     hue="negativeEdgeSampler",
-    palette={"Uniform": "grey", "Biased": sns.color_palette("bright")[1]},
+    palette={"Uniform": "#cdcdcd", "Bias aligned": sns.color_palette("bright")[1]},
 )
-g.fig.set_figwidth(9)
-g.fig.set_figheight(5)
+# g.fig.set_figwidth(9 * 0.815)
+# g.fig.set_figheight(5 * 1.16)
+g.fig.set_figwidth(8 * 0.815)
+g.fig.set_figheight(5 * 1.16 * 1.66 / 2)
+g.ax_joint.set_xscale("linear")
 g.ax_marg_x.remove()
 g.ax_joint.tick_params(labelbottom=False)
-g.ax_joint.set_ylabel("Logarithmic AUC-ROC relative to\nPreferential Attachment")
-g.ax_joint.set_xlabel("Networks")
-g.ax_joint.axhline(y=0, linewidth=1.5, color="black", linestyle="--")
-g.ax_marg_y.axhline(y=0, linewidth=1.5, color="black", linestyle="--")
-g.ax_joint.set(xlim=(0, 92), ylim=(score_min - 0.1, score_max + 0.1))
-g.ax_joint.legend(frameon=False, loc="lower left", handletextpad=0.1, markerscale=2)
-g.savefig(output_file, bbox_inches="tight", dpi=300)
+g.ax_joint.set_ylabel("Ratio of AUC-ROC to\nPreferential Attachment")
+g.ax_joint.set_xlabel("Graphs")
+g.ax_joint.axhline(y=1, linewidth=1.5, color="black", linestyle="--")
+g.ax_marg_y.axhline(y=1, linewidth=1.5, color="black", linestyle="--")
+g.ax_joint.set(xlim=(0, 92), ylim=(score_min - 1e-1, score_max + 1e-1))
+handles, labels = g.ax_joint.get_legend_handles_labels()
+g.ax_joint.legend(
+    handles[::-1],
+    labels[::-1],
+    frameon=False,
+    loc="upper left",
+    handletextpad=0.1,
+    markerscale=2,
+)
 
+g.savefig(output_file, bbox_inches="tight", dpi=300)
 # %%
 
 
 sns.set_style("white")
-sns.set(font_scale=1.2)
+sns.set(font_scale=1.4)
+
 sns.set_style("ticks")
 
+df = plot_data.query(
+    "negativeEdgeSampler == 'Uniform' and Score > -1.1 and Score < 1.1"
+).copy()
+df["Score"] = np.exp(df["Score"].values)
+score_max = df["Score"].values.max()
+score_min = df["Score"].values.min()
 g = sns.jointplot(
-    data=plot_data.query("negativeEdgeSampler == 'Uniform'"),
+    data=df,
     x="data_code",
     y="Score",
     kind="scatter",
     joint_kws={"s": 23, "alpha": 0.35, "linewidth": 0},
+    marginal_kws={"log_scale": True},
     hue="negativeEdgeSampler",
-    palette={"Uniform": "grey", "Biased": sns.color_palette()[1]},
+    palette={"Uniform": "#8d8d8d", "Bias aligned": sns.color_palette()[1]},
 )
-g.fig.set_figwidth(8)
-g.fig.set_figheight(5)
+g.ax_joint.set_xscale("linear")
+
+# Get the current locations and labels
+# locs, labels = g.ax_joint.get_yticks(), g.ax_joint.get_yticklabels()
+# locs = np.linspace(0.3, 1.4, int((1.4 - 0.3) / 0.1) + 2)
+# Set the y-tick labels to linear
+# g.ax_joint.set_yticks(locs, list(map(lambda x: f"{x:.02f}", locs)))
+
+
+g.fig.set_figwidth(8 * 0.815)
+g.fig.set_figheight(5 * 1.16 * 1.66 / 2)
 g.ax_marg_x.remove()
-g.ax_joint.tick_params(labelbottom=False)
-g.ax_joint.set_ylabel("Logarithmic AUC-ROC relative to\nPreferential Attachment")
-g.ax_joint.set_xlabel("Networks")
-g.ax_joint.axhline(y=0, linewidth=1.5, color="black", linestyle="--")
-g.ax_marg_y.axhline(y=0, linewidth=1.5, color="black", linestyle="--")
+g.ax_joint.set_ylabel("Ratio of AUC-ROC to\nPreferential Attachment")
+g.ax_joint.set_xlabel("Graphs")
+g.ax_joint.axhline(y=1, linewidth=1.5, color="black", linestyle="--")
+g.ax_marg_y.axhline(y=1, linewidth=1.5, color="black", linestyle="--")
 
-g.ax_joint.set(xlim=(0, 92), ylim=(score_min - 0.1, score_max + 0.1))
-g.ax_joint.legend(
-    frameon=False, loc="lower left", handletextpad=0.1, markerscale=2
-).remove()
+g.ax_joint.set(xlim=(0, 92), ylim=(score_min - 1e-1, score_max + 1e-1))
+g.ax_joint.legend().remove()
+
+labels = [item.get_text() for item in g.ax_joint.get_yticklabels()]
+
+# g.ax_joint.set_yticklabels([])
+# g.ax_marg_y.set_xticklabels([])
 g.savefig(output_file_uniform, bbox_inches="tight", dpi=300)
-# %%
 
-# plot_data.query("negativeEdgeSampler == 'Biased' and Score <=0").shape[
-#    0
-# ] / plot_data.query("negativeEdgeSampler == 'Biased'").shape[0]
+# %%
+# df = plot_data.copy()
+# df["Score"] = np.exp(df["Score"].values)
+# df = (
+#    df.query("negativeEdgeSampler =='Bias aligned' ")[["Data", "Score", "model"]]
+#    .groupby(["Data", "model"])
+#    .mean()
+# )
+# np.mean(df["Score"].values < 0)
+#
+## %%
+# df["Score"].min()
+#
+## %%
+#

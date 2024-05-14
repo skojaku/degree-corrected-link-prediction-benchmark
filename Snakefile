@@ -142,6 +142,13 @@ NET_STAT_FILE = j(
 )
 
 #
+# AUC-ROC vs PA
+#
+AUCROC_PA_POWERLAW_FILE = j(
+    STAT_DIR, "aucscore-degree-exponent.csv"
+)
+
+#
 # Embedding
 #
 EMB_FILE = j(
@@ -295,6 +302,7 @@ rule all:
         # Network stats (Check point 2)
         #
         NET_STAT_FILE,
+        AUCROC_PA_POWERLAW_FILE,
         #
         # Link classification (Check point 3)
         #
@@ -347,6 +355,12 @@ rule calc_network_stats:
         output_file = NET_STAT_FILE
     script:
         "workflow/calc-network-stats.py"
+
+rule calc_aucroc_pa_powerlaw:
+    output:
+        output_file = AUCROC_PA_POWERLAW_FILE
+    script:
+        "workflow/calc-aucroc-pa-powerlaw.py"
 
 # ============================
 # Optimal stacking

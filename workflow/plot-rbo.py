@@ -54,8 +54,8 @@ if "snakemake" in sys.modules:
     topk = int(snakemake.params["topk"])
     focal_score = snakemake.params["focal_score"]
 else:
-    retrieval_result_file = "../../data/derived/results/result_retrieval.csv"
-    classification_result_file = "../../data/derived/results/result_auc_roc.csv"
+    retrieval_result_file = "../data/derived/results/result_retrieval.csv"
+    classification_result_file = "../data/derived/results/result_auc_roc.csv"
     rbop = 0.5
     topk = 10
     focal_score = "vp"
@@ -96,7 +96,7 @@ for sampling, dg in rank_class.groupby("negativeEdgeSampler"):
 
 result_table = pd.DataFrame(results)
 result_table["sampling"] = result_table["sampling"].map(
-    {"uniform": "Uniform", "degreeBiased": "Degree-corrected"}
+    {"uniform": "Uniform", "degreeBiased": "Bias-aligned"}
 )
 
 # ===================
@@ -121,6 +121,8 @@ ax = sns.stripplot(
     color="#ffffff",
     edgecolor="black",
     linewidth=0.5,
+    hue_order=["Uniform", "Bias-aligned"],
+    order=["Uniform", "Bias-aligned"],
     ax=ax,
 )
 ax = sns.violinplot(
@@ -131,13 +133,16 @@ ax = sns.violinplot(
     bw_adjust=0.5,
     cut=0,
     common_norm=True,
+    order=["Uniform", "Bias-aligned"],
     palette={
         "Uniform": baseline_color,
-        "Degree-corrected": focal_color,
+        "Bias-aligned": focal_color,
     },
 )
 ax.set_ylabel("Rank correlation (Rank-biased Overlap)")
-ax.set_xlabel("Sampling type")
+ax.set_xlabel("")
 sns.despine()
 
 fig.savefig(output_file, bbox_inches="tight", dpi=300)
+
+# %%

@@ -38,7 +38,7 @@ if config["small_networks"]:
     with open("workflow/small-networks.json", "r") as f:
         DATA_LIST = json.load(f)
 
-N_ITERATION = 2
+N_ITERATION =  2
 
 # ====================
 # Configuration
@@ -274,6 +274,7 @@ FIG_DEG_DEG_PLOT =j(FIG_DIR, "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSamp
 FIG_PERF_VS_KURTOSIS_PLOT=j(FIG_DIR, "performance_vs_degree_kurtosis.pdf")
 FIG_RANK_CHANGE = j(FIG_DIR, "rank-change.pdf")
 FIG_DEG_DIST_POS_NEG_EDGES =j(FIG_DIR, "deg-pos-neg-edges.pdf")
+FIG_AUCROC_LOGNORMAL = j(FIG_DIR, "auc-roc-log-normal.pdf")
 
 params_rbo = {
     "rbop": ["0.1", "0.25", "0.5", "0.75", "0.9", "0.98"],
@@ -665,3 +666,12 @@ rule plot_deg_pos_neg_edges:
         output_file = FIG_DEG_DIST_POS_NEG_EDGES
     script:
         "workflow/plot_degere_dist_pos_neg_edges.py"
+
+rule plot_aucroc_lognormal:
+    input:
+        netstat_table_file=NET_STAT_FILE,
+        aucroc_table_file=LP_ALL_AUCROC_SCORE_FILE,
+    output:
+        output_file=FIG_AUCROC_LOGNORMAL,
+    script:
+        "workflow/plot-aucroc-lognormal.py"

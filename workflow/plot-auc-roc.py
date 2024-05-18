@@ -157,7 +157,7 @@ g = sns.jointplot(
     joint_kws={"s": 23, "alpha": 0.35, "linewidth": 0},
     marginal_kws={"log_scale": True},
     hue="negativeEdgeSampler",
-    palette={"Uniform": "#cdcdcd", "Bias aligned": sns.color_palette("bright")[1]},
+    palette={"Uniform": sns.color_palette()[0], "Bias aligned": sns.color_palette("bright")[1]},
 )
 # g.fig.set_figwidth(9 * 0.815)
 # g.fig.set_figheight(5 * 1.16)
@@ -204,7 +204,7 @@ g = sns.jointplot(
     joint_kws={"s": 23, "alpha": 0.35, "linewidth": 0},
     marginal_kws={"log_scale": True},
     hue="negativeEdgeSampler",
-    palette={"Uniform": "#8d8d8d", "Bias aligned": sns.color_palette()[1]},
+    palette={"Uniform": sns.color_palette()[0], "Bias aligned": sns.color_palette()[1]},
 )
 g.ax_joint.set_xscale("linear")
 

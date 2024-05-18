@@ -11,6 +11,7 @@ import utils
 from scipy import stats
 import igraph
 from tqdm import tqdm
+import powerlaw
 
 if "snakemake" in sys.modules:
     input_files = snakemake.input["input_files"]
@@ -19,7 +20,7 @@ else:
     from glob import glob
 
     input_files = list(glob("../data/preprocessed/*/edge_table.csv"))
-    output_file = "../data/"
+    output_file = "../data/stats/network-stats.csv"
 
 results = []
 for filename in tqdm(input_files):
@@ -47,6 +48,18 @@ for filename in tqdm(input_files):
         (n_nodes - 1) * deg_variance / (n_nodes * n_edges * (1 - density))
     )
 
+    # Log normal distribution
+    lognorm_sigma, _, lognorm_mu = stats.lognorm.fit(deg, floc=0, method="MM")
+
+    # Power law distribution?
+    try:
+        res = powerlaw.Fit(deg)
+        alpha = res.power_law.alpha
+        xmin = res.power_law.xmin
+    except:
+        alpha = np.nan
+        xmin = np.nan
+
     results += [
         {
             "network": dataname,
@@ -64,6 +77,8 @@ for filename in tqdm(input_files):
                 local_transitivity[~pd.isna(local_transitivity)]
             ),
             "degreeHeterogeneity": Hm,
+            "lognorm_mu": lognorm_mu,
+            "lognorm_sigma": lognorm_sigma,
         }
     ]
 

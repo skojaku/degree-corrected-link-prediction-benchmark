@@ -45,9 +45,9 @@ expected_auc = pd.DataFrame({"sigma": sigma_list, "aucroc": aucroc_list})
 
 # %% Plot the AUC-ROC curve
 sns.set_style("white")
-sns.set(font_scale=1.4)
+sns.set(font_scale=1.6)
 sns.set_style("ticks")
-fig, ax = plt.subplots(figsize=(6, 5))
+fig, ax = plt.subplots(figsize=(5.5, 4.5))
 
 sns.lineplot(
     data=expected_auc,
@@ -61,7 +61,14 @@ sns.lineplot(
 
 df = auc_table.query("n_nodes >= 300")
 sns.scatterplot(
-    data=df, x="lognorm_sigma", y="score", s=100, zorder=10, ax=ax, label="Empirical"
+    data=df,
+    x="lognorm_sigma",
+    y="score",
+    s=100,
+    zorder=10,
+    ax=ax,
+    label="Empirical",
+    color=sns.color_palette("bright")[1],
 )
 ax.legend(frameon=False, loc="lower right")
 
@@ -72,3 +79,5 @@ ax.set_ylabel("AUC-ROC of PA")
 sns.despine()
 
 fig.savefig(output_file, bbox_inches="tight", dpi=300)
+
+# %%

@@ -334,7 +334,9 @@ rule figs:
         FIG_RANK_CHANGE,
         expand(FIG_RBO, **params_rbo),
         #FIG_PERF_VS_KURTOSIS_PLOT,
-        FIG_DEG_DIST_POS_NEG_EDGES
+        FIG_DEG_DIST_POS_NEG_EDGES,
+	FIG_AUCROC_LOGNORMAL
+
 
 # ============================
 # Cleaning networks
@@ -634,6 +636,7 @@ rule calc_deg_deg_plot:
 rule plot_aucroc:
     input:
         auc_roc_table_file=LP_ALL_AUCROC_SCORE_FILE,
+        netstat_table_file=NET_STAT_FILE,
     output:
         output_file=FIG_AUCROC,
         output_file_uniform=FIG_AUCROC_UNIFORM,

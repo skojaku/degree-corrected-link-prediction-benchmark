@@ -92,14 +92,24 @@ pneg_k = np.insert(np.cumsum(pk.copy()), 0, 0)[:-1]
 sns.set_style("white")
 sns.set(font_scale=1.6)
 sns.set_style("ticks")
-fig, ax = plt.subplots(figsize=(5, 5))
+fig, ax = plt.subplots(figsize=(5.2, 4.5))
 
 
 ax = sns.ecdfplot(
-    neg_deg, complementary=True, log_scale=(True, True), ax=ax, label="Negative edge", lw = 2
+    neg_deg,
+    complementary=True,
+    log_scale=(True, True),
+    ax=ax,
+    label="Negative edge",
+    lw=2,
 )
 ax = sns.ecdfplot(
-    pos_deg, complementary=True, log_scale=(True, True), ax=ax, label="Positive edge", lw = 2,
+    pos_deg,
+    complementary=True,
+    log_scale=(True, True),
+    ax=ax,
+    label="Positive edge",
+    lw=2,
 )
 # ax = sns.ecdfplot(indeg, complementary=True, log_scale=(True, True), ax=ax)
 ax = sns.lineplot(

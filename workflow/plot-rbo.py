@@ -96,7 +96,7 @@ for sampling, dg in rank_class.groupby("negativeEdgeSampler"):
 
 result_table = pd.DataFrame(results)
 result_table["sampling"] = result_table["sampling"].map(
-    {"uniform": "Uniform", "degreeBiased": "Bias-aligned"}
+    {"uniform": "Original", "degreeBiased": "Degree-corrected"}
 )
 
 # ===================
@@ -121,8 +121,8 @@ ax = sns.stripplot(
     color="#ffffff",
     edgecolor="black",
     linewidth=0.5,
-    hue_order=["Uniform", "Bias-aligned"],
-    order=["Uniform", "Bias-aligned"],
+    hue_order=["Original", "Degree-corrected"],
+    order=["Original", "Degree-corrected"],
     ax=ax,
 )
 ax = sns.violinplot(
@@ -133,10 +133,10 @@ ax = sns.violinplot(
     bw_adjust=0.5,
     cut=0,
     common_norm=True,
-    order=["Uniform", "Bias-aligned"],
+    order=["Original", "Degree-corrected"],
     palette={
-        "Uniform": baseline_color,
-        "Bias-aligned": focal_color,
+        "Original": baseline_color,
+        "Degree-corrected": focal_color,
     },
 )
 ax.set_ylabel("Rank correlation (Rank-biased Overlap)")

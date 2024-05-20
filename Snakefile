@@ -49,7 +49,8 @@ N_ITERATION = 1
 #
 params_train_test_split = {
     "testEdgeFraction": [0.25],
-    "sampleId": list(range(N_ITERATION)),
+    "sampleId": [3,4],
+    #"sampleId": list(range(N_ITERATION)),
 }
 paramspace_train_test_split = to_paramspace(params_train_test_split)
 

@@ -446,4 +446,3 @@ dependencies:
   - pyg
   - conda-forge::leidenalg
   - umap-learn
-prefix: /home/skojaku/anaconda3/envs/linkpred

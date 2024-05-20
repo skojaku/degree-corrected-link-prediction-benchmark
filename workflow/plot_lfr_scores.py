@@ -73,7 +73,7 @@ for k, v in params.items():
 
 plot_data["model_type"] = plot_data["model"].apply(lambda x: x.replace("dc", ""))
 plot_data["Biased"] = plot_data["model"].apply(
-    lambda x: "Biased" if "dc" in x else "Unbiased"
+    lambda x: "Degree corrected" if "dc" in x else "Original"
 )
 # %%
 #
@@ -202,7 +202,9 @@ df = (
     .reset_index()
 )
 df["model_type"] = df["model"].apply(lambda x: x.replace("dc", ""))
-df["Biased"] = df["model"].apply(lambda x: "Biased" if "dc" in x else "Unbiased")
+df["Biased"] = df["model"].apply(
+    lambda x: "Degree-corrected" if "dc" in x else "Original"
+)
 
 
 sns.set_style("white")
@@ -216,8 +218,8 @@ sns.swarmplot(
     y=0,
     hue="Biased",
     palette={
-        "Biased": color_palette[1],
-        "Unbiased": baseline_color,
+        "Degree-corrected": color_palette[1],
+        "Original": baseline_color,
     },
     size=10,
     edgecolor="k",

@@ -42,7 +42,6 @@ plot_data = df.query("model == 'preferentialAttachment'")[
 
 plot_data = df.merge(plot_data, on=["data", "negativeEdgeSampler"])
 plot_data["relative_score"] = plot_data["score"].values / plot_data["score_pa"].values
-plot_data
 
 # %% Merge with the network stats
 plot_data = plot_data.merge(netstat_table, left_on="data", right_on="network")
@@ -82,7 +81,7 @@ sns.set_style("ticks")
 
 df = plot_data.query("negativeEdgeSampler == 'Corrected'").copy()
 df["isPA"] = df["model"] == "preferentialAttachment"
-
+df["data_code"] = 100 * df["data_code"] / df["data_code"].nunique()
 
 fig, ax = plt.subplots(figsize=(5.5, 4.5))
 
@@ -93,7 +92,7 @@ sns.scatterplot(
     ax=ax,
     s=40,
     zorder=10,
-    color=sns.color_palette(desat=0.5).as_hex()[0] + "99",
+    color=sns.color_palette(desat=0.5).as_hex()[0] + "44",
     lw=0,
 )
 sns.scatterplot(
@@ -110,7 +109,7 @@ ax.set_ylabel("AUC-ROC")
 ax.set_xlabel(r"Graphs ")
 sns.despine()
 
-ax.set(xlim=(-1, 91), ylim=(0.2, 1.01))
+ax.set(xlim=(-1, 101), ylim=(0.2, 1.01))
 ax.legend().remove()
 
 fig.savefig(output_file, bbox_inches="tight", dpi=300)
@@ -123,6 +122,7 @@ sns.set_style("ticks")
 
 df = plot_data.query("negativeEdgeSampler == 'Uniform'").copy()
 df["isPA"] = df["model"] == "preferentialAttachment"
+df["data_code"] = 100 * df["data_code"] / df["data_code"].nunique()
 
 
 fig, ax = plt.subplots(figsize=(5.5, 4.5))
@@ -134,7 +134,7 @@ sns.scatterplot(
     ax=ax,
     s=40,
     zorder=10,
-    color=sns.color_palette(desat=0.5).as_hex()[0] + "99",
+    color=sns.color_palette(desat=0.5).as_hex()[0] + "44",
     lw=0,
 )
 sns.scatterplot(
@@ -151,7 +151,7 @@ ax.set_ylabel("AUC-ROC")
 ax.set_xlabel(r"Graphs")
 sns.despine()
 
-ax.set(xlim=(-1, 91), ylim=(0.2, 1.01))
+ax.set(xlim=(-1, 101), ylim=(0.2, 1.01))
 ax.legend().remove()
 fig.savefig(output_file_uniform, bbox_inches="tight", dpi=300)
 

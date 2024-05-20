@@ -94,6 +94,9 @@ LFR_EVAL_EMB_FILE = j(LFR_EVAL_DIR, f"score_clus_{paramspace_lfr_com_detect_emb.
 FIG_LFR_PERF_CURVE = j(FIG_DIR, "lfr_perf_curve_n~{n}_k~{k}_tau~{tau}_dim~{dim}.pdf")
 FIG_LFR_AUCESIM = j(FIG_DIR, "lfr_aucesim_n~{n}_k~{k}_tau~{tau}_dim~{dim}.pdf")
 
+FIG_LFR_PERF_CURVE_NMI = j(FIG_DIR, "lfr_perf_curve_metric~nmi_n~{n}_k~{k}_tau~{tau}_dim~{dim}.pdf")
+FIG_LFR_AUCNMI = j(FIG_DIR, "lfr_aucesim_metric~nmi_n~{n}_k~{k}_tau~{tau}_dim~{dim}.pdf")
+
 # Multi partition model
 MPM_DIR = j(CMD_DATASET_DIR, "mpm")
 
@@ -133,6 +136,9 @@ rule figs_lfr:
     input:
         expand(FIG_LFR_PERF_CURVE, **params_fig_lfr),
         expand(FIG_LFR_AUCESIM, **params_fig_lfr),
+        expand(FIG_LFR_PERF_CURVE_NMI, **params_fig_lfr),
+        expand(FIG_LFR_AUCNMI, **params_fig_lfr),
+
 
 
 rule generate_lfr_net:
@@ -210,6 +216,24 @@ rule plot_lfr_result:
         clustering = "kmeans",
         metric = "cosine",
         score_type = "esim",
+        tau = lambda wildcards: float(wildcards.tau),
+        k = lambda wildcards: int(wildcards.k),
+        n = lambda wildcards: int(wildcards.n),
+        dim = lambda wildcards: int(wildcards.dim),
+    script:
+        "workflow/plot_lfr_scores.py"
+
+rule plot_lfr_result_nmi:
+    input:
+        input_file = j(LFR_EVAL_DIR, "all_scores.csv"),
+    output:
+        output_file_performance = FIG_LFR_PERF_CURVE_NMI,
+        output_file_aucesim = FIG_LFR_AUCNMI,
+    params:
+        model = ["GIN", "GCN", "GAT", "GraphSAGE", "dcGIN", "dcGCN", "dcGAT", "dcGraphSAGE"],
+        clustering = "kmeans",
+        metric = "cosine",
+        score_type = "nmi",
         tau = lambda wildcards: float(wildcards.tau),
         k = lambda wildcards: int(wildcards.k),
         n = lambda wildcards: int(wildcards.n),

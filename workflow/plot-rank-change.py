@@ -7,6 +7,7 @@ import sys
 import seaborn as sns
 import matplotlib.pyplot as plt
 import os
+import color_palette
 
 if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
@@ -18,7 +19,7 @@ else:
 
 def rankchangechart(
     df,
-    show_rank_axis=True,
+    show_rank_axis=False,
     rank_axis_distance=1.1,
     ax=None,
     scatter=False,
@@ -40,9 +41,9 @@ def rankchangechart(
     """
 
     # figure size
-    plt.Figure(figsize=(10, 30))
 
     if ax is None:
+        plt.Figure(figsize=(10, 5))
         left_yaxis = plt.gca()
     else:
         left_yaxis = ax
@@ -63,6 +64,13 @@ def rankchangechart(
         far_right_yaxis = left_yaxis.twinx()
         axes.append(far_right_yaxis)
 
+    #  Compute the rank difference
+    x = df_rank.T.values
+    dr = x[:, 1] - x[:, 0]
+    models = df.columns
+    model_rank_down = models[dr <= -8]
+    model_rank_up = models[dr >= 8]
+
     for col in df.columns:
         y = df[col]
         x = df.index.values
@@ -72,18 +80,24 @@ def rankchangechart(
             axis.plot(x, y, alpha=0)
 
         # Drop in rank greater than 8 places
-        if col in [
-            "preferentialAttachment",
-            "dcSBM",
-            "commonNeighbors",
-            "line",
-            "adamicAdar",
-        ]:
-            left_yaxis.plot(x, y, color="orange", **line_args, solid_capstyle="round")
+        if col in model_rank_down:
+            left_yaxis.plot(
+                x,
+                y,
+                color=sns.color_palette().as_hex()[0],
+                **line_args,
+                solid_capstyle="round",
+            )
 
         # Increase in rank greater than 8 places
-        elif col in ["node2vec", "deepwalk", "dcGAT"]:
-            left_yaxis.plot(x, y, color="green", **line_args, solid_capstyle="round")
+        elif col in model_rank_up:
+            left_yaxis.plot(
+                x,
+                y,
+                color=sns.color_palette().as_hex()[3],
+                **line_args,
+                solid_capstyle="round",
+            )
 
         # all other methods
         else:
@@ -114,20 +128,37 @@ def rankchangechart(
     left_labels = df.iloc[0].sort_values().index
     right_labels = df.iloc[-1].sort_values().index
 
+    left_labels = [label + " %2d" % (i + 1) for i, label in enumerate(left_labels)]
+    right_labels = ["%2d " % (i + 1) + label for i, label in enumerate(right_labels)]
+
     left_yaxis.set_yticklabels(left_labels)
     right_yaxis.set_yticklabels(right_labels)
 
     # Setting the position of the far right axis so that it doesn't overlap with the right axis
     if show_rank_axis:
         far_right_yaxis.spines["right"].set_position(("axes", rank_axis_distance))
-    far_right_yaxis.set_ylabel("rank", rotation=0, fontsize=15)
-    far_right_yaxis.yaxis.set_label_coords(1.5, 1.1)
+    # far_right_yaxis.set_ylabel("rank", rotation=0, fontsize=15)
+    # far_right_yaxis.yaxis.set_label_coords(2.3, 1.1)
 
+    for pos in ["right", "top", "bottom", "left"]:
+        left_yaxis.spines[pos].set_visible(False)
+        right_yaxis.spines[pos].set_visible(False)
+
+    left_yaxis.tick_params(axis="both", which="both", length=0)
+    right_yaxis.tick_params(axis="both", which="both", length=0)
     return axes
 
 
 # load results file
 results = pd.read_csv(input_file).drop(columns=["Unnamed: 0"])
+
+exclude = ["dcGAT", "dcGCN", "dcGraphSAGE", "dcGIN"]
+results = results[~results["model"].isin(exclude)]
+
+model_names = color_palette.get_model_names()
+results["model"] = results["model"].map(
+    lambda x: model_names[x] if x in model_names else x
+)
 
 # sort performances based on average auc score for uniform and biased sampling
 sorted_performances_uniform = sorted(
@@ -162,19 +193,29 @@ biased_ranks = {}
 for i, (model, _) in enumerate(sorted_performances_biased):
     biased_ranks[model] = len(sorted_performances_biased) - i
 
+
+#
 # create dataframe which is the input to the rank difference chart
 # columns are methods, rows are rank for each method based on uniform sampling and biased sampling
 df_rank = pd.DataFrame([uniform_ranks, biased_ranks])
 
 # get chart
+
+#
+sns.set_style("white")
+sns.set(font_scale=1.2)
+sns.set_style("ticks")
+fig, ax = plt.subplots(figsize=(3, 6))
+
 rankchangechart(
     df_rank,
-    rank_axis_distance=1.5,
+    rank_axis_distance=1.8,
     scatter=True,
-    holes=True,
-    line_args={"linewidth": 5, "alpha": 0.5},
-    scatter_args={"color": "grey"},
-    hole_args={"s": 10, "alpha": 1},
+    holes=False,
+    line_args={"linewidth": 4, "alpha": 0.8},
+    scatter_args={"color": "#2d2d2d", "zorder": 100},
+    hole_args={"s": 7, "alpha": 1},
+    ax=ax,
 )
 
 # save chart

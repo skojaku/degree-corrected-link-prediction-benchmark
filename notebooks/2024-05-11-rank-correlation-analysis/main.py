@@ -31,7 +31,7 @@ def rank_classification_task(data_table: pd.DataFrame):
     return df
 
 
-def rank_retrieval_task(data_table: pd.DataFrame, focal_score: str, topk=50):
+def rank_retrieval_task(data_table: pd.DataFrame, focal_score: str, topk=100):
     df = data_table.query(f"topk == {topk}")
     df["vp"] = np.maximum(df["prec"], df["rec"])
 
@@ -51,6 +51,7 @@ def rank_retrieval_task(data_table: pd.DataFrame, focal_score: str, topk=50):
 
 
 exclude = ["dcGIN", "dcGAT", "dcGraphSAGE", "dcGCN"]
+exclude = []
 
 classification_task_data_table = classification_task_data_table[
     ~classification_task_data_table["model"].isin(exclude)
@@ -60,7 +61,7 @@ retrieval_task_data_table = retrieval_task_data_table[
 ]
 
 rank_class = rank_classification_task(classification_task_data_table)
-rank_retrieval = rank_retrieval_task(retrieval_task_data_table, "vp", 50)
+rank_retrieval = rank_retrieval_task(retrieval_task_data_table, "vp", 10)
 # %%
 
 results = []
@@ -118,5 +119,20 @@ ax.set_xlabel("Sampling type")
 sns.despine()
 
 fig.savefig(output_file, bbox_extra_artists=(lgd,), bbox_inches="tight", dpi=300)
+
+# %%
+result_table.groupby
+# %%
+
+rank_retrieval[["model", "metric", "score"]].groupby(
+    ["model", "metric"]
+).mean().sort_values("score", ascending=False)
+
+# %%
+rank_class[["model", "metric", "score", "negativeEdgeSampler"]].groupby(
+    ["model", "metric", "negativeEdgeSampler"]
+).mean().sort_values("score", ascending=False).query("negativeEdgeSampler == 'uniform'")
+# %%
+rank_class
 
 # %%

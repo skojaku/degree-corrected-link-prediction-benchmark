@@ -55,6 +55,28 @@ def sample_candidates_faiss(
     test_edge_frac=0.25,
 ):
     res = faiss.StandardGpuResources()  # Use standard GPU resources
+    gpu_id = GPUtil.getFirstAvailable(
+        order="memory",
+        maxLoad=1,
+        maxMemory=0.3,
+        attempts=99999,
+        interval=60 * 1,
+        verbose=False,
+    )[0]
+
+    if sampling == "degreeBiased":
+        index = faiss.IndexFlatIP(emb.shape[1] + 1)  # Initialize the index on CPU
+        gpu_index = faiss.index_cpu_to_gpu(res, gpu_id, index)  # Move the index to GPU
+        deg = np.array(net.sum(axis=1)).flatten()
+        emb_key, emb_query = emb.copy(), emb.copy()
+        emb_key = np.hstack([emb_key, np.log(np.maximum(1, deg.reshape(-1, 1)))])
+        emb_query = np.hstack([emb_query, np.ones((emb_query.shape[0], 1))])
+        gpu_index.add(emb_key.astype("float32"))  # Add vectors to the index on GPU
+        D, I = gpu_index.search(
+            emb_query.astype("float32"), int(maxk)
+        )  # Perform the search on GPU
+        return D, I
+
     index = faiss.IndexFlatIP(emb.shape[1])  # Initialize the index on CPU
     gpu_index = faiss.index_cpu_to_gpu(res, gpu_id, index)  # Move the index to GPU
     gpu_index.add(emb.astype("float32"))  # Add vectors to the index on GPU
@@ -86,7 +108,11 @@ elif model_type == "embedding":
         emb,
         train_net,
         maxk=maxk,
-        sampling="uniform",
+        sampling=(
+            "uniform"
+            # if model not in ["dcGIN", "dcGAT", "dcGraphSAGE", "dcGCN"]
+            # else "degreeBiased"
+        ),
     )
 #
 # ========================
@@ -111,8 +137,6 @@ for topk in [5, 10, 25, 50, 100]:
 
 result = pd.DataFrame(result)
 
-result
-# %%
 result.to_csv(output_file, index=False)
 
 # %%

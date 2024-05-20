@@ -6,6 +6,12 @@ import matplotlib.pyplot as plt
 import polars as pl
 import rbo
 
+retrieval_result_file = "../../data/derived/results/result_retrieval.csv"
+retrieval_task_data_table = pd.read_csv(retrieval_result_file)
+
+classification_result_file = "../../data/derived/results/result_auc_roc.csv"
+classification_task_data_table = pd.read_csv(classification_result_file)
+
 
 def rank_classification_task(data_table: pd.DataFrame):
     df = data_table.copy()
@@ -44,28 +50,6 @@ def rank_retrieval_task(data_table: pd.DataFrame, focal_score: str, topk=50):
     return df.rename(columns={"data_name": "data", focal_score: "score"})
 
 
-import sys
-
-if "snakemake" in sys.modules:
-    retrieval_result_file = snakemake.input["retrieval_result"]
-    classification_result_file = snakemake.input["classification_result"]
-    output_file = snakemake.output["output_file"]
-    rbop = float(snakemake.params["rbop"])
-    topk = int(snakemake.params["topk"])
-    focal_score = snakemake.params["focal_score"]
-else:
-    retrieval_result_file = "../data/derived/results/result_retrieval.csv"
-    classification_result_file = "../data/derived/results/result_auc_roc.csv"
-    rbop = 0.5
-    topk = 10
-    focal_score = "vp"
-    output_file = "../../figs/rbo.pdf"
-
-
-retrieval_task_data_table = pd.read_csv(retrieval_result_file)
-classification_task_data_table = pd.read_csv(classification_result_file)
-
-
 exclude = ["dcGIN", "dcGAT", "dcGraphSAGE", "dcGCN"]
 
 classification_task_data_table = classification_task_data_table[
@@ -76,7 +60,7 @@ retrieval_task_data_table = retrieval_task_data_table[
 ]
 
 rank_class = rank_classification_task(classification_task_data_table)
-rank_retrieval = rank_retrieval_task(retrieval_task_data_table, focal_score, topk)
+rank_retrieval = rank_retrieval_task(retrieval_task_data_table, "vp", 50)
 # %%
 
 results = []
@@ -91,25 +75,23 @@ for sampling, dg in rank_class.groupby("negativeEdgeSampler"):
     for data, dh in df.groupby("data"):
         S = dh.sort_values(by="rank_class", ascending=False)["model"].values
         T = dh.sort_values(by="rank_retrieval", ascending=False)["model"].values
-        score = rbo.RankingSimilarity(S, T).rbo_ext(p=rbop)
+        score = rbo.RankingSimilarity(S, T).rbo_ext(p=0.5)
         results.append({"rbo_score": score, "data": data, "sampling": sampling})
 
 result_table = pd.DataFrame(results)
 result_table["sampling"] = result_table["sampling"].map(
-    {"uniform": "Original", "degreeBiased": "Degree-corrected"}
+    {"uniform": "Uniform", "degreeBiased": "Degree-corrected"}
 )
+result_table
+# %%
 
-# ===================
-# Plot
-# ===================
 sns.set_style("white")
 sns.set(font_scale=1.2)
 sns.set_style("ticks")
 fig, ax = plt.subplots(figsize=(4, 5))
 
-color_palette = sns.color_palette().as_hex()
-baseline_color = sns.desaturate(color_palette[0], 0.24)
-focal_color = sns.color_palette("bright").as_hex()[1]
+color_palette = sns.color_palette("bright")
+baseline_color = sns.desaturate(color_palette[0], 0.3)
 
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -121,8 +103,6 @@ ax = sns.stripplot(
     color="#ffffff",
     edgecolor="black",
     linewidth=0.5,
-    hue_order=["Original", "Degree-corrected"],
-    order=["Original", "Degree-corrected"],
     ax=ax,
 )
 ax = sns.violinplot(
@@ -130,19 +110,11 @@ ax = sns.violinplot(
     y="rbo_score",
     x="sampling",
     hue="sampling",
-    bw_adjust=0.5,
-    cut=0,
-    common_norm=True,
-    order=["Original", "Degree-corrected"],
-    palette={
-        "Original": baseline_color,
-        "Degree-corrected": focal_color,
-    },
+    cut=1,
+    palette={"Uniform": baseline_color, "Degree-corrected": color_palette[1]},
 )
 ax.set_ylabel("Rank correlation (Rank-biased Overlap)")
-ax.set_xlabel("")
+ax.set_xlabel("Sampling type")
 sns.despine()
 
-fig.savefig(output_file, bbox_inches="tight", dpi=300)
-
-# %%
+fig.savefig(output_file, bbox_extra_artists=(lgd,), bbox_inches="tight", dpi=300)

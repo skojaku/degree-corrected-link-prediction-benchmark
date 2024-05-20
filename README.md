@@ -23,18 +23,24 @@ cd libs/gnn-tools && pip install -e .
 cd libs/LFR-benchmark && python setup.py build && pip install -e .
 ```
 
+Create `workflow/config.yaml` file
+```config.yaml
+data_dir: "data/"
+paper_dir: "./paper/current/"
+small_networks: False
+```
 
 # TODO
 
 - [x] Fix the bug (duplicated positive/negative edges)
-- [ ] Regenerate the figures
-- [ ] Create a scatter plot of data vs aucroc ratio (where the preferential attachment is the base) for the uniform sampling
-- [ ] Create a scatter plot of data vs aucroc ratio (where the preferential attachment is the base) for the biased sampling
-- [ ] Implement & Run the community detection (LFR & Multi partition model)
+- [x] Regenerate the figures
+- [x] Create a scatter plot of data vs aucroc ratio (where the preferential attachment is the base) for the uniform sampling
+- [x] Create a scatter plot of data vs aucroc ratio (where the preferential attachment is the base) for the biased sampling
+- [x] Implement & Run the community detection (LFR & Multi partition model)
   - [x] LFR benchamrk implemented
-  - [ ] Running the LFR benchmark
-  - [ ] Collect the results
-- [ ] Evaluate the community detection benchmark
+  - [x] Running the LFR benchmark
+  - [x] Collect the results
+- [x] Evaluate the community detection benchmark
 
 # Missing module
 

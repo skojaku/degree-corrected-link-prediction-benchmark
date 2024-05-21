@@ -38,7 +38,7 @@ if config["small_networks"]:
     with open("workflow/small-networks.json", "r") as f:
         DATA_LIST = json.load(f)
 
-N_ITERATION = 1
+N_ITERATION =  3 
 
 # ====================
 # Configuration
@@ -49,7 +49,8 @@ N_ITERATION = 1
 #
 params_train_test_split = {
     "testEdgeFraction": [0.25],
-    "sampleId": list(range(N_ITERATION)),
+    "sampleId": [3,4],
+    #"sampleId": list(range(N_ITERATION)),
 }
 paramspace_train_test_split = to_paramspace(params_train_test_split)
 
@@ -142,6 +143,13 @@ NET_STAT_FILE = j(
 )
 
 #
+# AUC-ROC vs PA
+#
+AUCROC_PA_POWERLAW_FILE = j(
+    STAT_DIR, "aucscore-degree-exponent.csv"
+)
+
+#
 # Embedding
 #
 EMB_FILE = j(
@@ -219,6 +227,23 @@ LP_SCORE_NET_FILE = j(
     f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
 )
 
+# Retrieval task
+RT_SCORE_EMB_FILE = j(
+    RESULT_DIR,
+    "retrieval",
+    "{data}",
+    f"result_basedOn~emb_{paramspace_train_test_split.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.csv",
+)
+RT_SCORE_NET_FILE = j(
+    RESULT_DIR,
+    "retrieval",
+    "{data}",
+    f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
+)
+
+RT_ALL_SCORE_FILE = j(RESULT_DIR, "result_retrieval.csv")
+
+# Concatenated results
 LP_ALL_AUCROC_SCORE_FILE = j(RESULT_DIR, "result_auc_roc.csv")
 
 LP_SCORE_OPT_STACK_FILE = j(
@@ -249,6 +274,17 @@ FIG_PREC_RECAL_F1 =j(FIG_DIR, "prec-recall-f1.pdf")
 FIG_DEG_DEG_PLOT =j(FIG_DIR, "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
 FIG_PERF_VS_KURTOSIS_PLOT=j(FIG_DIR, "performance_vs_degree_kurtosis.pdf")
 FIG_RANK_CHANGE = j(FIG_DIR, "rank-change.pdf")
+FIG_DEG_DIST_POS_NEG_EDGES =j(FIG_DIR, "deg-pos-neg-edges.pdf")
+FIG_AUCROC_LOGNORMAL = j(FIG_DIR, "auc-roc-log-normal.pdf")
+
+params_rbo = {
+    "rbop": ["0.1", "0.25", "0.5", "0.75", "0.9", "0.98"],
+    "topk": ["10", "50", "100"],
+    "focal_score": ["vp", "prec", "rec"],
+}
+paramspace_rbo = to_paramspace(params_rbo)
+FIG_RBO = j(FIG_DIR, "rbo", f"rbo-{paramspace_rbo.wildcard_pattern}.pdf")
+
 
 #
 #
@@ -268,6 +304,7 @@ rule all:
         # Network stats (Check point 2)
         #
         NET_STAT_FILE,
+        AUCROC_PA_POWERLAW_FILE,
         #
         # Link classification (Check point 3)
         #
@@ -285,14 +322,22 @@ rule all:
             **params_negative_edge_sampler,
             **params_train_test_split
         ),
+        #
+        # Link retrieval (Check point 4)
+        #
+
 
 
 rule figs:
     input:
         expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
         FIG_AUCROC,
-        FIG_RANK_CHANGE
+        FIG_RANK_CHANGE,
+        expand(FIG_RBO, **params_rbo),
         #FIG_PERF_VS_KURTOSIS_PLOT,
+        FIG_DEG_DIST_POS_NEG_EDGES,
+	FIG_AUCROC_LOGNORMAL
+
 
 # ============================
 # Cleaning networks
@@ -314,6 +359,12 @@ rule calc_network_stats:
         output_file = NET_STAT_FILE
     script:
         "workflow/calc-network-stats.py"
+
+rule calc_aucroc_pa_powerlaw:
+    output:
+        output_file = AUCROC_PA_POWERLAW_FILE
+    script:
+        "workflow/calc-aucroc-pa-powerlaw.py"
 
 # ============================
 # Optimal stacking
@@ -525,6 +576,47 @@ rule concatenate_aucroc_results:
     script:
         "workflow/concat-results.py"
 
+#
+# Retrieval task
+#
+rule eval_link_retrieval_embedding:
+    input:
+        train_net_file = TRAIN_NET_FILE,
+        test_edge_file = TEST_EDGE_TABLE_FILE,
+        emb_file = EMB_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+        model=lambda wildcards: wildcards.model,
+        model_type="embedding",
+    output:
+        output_file=RT_SCORE_EMB_FILE,
+    script:
+        "workflow/run-link-retrieval-benchmark.py"
+
+rule eval_link_retrieval_networks:
+    input:
+        train_net_file = TRAIN_NET_FILE,
+        test_edge_file = TEST_EDGE_TABLE_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+        model=lambda wildcards: wildcards.model,
+        model_type="topology",
+    output:
+        output_file=RT_SCORE_NET_FILE,
+    script:
+        "workflow/run-link-retrieval-benchmark.py"
+
+rule all_retrieval:
+    input:
+        RT_ALL_SCORE_FILE,
+
+rule concatenate_results_retrieval:
+    input:
+        input_file_list=expand(RT_SCORE_EMB_FILE, data=DATA_LIST, **params_emb, **params_train_test_split) + expand(RT_SCORE_NET_FILE, data=DATA_LIST, **params_net_linkpred, **params_train_test_split),
+    output:
+        output_file=RT_ALL_SCORE_FILE,
+    script:
+        "workflow/concat-results.py"
 # =====================
 # Plot
 # =====================
@@ -545,6 +637,7 @@ rule calc_deg_deg_plot:
 rule plot_aucroc:
     input:
         auc_roc_table_file=LP_ALL_AUCROC_SCORE_FILE,
+        netstat_table_file=NET_STAT_FILE,
     output:
         output_file=FIG_AUCROC,
         output_file_uniform=FIG_AUCROC_UNIFORM,
@@ -553,9 +646,36 @@ rule plot_aucroc:
 
 rule plot_rank_change:
     input:
-        input_file = LP_ALL_SCORE_OPT_STACK_FILE
+        input_file =  LP_ALL_AUCROC_SCORE_FILE
     output:
         output_file = FIG_RANK_CHANGE
     script:
         "workflow/plot-rank-change.py"
 
+rule plot_rbo:
+    input:
+        retrieval_result = RT_ALL_SCORE_FILE,
+        classification_result = LP_ALL_AUCROC_SCORE_FILE
+    params:
+        rbop = lambda wildcards: wildcards.rbop,
+        topk = lambda wildcards: wildcards.topk,
+        focal_score = lambda wildcards: wildcards.focal_score
+    output:
+        output_file = FIG_RBO
+    script:
+        "workflow/plot-rbo.py"
+
+rule plot_deg_pos_neg_edges:
+    output:
+        output_file = FIG_DEG_DIST_POS_NEG_EDGES
+    script:
+        "workflow/plot_degere_dist_pos_neg_edges.py"
+
+rule plot_aucroc_lognormal:
+    input:
+        netstat_table_file=NET_STAT_FILE,
+        aucroc_table_file=LP_ALL_AUCROC_SCORE_FILE,
+    output:
+        output_file=FIG_AUCROC_LOGNORMAL,
+    script:
+        "workflow/plot-aucroc-lognormal.py"

@@ -110,11 +110,43 @@ TEST_EDGE_TABLE_FILE = j(
     f"testEdgeTable_{paramspace_train_test_split.wildcard_pattern}.csv",
 )
 
+# Optimal stacking training and heldout dataset
+OPT_TRAIN_DATASET_DIR = j(OPT_STACK_DIR, "train_datasets")
+OPT_HELDOUT_DATASET_DIR = j(OPT_STACK_DIR, "heldout_datasets")
+
+HELDOUT_NET_FILE_OPTIMAL_STACKING = j(
+    OPT_HELDOUT_DATASET_DIR,
+    "{data}",
+    f"heldout-net{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.npz",
+)
+
+TRAIN_NET_FILE_OPTIMAL_STACKING = j(
+    OPT_TRAIN_DATASET_DIR,
+    "{data}",
+    f"train-net_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.npz",
+)
+
+# ====================
+# Community detection
+# ====================
+include: "./Snakefile_community_detection.smk"
+
+# ====================
+# Intermediate files
+# ====================
+
 #
 # Network statistics
 #
 NET_STAT_FILE = j(
    STAT_DIR, "network-stats.csv"
+)
+
+#
+# AUC-ROC vs PA
+#
+AUCROC_PA_POWERLAW_FILE = j(
+    STAT_DIR, "aucscore-degree-exponent.csv"
 )
 
 #
@@ -139,6 +171,41 @@ PRED_SCORE_NET_FILE = j(
     PRED_DIR,
     "{data}",
     f"score_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
+)
+
+#
+# Optimal Stacking
+#
+TRAIN_FEATURE_MATRIX = j(
+    OPT_STACK_DIR,
+    "{data}",
+    "feature_matrices",
+    f"train-feature_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}_.pkl",
+)
+
+HELDOUT_FEATURE_MATRIX = j(
+    OPT_STACK_DIR,
+    "{data}",
+    "feature_matrices",
+    f"heldout-feature_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.pkl",
+)
+
+CV_DIR = j(OPT_STACK_DIR,
+    "{data}",
+    "cv",
+    f"condition_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}",
+)
+
+OUT_BEST_RF_PARAMS = j(
+    OPT_STACK_DIR,
+    "{data}",
+    f"bestparms-rf_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.csv",
+)
+
+EDGE_CANDIDATES_FILE_OPTIMAL_STACKING = j(
+    OPT_STACK_DIR,
+    "{data}",
+    f"edge_candidates_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.pkl",
 )
 
 # ====================
@@ -200,7 +267,15 @@ LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
 # ====================
 FIG_AUCROC = j(FIG_DIR, "aucroc.pdf")
 FIG_AUCROC_UNIFORM = j(FIG_DIR, "aucroc_uniform.pdf")
+FIG_DEGSKEW_AUCDIFF = j(FIG_DIR, "corr_degskew_aucdiff.pdf")
+FIG_NODES_AUCDIFF = j(FIG_DIR, "corr_nodes_aucdiff.pdf")
+FIG_DEGSKEW_AUCDIFF_NODESIZE = j(FIG_DIR, "corr_degskew_aucdiff_nodesize.pdf")
+FIG_PREC_RECAL_F1 =j(FIG_DIR, "prec-recall-f1.pdf")
 FIG_DEG_DEG_PLOT =j(FIG_DIR, "deg_deg_plot_negativeEdgeSampler~{negativeEdgeSampler}.pdf")
+FIG_PERF_VS_KURTOSIS_PLOT=j(FIG_DIR, "performance_vs_degree_kurtosis.pdf")
+FIG_RANK_CHANGE = j(FIG_DIR, "rank-change.pdf")
+FIG_DEG_DIST_POS_NEG_EDGES =j(FIG_DIR, "deg-pos-neg-edges.pdf")
+FIG_AUCROC_LOGNORMAL = j(FIG_DIR, "auc-roc-log-normal.pdf")
 
 params_rbo = {
     "rbop": ["0.1", "0.25", "0.5", "0.75", "0.9", "0.98"],
@@ -221,7 +296,7 @@ rule all:
         # All results
         #
         LP_ALL_AUCROC_SCORE_FILE,
-	    RT_ALL_SCORE_FILE,
+	RT_ALL_SCORE_FILE,
         #
         # Generate the link prediction benchmark (Check point 1)
         # [Implement from here] @ vision
@@ -248,6 +323,10 @@ rule all:
             **params_negative_edge_sampler,
             **params_train_test_split
         ),
+        #
+        # Link retrieval (Check point 4)
+        #
+
 
 
 rule figs:
@@ -258,7 +337,7 @@ rule figs:
         expand(FIG_RBO, **params_rbo),
         #FIG_PERF_VS_KURTOSIS_PLOT,
         FIG_DEG_DIST_POS_NEG_EDGES,
-	    FIG_AUCROC_LOGNORMAL
+	FIG_AUCROC_LOGNORMAL
 
 
 # ============================
@@ -289,6 +368,92 @@ rule calc_aucroc_pa_powerlaw:
         "workflow/calc-aucroc-pa-powerlaw.py"
 
 # ============================
+# Optimal stacking
+# ============================
+rule optimal_stacking_all:
+    input:
+        expand(
+            LP_ALL_SCORE_OPT_STACK_FILE,
+            data=DATA_LIST,
+            **params_negative_edge_sampler,
+            **params_train_test_split,
+        ),
+        expand(
+            BEST_RF_FEATURES,
+            data=DATA_LIST,
+            **params_negative_edge_sampler,
+            **params_train_test_split,
+        ),
+
+rule optimal_stacking_train_heldout_dataset:
+    input:
+        edge_table_file=EDGE_TABLE_FILE,
+    params:
+        edge_fraction_parameters=paramspace_train_test_split.instance,
+        edge_sampler_parameters=paramspace_negative_edge_sampler.instance,
+    output:
+        output_heldout_net_file=HELDOUT_NET_FILE_OPTIMAL_STACKING,
+        output_train_net_file=TRAIN_NET_FILE_OPTIMAL_STACKING,
+        output_edge_candidates_file=EDGE_CANDIDATES_FILE_OPTIMAL_STACKING,
+    script:
+        "workflow/generate-optimal-stacking-train-heldout-networks.py"
+
+rule optimal_stacking_generate_features:
+    input:
+        input_original_edge_table_file=EDGE_TABLE_FILE,
+        input_heldout_net_file=HELDOUT_NET_FILE_OPTIMAL_STACKING,
+        input_train_net_file=TRAIN_NET_FILE_OPTIMAL_STACKING,
+        input_edge_candidates_file=EDGE_CANDIDATES_FILE_OPTIMAL_STACKING,
+    output:
+        output_heldout_feature=HELDOUT_FEATURE_MATRIX,
+        output_train_feature=TRAIN_FEATURE_MATRIX
+    script:
+        "workflow/generate-optimal-stacking-topological-features.py"
+
+rule optimal_stacking_generate_cv_files:
+    input:
+        input_heldout_feature=HELDOUT_FEATURE_MATRIX,
+        input_train_feature=TRAIN_FEATURE_MATRIX,
+    output:
+        output_cv_dir=directory(CV_DIR),
+    script:
+        "workflow/generate-optimal-stacking-cv.py"
+
+rule optimal_stacking_model_selection:
+    input:
+        input_cv_dir=CV_DIR,
+    output:
+        output_best_rf_params=OUT_BEST_RF_PARAMS,
+    script:
+        "workflow/optimal-stacking-modelselection.py"
+
+rule optimal_stacking_performance:
+    input:
+        input_best_rf_params=OUT_BEST_RF_PARAMS,
+        input_seen_unseen_data_dir=CV_DIR,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=LP_SCORE_OPT_STACK_FILE,
+        feature_importance_file=BEST_RF_FEATURES
+    script:
+        "workflow/optimal-stacking-performance.py"
+
+
+rule optimal_stacking_concatenate_results:
+    input:
+        input_file_list=expand(
+            LP_SCORE_OPT_STACK_FILE,
+            data=DATA_LIST,
+            **params_train_test_split,
+            **params_negative_edge_sampler
+        )
+    output:
+        output_file=LP_ALL_SCORE_OPT_STACK_FILE,
+    script:
+        "workflow/concat-results.py"
+
+# ============================
 # Generating benchmark dataset
 # ============================
 rule generate_link_prediction_dataset:
@@ -312,6 +477,7 @@ rule train_test_edge_split:
         output_target_edge_table_file=TARGET_EDGE_TABLE_FILE,
     script:
         "workflow/generate-test-edges.py"
+
 
 
 # ==============================
@@ -452,10 +618,22 @@ rule concatenate_results_retrieval:
         output_file=RT_ALL_SCORE_FILE,
     script:
         "workflow/concat-results.py"
-
 # =====================
 # Plot
 # =====================
+
+#
+# Figure 1 and 2
+#
+rule calc_deg_deg_plot:
+    input:
+        edge_table_file=EDGE_TABLE_FILE.format(data = "airport-rach"),
+    params:
+        negativeEdgeSampler = lambda wildcards: wildcards.negativeEdgeSampler
+    output:
+        output_file=FIG_DEG_DEG_PLOT,
+    script:
+        "workflow/plot-deg-deg-plot.py"
 
 rule plot_aucroc:
     input:
@@ -466,3 +644,39 @@ rule plot_aucroc:
         output_file_uniform=FIG_AUCROC_UNIFORM,
     script:
         "workflow/plot-auc-roc.py"
+
+rule plot_rank_change:
+    input:
+        input_file =  LP_ALL_AUCROC_SCORE_FILE
+    output:
+        output_file = FIG_RANK_CHANGE
+    script:
+        "workflow/plot-rank-change.py"
+
+rule plot_rbo:
+    input:
+        retrieval_result = RT_ALL_SCORE_FILE,
+        classification_result = LP_ALL_AUCROC_SCORE_FILE
+    params:
+        rbop = lambda wildcards: wildcards.rbop,
+        topk = lambda wildcards: wildcards.topk,
+        focal_score = lambda wildcards: wildcards.focal_score
+    output:
+        output_file = FIG_RBO
+    script:
+        "workflow/plot-rbo.py"
+
+rule plot_deg_pos_neg_edges:
+    output:
+        output_file = FIG_DEG_DIST_POS_NEG_EDGES
+    script:
+        "workflow/plot_degere_dist_pos_neg_edges.py"
+
+rule plot_aucroc_lognormal:
+    input:
+        netstat_table_file=NET_STAT_FILE,
+        aucroc_table_file=LP_ALL_AUCROC_SCORE_FILE,
+    output:
+        output_file=FIG_AUCROC_LOGNORMAL,
+    script:
+        "workflow/plot-aucroc-lognormal.py"

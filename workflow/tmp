@@ -1,0 +1,14 @@
+rm calc-aucroc-pa-power-law.py
+rm concatenate-com-detect-results.py
+rm EmbeddingModels.py
+rm eval-com-detect-score.py
+rm generate-lfr-networks.py
+rm generate-list-of-small-nets.py
+rm generate-mpm-networks.py
+rm generate-net-by-multi-partition-model.py
+rm kmeans-clustering.py
+rm NetworkTopologyPredictionModels.py
+rm OptimalStackingFunctions.py
+rm plot_degree_dist_pos_neg_edges.py
+rm plot_lfr_scores.py
+rm RankingModels.py

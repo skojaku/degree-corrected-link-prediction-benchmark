@@ -82,7 +82,7 @@ Specifically, we build the conda environment with the following command.
 ```bash
 mamba create -n linkpred -c bioconda -c nvidia -c pytorch -c pyg python=3.11 cuda-version=12.1 pytorch torchvision torchaudio pytorch-cuda=12.1 snakemake graph-tool scikit-learn numpy==1.23.5 numba scipy==1.10.1 pandas polars networkx seaborn matplotlib gensim ipykernel tqdm black faiss-gpu pyg pytorch-sparse python-igraph -y
 pip install adabelief-pytorch==0.2.0
-pip install GPUtil
+pip install GPUtil powerlaw
 ```
 You can also use the `environment.yml` file to create the conda environment.
 ```bash
@@ -115,6 +115,7 @@ data_dir: "data/"
 small_networks: Fales
 ```
 where `data_dir` is the directory where all data will is located, and `small_networks` is a boolean value indicating whether to run the experiments for the small networks for testing the code.
+
 
 Once you have created the `config.yaml` file, you can run the snakemake as follows:
 ```bash

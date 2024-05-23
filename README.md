@@ -12,6 +12,10 @@
 
 ## Table of content
 
+- [Degree-corrected link prediction task](#degree-corrected-link-prediction-task)
+  - [Installation](#installation)
+  - [Usage](#usage)
+- [Running your link prediction benchmarks](#running-your-link-prediction-benchmarks)
 - [Reproducing the results](#reproducing-the-results)
   - [Data](#data)
   - [Installing the packages](#installing-the-packages)
@@ -58,6 +62,10 @@ src_test # The source nodes of the test edges
 trg_test # The destination nodes of the test edges
 y_test # The labels of the test edges, where 1 means positive and 0 means negative
 ```
+
+# Running your link prediction benchmarks
+
+mv t
 
 # Reproducing the results
 

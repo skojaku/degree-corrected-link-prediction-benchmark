@@ -28,7 +28,7 @@
 This repository provides the code to generate the degree-corrected link prediction task.
 ## Installation
 ```bash
-pip install "git+ssh://git@github.com/skojaku/degree-corrected-link-prediction.git#subdirectory=libs/dclinkpred&egg=dclinkpred"
+pip install "git+://git@github.com/skojaku/degree-corrected-link-prediction.git#subdirectory=libs/dclinkpred&egg=dclinkpred"
 ```
 or
 ```bash

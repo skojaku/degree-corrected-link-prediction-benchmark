@@ -63,10 +63,6 @@ trg_test # The destination nodes of the test edges
 y_test # The labels of the test edges, where 1 means positive and 0 means negative
 ```
 
-# Running your link prediction benchmarks
-
-mv t
-
 # Reproducing the results
 
 We provide all source code and data to reproduce the results in the paper. We tested the workflow under the following environment.
@@ -74,13 +70,13 @@ We provide all source code and data to reproduce the results in the paper. We te
 - CUDA: 12.1
 - Python: 3.11
 
-The expected execution time varies depending on the computational resources. With our machine equipped with 8 NVIDIA V100 GPUs and 64 CPUs, the execution time for the entire workflow, including the robustness analysis, is approximately one week.
+All code are provided in the `reproduction/` directory. The expected execution time varies depending on the computational resources. With our machine equipped with 8 NVIDIA V100 GPUs and 64 CPUs, the execution time for the entire workflow, including the robustness analysis, is approximately one week.
 
 ## Data
 
 We provide the source of the network data in the edge list format at [FigShare](https://figshare.com/projects/Implicit_degree_bias_in_the_link_prediction_task/205432).
 The edge list is a CSV file with 2 columns representing the source and destination nodes of the network.
-Download the data and place it in the `data/raw` directory.
+Download the data and place it in the `reproduction/data/raw` directory.
 
 ## Installing the packages
 
@@ -117,7 +113,7 @@ pip install -e .
 
 ## Running the experiments
 
-We provide the snakemake file to run the experiments. Before running the snakemake, you must create a `config.yaml` file under the `config/` directory.
+We provide the snakemake file to run the experiments. Before running the snakemake, you must create a `config.yaml` file under the `reproduction/workflow/` directory.
 ```yaml
 data_dir: "data/"
 small_networks: Fales
@@ -125,7 +121,7 @@ small_networks: Fales
 where `data_dir` is the directory where all data will is located, and `small_networks` is a boolean value indicating whether to run the experiments for the small networks for testing the code.
 
 
-Once you have created the `config.yaml` file, you can run the snakemake as follows:
+Once you have created the `config.yaml` file, move under the `reproduction/` directory and run the snakemake as follows:
 ```bash
 snakemake --cores <number of cores> all
 ```
@@ -133,11 +129,11 @@ or conveniently,
 ```bash
 nohup snakemake --cores <number of cores> all >log &
 ```
-The Snakemake will preprocess the data, run the experiments, and generate the figures in `figs/` directory.
+The Snakemake will preprocess the data, run the experiments, and generate the figures in `reproduction/figs/` directory.
 
 ## Testing with new network data
 
-New networks can be added to the experiment by adding a new file to the `data/raw` directory.
+New networks can be added to the experiment by adding a new file to the `reproduction/data/raw` directory.
 The file should be in the edge list format with 2 columns representing the source and destination nodes of the network, e.g.,
 ```csv
 1 2

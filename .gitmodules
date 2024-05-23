@@ -1,3 +1,6 @@
-[submodule "libs/libs/gnn-tools"]
-	path = libs/libs/gnn-tools
+[submodule "libs/gnn-tools"]
+	path = libs/gnn-tools
 	url = https://github.com/skojaku/gnn-tools
+[submodule "libs/LFR-benchmark"]
+	path = libs/LFR-benchmark
+	url = https://github.com/skojaku/LFR-benchmark

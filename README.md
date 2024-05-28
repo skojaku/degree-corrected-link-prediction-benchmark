@@ -5,7 +5,7 @@
 @article{aiyappa2024implicit,
   title={Implicit degree bias in the link prediction task},
   author={Rachith Aiyappa and Xin Wang and Munjung Kim and Ozgur Can Seckin and Jisung Yoon and Yong-Yeol Ahn and Sadamori Kojaku},
-  journal={arxiv: xxxx}
+  journal={arxiv: 2405.14985}
   year={2024}
 }
 ```

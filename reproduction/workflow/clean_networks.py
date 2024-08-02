@@ -4,7 +4,7 @@
 # @Last Modified by:   Rachith Aiyappa
 # @Last Modified time: 2023-03-28 05:44pm
 
-"""This script takes as input as bunch of raw networks, 
+"""This script takes as input as bunch of raw networks,
 and outputs the edge list of its gcc as a csv file."""
 
 import networkx as nx
@@ -18,7 +18,7 @@ import sys
 
 if "snakemake" in sys.modules:
     raw_unprocessed_dir = snakemake.input["raw_unprocessed_networks_dir"]
-    #raw_processed_networks_dir = snakemake.input["raw_processed_networks_dir"]
+    # raw_processed_networks_dir = snakemake.input["raw_processed_networks_dir"]
     edge_table_file = snakemake.output["edge_table_file"]
     name_of_network = edge_table_file.split("/")[-2]
 else:
@@ -55,7 +55,7 @@ for f in os.listdir(raw_unprocessed_dir):
 
         break
 
-#os.makedirs(raw_processed_networks_dir + "/" + name_of_network, exist_ok=True)
+# os.makedirs(raw_processed_networks_dir + "/" + name_of_network, exist_ok=True)
 
 # returns upper triangle of the matrix inclusive of diagonal to avoid duplicate edges in output
 Gcc_A_triup = triu(Gcc_A, k=0, format="csc")

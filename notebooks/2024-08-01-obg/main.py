@@ -40,8 +40,8 @@ tmp_folder_path = "tmp_dataset/"
 small_data = ["ogbl-collab", "ogbl-ddi", "ogbl-biokg"]
 medium_data = ["ogbl-citation2", "ogbl-wikikg2", "ogbl-vessel"]
 # medium_data = ["ogbl-ppa", "ogbl-citation2", "ogbl-wikikg2", "ogbl-vessel"]
-for dataset_code in medium_data:
-    # for dataset_code in small_data:
+#for dataset_code in medium_data:
+for dataset_code in small_data:
 
     # Load dataset
     dataset = PygLinkPropPredDataset(name=dataset_code, root=tmp_folder_path)

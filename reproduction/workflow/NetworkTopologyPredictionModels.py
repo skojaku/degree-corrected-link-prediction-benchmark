@@ -1,3 +1,4 @@
+# %%
 # -*- coding: utf-8 -*-
 # @Author: Sadamori Kojaku
 # @Date:   2022-10-14 15:08:01
@@ -119,9 +120,9 @@ def localRandomWalk(network, src=None, trg=None, maxk=None, batch_size=200000):
         usrc = np.unique(src)
         for start in range(0, len(usrc), batch_size):
             end = min(start + batch_size, len(usrc))
-            src_batch = usrc[start:end]
-            focal_edge_ids = np.where(np.isin(src, src_batch))[0]
+            focal_edge_ids = np.where(np.isin(src, usrc[start:end]))[0]
             trg_batch = trg[focal_edge_ids]
+            src_batch = src[focal_edge_ids]
 
             results.append(batch_local_random_walk(src_batch, trg_batch))
             results_edge_ids.append(focal_edge_ids)
@@ -158,8 +159,8 @@ def localPathIndex(network, src=None, trg=None, maxk=None, epsilon=1e-3, batch_s
         usrc = np.unique(src)
         for start in range(0, len(usrc), batch_size):
             end = min(start + batch_size, len(usrc))
-            src_batch = usrc[start:end]
-            focal_edge_ids = np.where(np.isin(src, src_batch))[0]
+            focal_edge_ids = np.where(np.isin(src, usrc[start:end]))[0]
+            src_batch = src[focal_edge_ids]
             trg_batch = trg[focal_edge_ids]
 
             results.append(batch_local_path_index(src_batch, trg_batch))

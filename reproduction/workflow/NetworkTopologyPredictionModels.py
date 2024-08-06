@@ -95,12 +95,15 @@ def adamicAdar(network, src=None, trg=None, maxk=None):
 
 
 @topology_model
-def localRandomWalk(network, src=None, trg=None, maxk=None, batch_size=200000):
+def localRandomWalk(network, src=None, trg=None, maxk=None, batch_size=10000):
     deg = np.array(network.sum(axis=1)).reshape(-1)
     deg_inv = 1 / np.maximum(deg, 1)
     P = sparse.diags(deg_inv) @ network
     if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
+        if network.shape[0] > 10000:
+            scores, indices = localRandomWalkBatch(network, maxk, batch_size)
+            return scores, indices
         PP = P @ P
         PPP = PP @ P
         S = P + PP + PPP
@@ -130,6 +133,32 @@ def localRandomWalk(network, src=None, trg=None, maxk=None, batch_size=200000):
         order = np.argsort(np.concatenate(results_edge_ids))
         return np.concatenate(results)[order]
 
+def localRandomWalkBatch(train_net, maxk, batch_size = None):
+    n_nodes = train_net.shape[0]
+    if batch_size is None:
+        batch_size = n_nodes // 100
+    n_batches = int(np.ceil(n_nodes / batch_size))
+
+    deg = np.array(train_net.sum(axis=1)).reshape(-1)
+    deg_inv = 1 / np.maximum(deg, 1)
+    P = sparse.diags(deg_inv) @ train_net
+
+    predicted = np.zeros((n_nodes, maxk), dtype=np.int32)
+    scores = np.zeros((n_nodes, maxk), dtype=np.float32)
+    for i in range(n_batches):
+        start = i * batch_size
+        end = np.minimum(start + batch_size, n_nodes)
+        U = P[start:end, :].toarray()
+        P1 = U.copy()
+        P2 = P1 @ P # A @ A
+        P3 = P2 @ P # A @ A + epsilon * A @ A @ A
+        batch_net = P1 + P2 + P3
+        batch_net = batch_net - U * batch_net
+        batch_net[(np.arange(end-start), np.arange(start, end))] = 0
+        predicted[start:end] = np.argsort(-batch_net, axis=1)[:, :maxk]
+        scores[start:end] = -np.sort(-batch_net, axis=1)[:, :maxk]
+    return scores, predicted
+
 def pairing(src, trg):
     return complex(src, trg)
 
@@ -137,14 +166,18 @@ def depairing(pair):
     return pair.real.astype(int), pair.imag.astype(int)
 
 @topology_model
-def localPathIndex(network, src=None, trg=None, maxk=None, epsilon=1e-3, batch_size=200000):
+def localPathIndex(network, src=None, trg=None, maxk=None, epsilon=1e-3, batch_size=10000):
     A = network
     if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
+        if network.shape[0] > 10000:
+            scores, indices = localPathIndexBatch(network, maxk, epsilon, batch_size)
+            return scores, indices
         AA = A @ A
         AAA = AA @ A
         S = AA + epsilon * AAA
         S = S - S.multiply(network)
+        S.setdiag(0)
         scores, indices = find_k_largest_elements(S, maxk)
         return scores, indices
     else:
@@ -169,6 +202,27 @@ def localPathIndex(network, src=None, trg=None, maxk=None, epsilon=1e-3, batch_s
         order = np.argsort(np.concatenate(results_edge_ids))
         return np.concatenate(results)[order]
 
+def localPathIndexBatch(train_net, maxk, epsilon = 1e-3, batch_size = None):
+    n_nodes = train_net.shape[0]
+    if batch_size is None:
+        batch_size = n_nodes // 100
+
+    n_batches = int(np.ceil(n_nodes / batch_size))
+
+    predicted = np.zeros((n_nodes, maxk), dtype=np.int32)
+    scores = np.zeros((n_nodes, maxk), dtype=np.float32)
+    for i in range(n_batches):
+        start = i * batch_size
+        end = np.minimum(start + batch_size, n_nodes)
+        U = train_net[start:end, :].toarray()
+        batch_net = U.copy()
+        batch_net = batch_net @ train_net # A @ A
+        batch_net = batch_net + epsilon * batch_net @ train_net # A @ A + epsilon * A @ A @ A
+        batch_net = batch_net - U * batch_net
+        batch_net[(np.arange(end-start), np.arange(start, end))] = 0
+        predicted[start:end] = np.argsort(-batch_net, axis=1)[:, :maxk]
+        scores[start:end] = -np.sort(-batch_net, axis=1)[:, :maxk]
+    return scores, predicted
 
 def find_k_largest_elements(A, k):
     """A is the scipy csr sparse matrix"""

@@ -780,20 +780,19 @@ class SBMEmbedding(NodeEmbeddings):
         self.in_vec = np.einsum("ij,i->ij", u, outdeg)
         self.out_vec = np.einsum("ij,i->ij", u, indeg)
 
-import networkx as nx
-G = nx.karate_club_graph()
-A = nx.adjacency_matrix(G)
-labels = np.unique([d[1]['club'] for d in G.nodes(data=True)], return_inverse=True)[1]
-A.data  = np.ones_like(A.data)
-
-u = AdjacencySpectralEmbedding().fit(A).transform(2)
-
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.decomposition import PCA
-pca = PCA(n_components=2)
-u = pca.fit_transform(u)
-
-sns.scatterplot(u[:, 0], u[:, 1], hue=labels)
-plt.show()
-# %%
+#import networkx as nx
+#G = nx.karate_club_graph()
+#A = nx.adjacency_matrix(G)
+#labels = np.unique([d[1]['club'] for d in G.nodes(data=True)], return_inverse=True)[1]
+#A.data  = np.ones_like(A.data)
+#
+#u = AdjacencySpectralEmbedding().fit(A).transform(2)
+#
+#import matplotlib.pyplot as plt
+#import seaborn as sns
+#from sklearn.decomposition import PCA
+#pca = PCA(n_components=2)
+#u = pca.fit_transform(u)
+#
+#sns.scatterplot(u[:, 0], u[:, 1], hue=labels)
+#plt.show()

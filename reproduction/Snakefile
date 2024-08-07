@@ -32,17 +32,11 @@ DATA_LIST = [
     f.split("net_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
 
-# focus on the obg datasets (not every server has a complete set of datasets)
-DATA_LIST = [d for d in DATA_LIST if "ogbl" in d]
-print(DATA_LIST)
-
-
 # Small networks
 # Comment out if you want to run for all networks
 #if config["small_networks"]:
 #    with open("workflow/small-networks.json", "r") as f:
 #        DATA_LIST = json.load(f)
-
 
 N_ITERATION =  5
 
@@ -55,8 +49,7 @@ N_ITERATION =  5
 #
 params_train_test_split = {
     "testEdgeFraction": [0.25],
-    "sampleId": [2,3,4],
-    #"sampleId": list(range(N_ITERATION)),
+    "sampleId": list(range(N_ITERATION)),
 }
 paramspace_train_test_split = to_paramspace(params_train_test_split)
 
@@ -71,8 +64,8 @@ paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 # Network embedding
 #
 MODEL_LIST = list(embedding_models.keys())
-#MODEL_LIST = ["GraphSAGE", "GIN", "GAT", "GCN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"] # added to limit
-MODEL_LIST = [m for m in MODEL_LIST if m not in ["EdgeCNN", "dcEdgeCNN", "nonbacktracking", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN" ]]
+MODEL_LIST = ["GraphSAGE", "GIN", "GAT", "GCN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"] # added to limit
+MODEL_LIST = [m for m in MODEL_LIST if m not in ["EdgeCNN", "dcEdgeCNN"]]
 params_emb = {"model": MODEL_LIST, "dim": [128]}
 paramspace_emb = to_paramspace(params_emb)
 
@@ -303,7 +296,7 @@ rule all:
         # All results
         #
         LP_ALL_AUCROC_SCORE_FILE,
-	    RT_ALL_SCORE_FILE,
+	RT_ALL_SCORE_FILE,
         #
         # Generate the link prediction benchmark (Check point 1)
         # [Implement from here] @ vision

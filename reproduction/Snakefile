@@ -227,6 +227,23 @@ LP_SCORE_NET_FILE = j(
     f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
 )
 
+# HITS@K and MRR
+LP_SCORE_HITS_MRR_EMB_FILE = j(
+    RESULT_DIR,
+    "hits-mrr",
+    "{data}",
+    f"result_basedOn~emb_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_emb.wildcard_pattern}.csv",
+)
+LP_SCORE_HITS_MRR_NET_FILE = j(
+    RESULT_DIR,
+    "hits-mrr",
+    "{data}",
+    f"result_basedOn~net_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_net_linkpred.wildcard_pattern}.csv",
+)
+
+
+LP_ALL_HITS_MRR_SCORE_FILE = j(RESULT_DIR, "result_hits_mrr.csv")
+
 # Retrieval task
 RT_SCORE_EMB_FILE = j(
     RESULT_DIR,
@@ -292,11 +309,16 @@ FIG_RBO = j(FIG_DIR, "rbo", f"rbo-{paramspace_rbo.wildcard_pattern}.pdf")
 #
 rule all:
     input:
+        LP_ALL_HITS_MRR_SCORE_FILE
+
+
+rule _all:
+    input:
         #
         # All results
         #
         LP_ALL_AUCROC_SCORE_FILE,
-	RT_ALL_SCORE_FILE,
+	    RT_ALL_SCORE_FILE,
         #
         # Generate the link prediction benchmark (Check point 1)
         # [Implement from here] @ vision
@@ -574,6 +596,51 @@ rule concatenate_aucroc_results:
         )
     output:
         output_file=LP_ALL_AUCROC_SCORE_FILE,
+    script:
+        "workflow/concat-results.py"
+
+#
+# HITS@K and MRR
+#
+rule eval_link_prediction_embedding_hits_mrr:
+    input:
+        input_file=PRED_SCORE_EMB_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=LP_SCORE_HITS_MRR_EMB_FILE,
+    script:
+        "workflow/eval-link-prediction-performance-hits-and-mrr.py"
+
+
+rule eval_link_prediction_networks_hits_mrr:
+    input:
+        input_file=PRED_SCORE_NET_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=LP_SCORE_HITS_MRR_NET_FILE,
+    script:
+        "workflow/eval-link-prediction-performance-hits-and-mrr.py"
+
+rule concatenate_hits_mrr_results:
+    input:
+        input_file_list=expand(
+            LP_SCORE_HITS_MRR_EMB_FILE,
+            data=DATA_LIST,
+            **params_emb,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        )
+        + expand(
+            LP_SCORE_HITS_MRR_NET_FILE,
+            data=DATA_LIST,
+            **params_net_linkpred,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        )
+    output:
+        output_file=LP_ALL_HITS_MRR_SCORE_FILE,
     script:
         "workflow/concat-results.py"
 

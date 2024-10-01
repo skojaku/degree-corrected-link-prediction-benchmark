@@ -284,11 +284,11 @@ rule calc_network_stats:
     script:
         "workflow/calc-network-stats.py"
 
-rule calc_aucroc_pa_powerlaw:
-    output:
-        output_file = AUCROC_PA_POWERLAW_FILE
-    script:
-        "workflow/calc-aucroc-pa-powerlaw.py"
+#rule calc_aucroc_pa_powerlaw:
+#    output:
+#        output_file = AUCROC_PA_POWERLAW_FILE
+#    script:
+#        "workflow/calc-aucroc-pa-powerlaw.py"
 
 # ============================
 # Generating benchmark dataset

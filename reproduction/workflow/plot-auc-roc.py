@@ -68,6 +68,8 @@ plot_data["negativeEdgeSampler"] = plot_data["negativeEdgeSampler"].map(
     {"uniform": "Uniform", "degreeBiased": "Corrected"}
 )
 # %%
+df = plot_data.query("negativeEdgeSampler == 'Corrected' and model == 'preferentialAttachment'")
+df["score"].mean()
 
 # %% ========================
 # Plot

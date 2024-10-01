@@ -31,7 +31,6 @@ FIG_DIR =j("figs")
 DATA_LIST = [
     f.split("net_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
-DATA_LIST = [d for d in DATA_LIST if "ogbl" not in d]
 
 
 # Small networks
@@ -305,14 +304,36 @@ params_rbo = {
 paramspace_rbo = to_paramspace(params_rbo)
 FIG_RBO = j(FIG_DIR, "rbo", f"rbo-{paramspace_rbo.wildcard_pattern}.pdf")
 
+params_hits = {
+    "metric": ["Hits@10", "Hits@20", "Hits@50", "Hits@100"],
+}
+paramspace_hits = to_paramspace(params_hits)
+FIG_HITS = j(FIG_DIR, "hits", f"hits_{paramspace_hits.wildcard_pattern}.pdf")
+FIG_HITS_UNIFORM = j(FIG_DIR, "hits", f"hits_uniform_{paramspace_hits.wildcard_pattern}.pdf")
 
+params_rbo_hits = {
+    "rbop": ["0.5"],
+    "topk": ["50"],
+    "focal_score": ["vp", "prec", "rec"],
+    "metric": ["Hits@10", "Hits@20", "Hits@50", "Hits@100"],
+}
+paramspace_rbo_hits = to_paramspace(params_rbo_hits)
+FIG_RBO_HITS = j(FIG_DIR, "rbo-hits", f"rbo-hits_{paramspace_rbo_hits.wildcard_pattern}.pdf")
 #
 #
 # RULES
 #
 rule all:
     input:
-        LP_ALL_HITS_MRR_SCORE_FILE
+        #LP_ALL_HITS_MRR_SCORE_FILE
+        expand(FIG_DEG_DEG_PLOT, **params_negative_edge_sampler),
+        FIG_AUCROC,
+        FIG_RANK_CHANGE,
+        expand(FIG_RBO, **params_rbo),
+        FIG_DEG_DIST_POS_NEG_EDGES,
+        FIG_AUCROC_LOGNORMAL,
+        expand(FIG_HITS, **params_hits),
+        expand(FIG_RBO_HITS, **params_rbo_hits),
 
 
 rule _all:
@@ -324,7 +345,6 @@ rule _all:
 	    RT_ALL_SCORE_FILE,
         #
         # Generate the link prediction benchmark (Check point 1)
-        # [Implement from here] @ vision
         expand(TARGET_EDGE_TABLE_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler),
         #
         # Network stats (Check point 2)
@@ -360,10 +380,10 @@ rule figs:
         FIG_AUCROC,
         FIG_RANK_CHANGE,
         expand(FIG_RBO, **params_rbo),
-        #FIG_PERF_VS_KURTOSIS_PLOT,
         FIG_DEG_DIST_POS_NEG_EDGES,
-	FIG_AUCROC_LOGNORMAL
-
+        FIG_AUCROC_LOGNORMAL,
+        expand(FIG_HITS, **params_hits),
+        expand(FIG_RBO_HITS, **params_rbo_hits),
 
 # ============================
 # Cleaning networks
@@ -750,3 +770,30 @@ rule plot_aucroc_lognormal:
         output_file=FIG_AUCROC_LOGNORMAL,
     script:
         "workflow/plot-aucroc-lognormal.py"
+
+rule plot_normalized_hits:
+    input:
+        hits_table_file = LP_ALL_HITS_MRR_SCORE_FILE,
+        netstat_table_file = NET_STAT_FILE,
+    output:
+        output_file = FIG_HITS,
+        output_file_uniform = FIG_HITS_UNIFORM,
+    params:
+        metric = lambda wildcards: wildcards.metric
+    script:
+        "workflow/plot-normalized-hits.py"
+
+
+rule plot_rbo_hits:
+    input:
+        classification_result = LP_ALL_HITS_MRR_SCORE_FILE,
+        retrieval_result = RT_ALL_SCORE_FILE,
+    output:
+        output_file = FIG_RBO_HITS,
+    params:
+        rbop = lambda wildcards: wildcards.rbop,
+        topk = lambda wildcards: wildcards.topk,
+        focal_score = lambda wildcards: wildcards.focal_score,
+        metric = lambda wildcards: wildcards.metric
+    script:
+        "workflow/plot-rbo-hits.py"

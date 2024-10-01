@@ -23,6 +23,9 @@ else:
     output_file = "../data/stats/network-stats.csv"
 
 results = []
+
+
+# %%
 for filename in tqdm(input_files):
     dataname = filename.split("/")[-2]
     edge_table = pd.read_csv(filename)
@@ -85,4 +88,6 @@ for filename in tqdm(input_files):
 results = pd.DataFrame(results)
 results.to_csv(output_file, index=False)
 
+# %%
+results.query("network == 'ogbl-collab'")
 # %%

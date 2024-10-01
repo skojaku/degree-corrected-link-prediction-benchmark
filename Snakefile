@@ -31,6 +31,7 @@ FIG_DIR =j("figs")
 DATA_LIST = [
     f.split("net_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
+DATA_LIST = [d for d in DATA_LIST if "ogbl" not in d]
 
 # Small networks
 # Comment out if you want to run for all networks

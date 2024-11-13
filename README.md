@@ -5,7 +5,7 @@
 @article{aiyappa2024implicit,
   title={Implicit degree bias in the link prediction task},
   author={Rachith Aiyappa and Xin Wang and Munjung Kim and Ozgur Can Seckin and Jisung Yoon and Yong-Yeol Ahn and Sadamori Kojaku},
-  journal={arxiv: xxxx}
+  journal={arxiv: 2405.14985}
   year={2024}
 }
 ```
@@ -28,7 +28,7 @@
 This repository provides the code to generate the degree-corrected link prediction task.
 ## Installation
 ```bash
-pip install "git+://git@github.com/skojaku/degree-corrected-link-prediction.git#subdirectory=libs/dclinkpred&egg=dclinkpred"
+pip install "git+https://git@github.com/skojaku/degree-corrected-link-prediction.git#subdirectory=libs/dclinkpred&egg=dclinkpred"
 ```
 or
 ```bash
@@ -41,6 +41,7 @@ pip install -e .
 
 ```python
 from dclinkpred import LinkPredictionDataset
+import networkx as nx
 
 # Create a karate club graph
 G = nx.karate_club_graph()
@@ -52,7 +53,7 @@ lpdata = LinkPredictionDataset(
     testEdgeFraction=0.2, # 20% of the edges will be used for testing
     degree_correction=True, # degree correction will be applied
     negatives_per_positive=10, # 10 negative samples will be generated for each positive sample
-    allow_duplicate_edges=False, # Do not allow duplicate negative edges
+    allow_duplicatd_negatives=False, # Do not allow duplicate negative edges
 )
 lpdata.fit(G) # Fit the dataset
 train_net, src_test, trg_test, y_test = lpdata.transform() # Transform the dataset

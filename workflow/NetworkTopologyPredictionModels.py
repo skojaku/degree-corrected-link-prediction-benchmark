@@ -142,7 +142,6 @@ def localRandomWalkBatch(train_net, maxk, batch_size = None):
     deg = np.array(train_net.sum(axis=1)).reshape(-1)
     deg_inv = 1 / np.maximum(deg, 1)
     P = sparse.diags(deg_inv) @ train_net
-    P_csc = sparse.csc_matrix(P)
 
     predicted = np.zeros((n_nodes, maxk), dtype=np.int32)
     scores = np.zeros((n_nodes, maxk), dtype=np.float32)
@@ -151,8 +150,8 @@ def localRandomWalkBatch(train_net, maxk, batch_size = None):
         end = np.minimum(start + batch_size, n_nodes)
         U = P[start:end, :].toarray()
         P1 = U.copy()
-        P2 = P1 @ P_csc # A @ A
-        P3 = P2 @ P_csc # A @ A + epsilon * A @ A @ A
+        P2 = P1 @ P # A @ A
+        P3 = P2 @ P # A @ A + epsilon * A @ A @ A
         batch_net = P1 + P2 + P3
         batch_net = batch_net - U * batch_net
         batch_net[(np.arange(end-start), np.arange(start, end))] = 0
@@ -204,8 +203,6 @@ def localPathIndex(network, src=None, trg=None, maxk=None, epsilon=1e-3, batch_s
         return np.concatenate(results)[order]
 
 def localPathIndexBatch(train_net, maxk, epsilon = 1e-3, batch_size = None):
-    train_net_csc = sparse.csc_matrix(train_net)
-
     n_nodes = train_net.shape[0]
     if batch_size is None:
         batch_size = n_nodes // 100
@@ -214,14 +211,13 @@ def localPathIndexBatch(train_net, maxk, epsilon = 1e-3, batch_size = None):
 
     predicted = np.zeros((n_nodes, maxk), dtype=np.int32)
     scores = np.zeros((n_nodes, maxk), dtype=np.float32)
-
     for i in range(n_batches):
         start = i * batch_size
         end = np.minimum(start + batch_size, n_nodes)
         U = train_net[start:end, :].toarray()
         batch_net = U.copy()
-        batch_net = batch_net @ train_net_csc # A @ A
-        batch_net = batch_net + epsilon * batch_net @ train_net_csc # A @ A + epsilon * A @ A @ A
+        batch_net = batch_net @ train_net # A @ A
+        batch_net = batch_net + epsilon * batch_net @ train_net # A @ A + epsilon * A @ A @ A
         batch_net = batch_net - U * batch_net
         batch_net[(np.arange(end-start), np.arange(start, end))] = 0
         predicted[start:end] = np.argsort(-batch_net, axis=1)[:, :maxk]

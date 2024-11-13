@@ -28,4 +28,4 @@ dependencies:
   - pyg
   - pytorch-sparse
   - python-igraph
-prefix: /home/skojaku/anaconda3/envs/linkpred/envs/linkpred
+

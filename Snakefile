@@ -64,7 +64,7 @@ paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 # Network embedding
 #
 MODEL_LIST = list(embedding_models.keys())
-MODEL_LIST = ["GraphSAGE", "GIN", "GAT", "GCN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"] # added to limit
+#MODEL_LIST = ["GraphSAGE", "GIN", "GAT", "GCN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"] # added to limit
 MODEL_LIST = [m for m in MODEL_LIST if m not in ["EdgeCNN", "dcEdgeCNN"]]
 params_emb = {"model": MODEL_LIST, "dim": [128]}
 paramspace_emb = to_paramspace(params_emb)
@@ -209,8 +209,9 @@ params_rbo = {
 }
 paramspace_rbo = to_paramspace(params_rbo)
 FIG_RBO = j(FIG_DIR, "rbo", f"rbo-{paramspace_rbo.wildcard_pattern}.pdf")
-
-
+FIG_RANK_CHANGE = j(FIG_DIR, "rank-change.pdf")
+FIG_DEG_DIST_POS_NEG_EDGES =j(FIG_DIR, "deg-pos-neg-edges.pdf")
+FIG_AUCROC_LOGNORMAL = j(FIG_DIR, "auc-roc-log-normal.pdf")
 #
 #
 # RULES
@@ -230,7 +231,7 @@ rule all:
         # Network stats (Check point 2)
         #
         NET_STAT_FILE,
-        AUCROC_PA_POWERLAW_FILE,
+        #AUCROC_PA_POWERLAW_FILE,
         #
         # Link classification (Check point 3)
         #
@@ -257,8 +258,8 @@ rule figs:
         FIG_RANK_CHANGE,
         expand(FIG_RBO, **params_rbo),
         #FIG_PERF_VS_KURTOSIS_PLOT,
-        FIG_DEG_DIST_POS_NEG_EDGES,
-	    FIG_AUCROC_LOGNORMAL
+        #FIG_DEG_DIST_POS_NEG_EDGES,
+	    #FIG_AUCROC_LOGNORMAL
 
 
 # ============================

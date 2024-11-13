@@ -58,7 +58,7 @@ paramspace_train_test_split = to_paramspace(params_train_test_split)
 
 
 params_negative_edge_sampler = {
-    "negativeEdgeSampler": ["uniform", "degreeBiased"],
+    "negativeEdgeSampler": ["uniform", "degreeBiased", "heart"],
 }
 paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 
@@ -520,11 +520,25 @@ rule train_test_edge_split:
         train_net_file=TRAIN_NET_FILE,
     params:
         parameters=paramspace_negative_edge_sampler.instance,
+    wildcard_constraints:
+        negativeEdgeSampler="uniform|degreeBiased"
     output:
         output_target_edge_table_file=TARGET_EDGE_TABLE_FILE,
     script:
         "workflow/generate-test-edges.py"
 
+rule train_test_edge_split_by_heart:
+    input:
+        edge_table_file=EDGE_TABLE_FILE,
+        train_net_file=TRAIN_NET_FILE,
+    params:
+        parameters=paramspace_negative_edge_sampler.instance,
+    wildcard_constraints:
+        negativeEdgeSampler = "heart",
+    output:
+        output_target_edge_table_file=TARGET_EDGE_TABLE_FILE,
+    script:
+        "workflow/generate-test-edges-by-heart.py"
 
 
 # ==============================

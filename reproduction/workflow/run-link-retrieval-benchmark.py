@@ -58,7 +58,7 @@ def sample_candidates_faiss(
     gpu_id = GPUtil.getFirstAvailable(
         order="memory",
         maxLoad=1,
-        maxMemory=0.3,
+        maxMemory=0.5,
         attempts=99999,
         interval=60 * 1,
         verbose=False,

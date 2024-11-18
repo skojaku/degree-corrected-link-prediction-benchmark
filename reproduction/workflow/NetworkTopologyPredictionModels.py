@@ -35,6 +35,7 @@ def commonNeighbors(network, src=None, trg=None, maxk=None):
         return scores, indices
     return np.array((network[src, :].multiply(network[trg, :])).sum(axis=1)).reshape(-1)
 
+
 @topology_model
 def jaccardIndex(network, src=None, trg=None, maxk=None):
     deg = np.array(network.sum(axis=1)).reshape(-1)
@@ -55,7 +56,6 @@ def jaccardIndex(network, src=None, trg=None, maxk=None):
         -1
     )
     return score / np.maximum(deg[src] + deg[trg] - score, 1)
-
 
 
 @topology_model
@@ -111,6 +111,7 @@ def localRandomWalk(network, src=None, trg=None, maxk=None, batch_size=10000):
         scores, indices = find_k_largest_elements(S, maxk)
         return scores, indices
     else:
+
         def batch_local_random_walk(src_batch, trg_batch):
             usrc, src_uids = np.unique(src_batch, return_inverse=True)
             PP = P[usrc, :] @ P
@@ -118,6 +119,7 @@ def localRandomWalk(network, src=None, trg=None, maxk=None, batch_size=10000):
             S = P[usrc, :] + PP + PPP
             S = sparse.diags(deg[usrc] / np.sum(deg)) @ S
             return np.array(S[(src_uids, trg_batch)]).reshape(-1)
+
         batch_size = np.minimum(len(src), batch_size)
         results, results_edge_ids = [], []
         usrc = np.unique(src)
@@ -133,7 +135,8 @@ def localRandomWalk(network, src=None, trg=None, maxk=None, batch_size=10000):
         order = np.argsort(np.concatenate(results_edge_ids))
         return np.concatenate(results)[order]
 
-def localRandomWalkBatch(train_net, maxk, batch_size = None):
+
+def localRandomWalkBatch(train_net, maxk, batch_size=None):
     n_nodes = train_net.shape[0]
     if batch_size is None:
         batch_size = n_nodes // 100
@@ -151,23 +154,28 @@ def localRandomWalkBatch(train_net, maxk, batch_size = None):
         end = np.minimum(start + batch_size, n_nodes)
         U = P[start:end, :].toarray()
         P1 = U.copy()
-        P2 = P1 @ P_csc # A @ A
-        P3 = P2 @ P_csc # A @ A + epsilon * A @ A @ A
+        P2 = P1 @ P_csc  # A @ A
+        P3 = P2 @ P_csc  # A @ A + epsilon * A @ A @ A
         batch_net = P1 + P2 + P3
         batch_net = batch_net - U * batch_net
-        batch_net[(np.arange(end-start), np.arange(start, end))] = 0
+        batch_net[(np.arange(end - start), np.arange(start, end))] = 0
         predicted[start:end] = np.argsort(-batch_net, axis=1)[:, :maxk]
         scores[start:end] = -np.sort(-batch_net, axis=1)[:, :maxk]
     return scores, predicted
 
+
 def pairing(src, trg):
     return complex(src, trg)
+
 
 def depairing(pair):
     return pair.real.astype(int), pair.imag.astype(int)
 
+
 @topology_model
-def localPathIndex(network, src=None, trg=None, maxk=None, epsilon=1e-3, batch_size=10000):
+def localPathIndex(
+    network, src=None, trg=None, maxk=None, epsilon=1e-3, batch_size=10000
+):
     A = network
     if src is None and trg is None:
         assert maxk is not None, "maxk must be specified"
@@ -182,12 +190,14 @@ def localPathIndex(network, src=None, trg=None, maxk=None, epsilon=1e-3, batch_s
         scores, indices = find_k_largest_elements(S, maxk)
         return scores, indices
     else:
+
         def batch_local_path_index(src_batch, trg_batch):
             usrc, src_uids = np.unique(src_batch, return_inverse=True)
             AA_usrc = A[usrc, :] @ A
             AAA_usrc = AA_usrc @ A
             S_usrc = AA_usrc + epsilon * AAA_usrc
             return np.array(S_usrc[(src_uids, trg_batch)]).reshape(-1)
+
         batch_size = np.minimum(len(src), batch_size)
         results, results_edge_ids = [], []
         usrc = np.unique(src)
@@ -203,7 +213,8 @@ def localPathIndex(network, src=None, trg=None, maxk=None, epsilon=1e-3, batch_s
         order = np.argsort(np.concatenate(results_edge_ids))
         return np.concatenate(results)[order]
 
-def localPathIndexBatch(train_net, maxk, epsilon = 1e-3, batch_size = None):
+
+def localPathIndexBatch(train_net, maxk, epsilon=1e-3, batch_size=None):
     train_net_csc = sparse.csc_matrix(train_net)
 
     n_nodes = train_net.shape[0]
@@ -220,13 +231,16 @@ def localPathIndexBatch(train_net, maxk, epsilon = 1e-3, batch_size = None):
         end = np.minimum(start + batch_size, n_nodes)
         U = train_net[start:end, :].toarray()
         batch_net = U.copy()
-        batch_net = batch_net @ train_net_csc # A @ A
-        batch_net = batch_net + epsilon * batch_net @ train_net_csc # A @ A + epsilon * A @ A @ A
+        batch_net = batch_net @ train_net_csc  # A @ A
+        batch_net = (
+            batch_net + epsilon * batch_net @ train_net_csc
+        )  # A @ A + epsilon * A @ A @ A
         batch_net = batch_net - U * batch_net
-        batch_net[(np.arange(end-start), np.arange(start, end))] = 0
+        batch_net[(np.arange(end - start), np.arange(start, end))] = 0
         predicted[start:end] = np.argsort(-batch_net, axis=1)[:, :maxk]
         scores[start:end] = -np.sort(-batch_net, axis=1)[:, :maxk]
     return scores, predicted
+
 
 def find_k_largest_elements(A, k):
     """A is the scipy csr sparse matrix"""

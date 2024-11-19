@@ -53,24 +53,17 @@ test_net = sparse.csr_matrix(
 maxk = 100
 maxk = np.minimum(maxk, train_net.shape[1] - 1)
 
-model, config = buddy.load_model(model_path=model_file, device="cpu")
-
 S = train_net @ train_net
 S = S - S.multiply(train_net)
 
-AA = train_net @ train_net
-AAA = AA @ train_net
-S = AA + AAA
-S = S - S.multiply(train_net)
-S.setdiag(0)
 src, trg, _ = sparse.find(S)
 
+from LinearClassifier import LinearClassifier
 
-candidate_edges = torch.from_numpy(np.column_stack([src, trg])).long().T
-preds = buddy.predict_edge_likelihood(
-    model, train_net, candidate_edges, args=config, device="cpu"
-)
-preds = preds.numpy()
+model = LinearClassifier()
+model.load(model_file)
+preds = model.predict(train_net, src, trg)
+
 predicted = sparse.csr_matrix((preds, (src, trg)), shape=train_net.shape)
 scores, predicted = find_k_largest_elements(predicted, maxk)
 

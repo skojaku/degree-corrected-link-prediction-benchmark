@@ -12,7 +12,7 @@ import sys
 from sklearn.linear_model import LogisticRegression
 import scipy
 import GPUtil
-import buddy
+from MLP import load_model
 
 # %% Load
 if "snakemake" in sys.modules:
@@ -53,23 +53,14 @@ test_net = sparse.csr_matrix(
 maxk = 100
 maxk = np.minimum(maxk, train_net.shape[1] - 1)
 
-model, config = buddy.load_model(model_path=model_file, device="cpu")
+
+model = load_model(model_file, device="cpu")
 
 S = train_net @ train_net
 S = S - S.multiply(train_net)
-
-AA = train_net @ train_net
-AAA = AA @ train_net
-S = AA + AAA
-S = S - S.multiply(train_net)
-S.setdiag(0)
 src, trg, _ = sparse.find(S)
 
-
-candidate_edges = torch.from_numpy(np.column_stack([src, trg])).long().T
-preds = buddy.predict_edge_likelihood(
-    model, train_net, candidate_edges, args=config, device="cpu"
-)
+preds = model.forward_edges(train_net, src, trg)
 preds = preds.numpy()
 predicted = sparse.csr_matrix((preds, (src, trg)), shape=train_net.shape)
 scores, predicted = find_k_largest_elements(predicted, maxk)

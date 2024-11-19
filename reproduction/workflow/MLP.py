@@ -25,6 +25,10 @@ class MLP(torch.nn.Module):
     ):
         super(MLP, self).__init__()
 
+        self.hidden_layers = hidden_layers
+        self.dropout_rate = dropout_rate
+        self.activation = activation
+
         if activation == "relu":
             activation = torch.nn.ReLU
         elif activation == "leaky_relu":
@@ -34,7 +38,7 @@ class MLP(torch.nn.Module):
 
         # Input features: resource allocation, common neighbors, jaccard index,
         # adamic adar, local random walk, and optionally degree
-        input_dim = 4 if not with_degree else 5
+        input_dim = 4 if not with_degree else 7
 
         # Define layers
         layers = []
@@ -104,12 +108,14 @@ def save_model(self, filepath):
         "mean": self.mean,
         "std": self.std,
         "with_degree": self.with_degree,
+        "hidden_layers": self.hidden_layers,
+        "dropout_rate": self.dropout_rate,
+        "activation": self.activation,
     }
     torch.save(save_dict, filepath)
 
 
-@classmethod
-def load_model(cls, filepath, device="cpu"):
+def load_model(filepath, device="cpu"):
     """Load a trained model from disk.
 
     Args:
@@ -122,7 +128,12 @@ def load_model(cls, filepath, device="cpu"):
     checkpoint = torch.load(filepath, map_location=device)
 
     # Create new model instance
-    model = cls(with_degree=checkpoint["with_degree"])
+    model = MLP(
+        with_degree=checkpoint["with_degree"],
+        hidden_layers=checkpoint["hidden_layers"],
+        dropout_rate=checkpoint["dropout_rate"],
+        activation=checkpoint["activation"],
+    )
 
     # Load model parameters and scaling
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -158,7 +169,15 @@ def compute_network_stats(network, src, trg, with_degree=False, std=None, mean=N
         # Add degree product if enabled
         deg = network.sum(axis=1).A1
         deg_prod = deg[src] * deg[trg]
-        features = [ra, ji, aa, lrw, deg_prod]
+        features = [
+            ra,
+            ji,
+            aa,
+            lrw,
+            np.maximum(deg[trg], deg[src]),
+            np.minimum(deg[trg], deg[src]),
+            deg_prod,
+        ]
     else:
         features = [ra, ji, aa, lrw]
 
@@ -226,9 +245,10 @@ def train_mlp_with_early_stopping(
     y_val = y_val
     for epoch in pbar:
         total_loss = 0
+        order = np.random.permutation(len(X_train_rescaled))
         for i in range(0, len(X_train_rescaled), batch_size):
-            batch_x = X_train_rescaled[i : i + batch_size]
-            batch_y = y_train[i : i + batch_size]
+            batch_x = X_train_rescaled[order[i : i + batch_size]]
+            batch_y = y_train[order[i : i + batch_size]]
 
             optimizer.zero_grad()
             pred = model(batch_x)
@@ -280,6 +300,7 @@ def train_heldout(
     device="cpu",
     lr=0.001,
     epochs=500,
+    batch_size=1024 * 5,
 ):
     """
     Train MLP model with hyperparameter tuning using held-out validation set.
@@ -301,7 +322,7 @@ def train_heldout(
     # Default parameter ranges if none provided
     if param_ranges is None:
         param_ranges = {
-            "hidden_layers": [[32], [32, 32], [256], [256, 256]],
+            "hidden_layers": [[32], [32, 32], [64], [64, 64]],
             "dropout_rate": [0.2, 0.5],
             "activation": ["relu", "leaky_relu"],
         }
@@ -310,9 +331,9 @@ def train_heldout(
     param_combinations = list(product(*param_ranges.values()))
 
     # Split positive edges into train/val sets
-    pos_src, pos_trg, _ = sparse.find(network)
+    pos_src, pos_trg, _ = sparse.find(sparse.triu(network, 1))
     train_src, val_src, train_trg, val_trg = train_test_split(
-        pos_src, pos_trg, test_size=0.1
+        pos_src, pos_trg, test_size=0.25
     )
 
     # Sample negative edges for training and validation
@@ -379,6 +400,7 @@ def train_heldout(
             patience=max_patience,
             device=device,
             lr=lr,
+            batch_size=batch_size,
         )
 
         if val_score > best_val_score:

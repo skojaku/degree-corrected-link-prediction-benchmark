@@ -85,6 +85,20 @@ paramspace_buddy = to_paramspace(params_buddy)
 BUDDY_MODEL_DIR_FILE = j(DERIVED_DIR, "models", "buddy", "{data}", f"buddy_{paramspace_buddy.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}")
 
 #
+# MLP model
+#
+params_mlp = {"model": ["MLP"], "trainNegativeEdgeSampler": ["uniform"], "withDegree": [True, False]}
+paramspace_mlp = to_paramspace(params_mlp)
+MLP_MODEL_FILE = j(DERIVED_DIR, "models", "mlp", "{data}", f"mlp_{paramspace_mlp.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.pth")
+
+#
+# Linear classifier
+#
+params_linear = {"model": ["LinearClassifier"], "trainNegativeEdgeSampler": ["uniform"]}
+paramspace_linear = to_paramspace(params_linear)
+LINEAR_MODEL_FILE = j(DERIVED_DIR, "models", "linear", "{data}", f"linear_{paramspace_linear.wildcard_pattern}_{paramspace_train_test_split.wildcard_pattern}.pickle")
+
+#
 # Network-based link prediction
 #
 params_net_linkpred = {
@@ -197,6 +211,24 @@ PRED_SCORE_BUDDY_FILE = j(
 )
 
 #
+# MLP model
+#
+PRED_SCORE_MLP_FILE = j(
+    PRED_DIR,
+    "{data}",
+    f"score_basedOn~mlp_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_mlp.wildcard_pattern}.csv",
+)
+
+#
+# Linear classifier
+#
+PRED_SCORE_LINEAR_FILE = j(
+    PRED_DIR,
+    "{data}",
+    f"score_basedOn~linearClassifier_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_linear.wildcard_pattern}.csv",
+)
+
+#
 # Optimal Stacking
 #
 TRAIN_FEATURE_MATRIX = j(
@@ -306,6 +338,51 @@ RT_SCORE_BUDDY_FILE = j(
 )
 
 
+#
+# MLP model (added)
+#
+LP_SCORE_MLP_FILE = j(
+    RESULT_DIR,
+    "auc-roc",
+    "{data}",
+    f"result_basedOn~mlp_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_mlp.wildcard_pattern}.csv",
+)
+LP_SCORE_HITS_MRR_MLP_FILE = j(
+    RESULT_DIR,
+    "hits-mrr",
+    "{data}",
+    f"result_basedOn~mlp_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_mlp.wildcard_pattern}.csv",
+)
+
+RT_SCORE_MLP_FILE = j(
+    RESULT_DIR,
+    "retrieval",
+    "{data}",
+    f"result_basedOn~mlp_{paramspace_train_test_split.wildcard_pattern}_{paramspace_mlp.wildcard_pattern}.csv",
+)
+
+#
+# Linear classifier (added)
+#
+LP_SCORE_LINEAR_FILE = j(
+    RESULT_DIR,
+    "auc-roc",
+    "{data}",
+    f"result_basedOn~linearClassifier_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_linear.wildcard_pattern}.csv",
+)
+LP_SCORE_HITS_MRR_LINEAR_FILE = j(
+    RESULT_DIR,
+    "hits-mrr",
+    "{data}",
+    f"result_basedOn~linearClassifier_{paramspace_train_test_split.wildcard_pattern}_{paramspace_negative_edge_sampler.wildcard_pattern}_{paramspace_linear.wildcard_pattern}.csv",
+)
+RT_SCORE_LINEAR_FILE = j(
+    RESULT_DIR,
+    "retrieval",
+    "{data}",
+    f"result_basedOn~linearClassifier_{paramspace_train_test_split.wildcard_pattern}_{paramspace_linear.wildcard_pattern}.csv",
+)
+
 RT_ALL_SCORE_FILE = j(RESULT_DIR, "result_retrieval.csv")
 
 # Concatenated results
@@ -387,6 +464,17 @@ rule _all_buddy:
         expand(LP_SCORE_HITS_MRR_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_buddy),
         expand(RT_SCORE_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_buddy),
 
+rule _all_mlp:
+    input:
+        expand(LP_SCORE_MLP_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_mlp),
+        expand(LP_SCORE_HITS_MRR_MLP_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_mlp),
+        expand(RT_SCORE_MLP_FILE, data=DATA_LIST, **params_train_test_split, **params_mlp),
+
+rule _all_linear:
+    input:
+        expand(LP_SCORE_LINEAR_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_linear),
+        expand(LP_SCORE_HITS_MRR_LINEAR_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_linear),
+        expand(RT_SCORE_LINEAR_FILE, data=DATA_LIST, **params_train_test_split, **params_linear),
 
 rule _all:
     input:
@@ -612,6 +700,26 @@ rule train_buddy_model:
     script:
         "workflow/train_buddy_model.py"
 
+rule train_mlp_model:
+    input:
+        net_file=TRAIN_NET_FILE,
+    output:
+        output_file=MLP_MODEL_FILE,
+    params:
+        parameters = paramspace_mlp.instance,
+    script:
+        "workflow/train_mlp_model.py"
+
+rule train_linear_model:
+    input:
+        net_file=TRAIN_NET_FILE,
+    output:
+        output_file=LINEAR_MODEL_FILE,
+    params:
+        parameters=paramspace_linear.instance,
+    script:
+        "workflow/train_linearClassifier_model.py"
+
 #
 # Positive vs Negative
 #
@@ -631,10 +739,37 @@ rule buddy_link_prediction:
     input:
         input_file=TARGET_EDGE_TABLE_FILE,
         model_file=BUDDY_MODEL_DIR_FILE,
+        net_file = TRAIN_NET_FILE,
     output:
         output_file=PRED_SCORE_BUDDY_FILE,
+    params:
+        parameters=paramspace_buddy.instance,
     script:
         "workflow/buddy-link-prediction.py"
+
+rule mlp_link_prediction:
+    input:
+        input_file=TARGET_EDGE_TABLE_FILE,
+        model_file=MLP_MODEL_FILE,
+        net_file = TRAIN_NET_FILE,
+    output:
+        output_file=PRED_SCORE_MLP_FILE,
+    params:
+        parameters=paramspace_mlp.instance,
+    script:
+        "workflow/mlp-link-prediction.py"
+
+rule linearClassifier_link_prediction:
+    input:
+        input_file=TARGET_EDGE_TABLE_FILE,
+        model_file=LINEAR_MODEL_FILE,
+        net_file = TRAIN_NET_FILE,
+    output:
+        output_file=PRED_SCORE_LINEAR_FILE,
+    params:
+        parameters=paramspace_linear.instance,
+    script:
+        "workflow/linearClassifier-link-prediction.py"
 
 # ==============================
 # Prediction based on networks
@@ -693,6 +828,26 @@ rule eval_link_prediction_buddy:
     script:
         "workflow/eval-link-prediction-performance.py"
 
+rule eval_link_prediction_mlp:
+    input:
+        input_file=PRED_SCORE_MLP_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=LP_SCORE_MLP_FILE,
+    script:
+        "workflow/eval-link-prediction-performance.py"
+
+rule eval_link_prediction_linearClassifier:
+    input:
+        input_file=PRED_SCORE_LINEAR_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=LP_SCORE_LINEAR_FILE,
+    script:
+        "workflow/eval-link-prediction-performance.py"
+
 rule concatenate_aucroc_results:
     input:
         input_file_list=expand(
@@ -715,6 +870,18 @@ rule concatenate_aucroc_results:
             **params_negative_edge_sampler,
             **params_train_test_split,
             **params_buddy
+        ) + expand(
+            LP_SCORE_MLP_FILE,
+            data=DATA_LIST,
+            **params_negative_edge_sampler,
+            **params_train_test_split,
+            **params_mlp
+        ) + expand(
+            LP_SCORE_LINEAR_FILE,
+            data=DATA_LIST,
+            **params_negative_edge_sampler,
+            **params_train_test_split,
+            **params_linear
         )
     output:
         output_file=LP_ALL_AUCROC_SCORE_FILE,
@@ -756,6 +923,26 @@ rule eval_link_prediction_buddy_hits_mrr:
     script:
         "workflow/eval-link-prediction-performance-hits-and-mrr.py"
 
+rule eval_link_prediction_mlp_hits_mrr:
+    input:
+        input_file=PRED_SCORE_MLP_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=LP_SCORE_HITS_MRR_MLP_FILE,
+    script:
+        "workflow/eval-link-prediction-performance-hits-and-mrr.py"
+
+rule linearClassifier_link_prediction_hits_mrr:
+    input:
+        input_file=PRED_SCORE_LINEAR_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=LP_SCORE_HITS_MRR_LINEAR_FILE,
+    script:
+        "workflow/eval-link-prediction-performance-hits-and-mrr.py"
+
 rule concatenate_hits_mrr_results:
     input:
         input_file_list=expand(
@@ -778,6 +965,18 @@ rule concatenate_hits_mrr_results:
             **params_negative_edge_sampler,
             **params_train_test_split,
             **params_buddy
+        ) + expand(
+            LP_SCORE_HITS_MRR_MLP_FILE,
+            data=DATA_LIST,
+            **params_negative_edge_sampler,
+            **params_train_test_split,
+            **params_mlp
+        ) + expand(
+            LP_SCORE_HITS_MRR_LINEAR_FILE,
+            data=DATA_LIST,
+            **params_negative_edge_sampler,
+            **params_train_test_split,
+            **params_linear
         )
     output:
         output_file=LP_ALL_HITS_MRR_SCORE_FILE,
@@ -826,13 +1025,37 @@ rule eval_link_retrieval_buddy:
     script:
         "workflow/run-link-retrieval-benchmark-buddy.py"
 
+rule eval_link_retrieval_mlp:
+    input:
+        train_net_file = TRAIN_NET_FILE,
+        test_edge_file = TEST_EDGE_TABLE_FILE,
+        model_file = MLP_MODEL_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=RT_SCORE_MLP_FILE,
+    script:
+        "workflow/run-link-retrieval-benchmark-buddy.py"
+
+rule eval_link_retrieval_linearClassifier:
+    input:
+        train_net_file = TRAIN_NET_FILE,
+        test_edge_file = TEST_EDGE_TABLE_FILE,
+        model_file = LINEAR_MODEL_FILE,
+    params:
+        data_name=lambda wildcards: wildcards.data,
+    output:
+        output_file=RT_SCORE_LINEAR_FILE,
+    script:
+        "workflow/run-link-retrieval-benchmark-linearClassifier.py"
+
 rule all_retrieval:
     input:
         RT_ALL_SCORE_FILE,
 
 rule concatenate_results_retrieval:
     input:
-        input_file_list=expand(RT_SCORE_EMB_FILE, data=DATA_LIST, **params_emb, **params_train_test_split) + expand(RT_SCORE_NET_FILE, data=DATA_LIST, **params_net_linkpred, **params_train_test_split) + expand(RT_SCORE_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_buddy)
+        input_file_list=expand(RT_SCORE_EMB_FILE, data=DATA_LIST, **params_emb, **params_train_test_split) + expand(RT_SCORE_NET_FILE, data=DATA_LIST, **params_net_linkpred, **params_train_test_split) + expand(RT_SCORE_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_buddy) + expand(RT_SCORE_MLP_FILE, data=DATA_LIST, **params_negative_edge_sampler, **params_train_test_split, **params_mlp) + expand(RT_SCORE_LINEAR_FILE, data=DATA_LIST, **params_negative_edge_sampler, **params_train_test_split, **params_linear)
     output:
         output_file=RT_ALL_SCORE_FILE,
     script:

@@ -63,14 +63,14 @@ else:
     # Results Retrievals
     input_file_list = list(glob.glob("../data/derived/results/retrieval/*/*.csv"))
     output_file = "../data/derived/results/result_retrieval.csv"
-    
+
     # Results Retrievals
-    input_file_list = list(glob.glob("../data/derived/results/retrieval/*/*.csv"))
-    output_file = "../data/derived/results/result_retrieval.csv"
-    
+    # input_file_list = list(glob.glob("../data/derived/results/retrieval/*/*.csv"))
+    # output_file = "../data/derived/results/result_retrieval.csv"
+
     # Results Retrievals
-    #input_file_list = list(glob.glob("../data/derived/results/hits-mrr/*/*.csv"))
-    #output_file = "../data/derived/results/result_hits-mrr.csv"
+    # input_file_list = list(glob.glob("../data/derived/results/hits-mrr/*/*.csv"))
+    # output_file = "../data/derived/results/result_hits-mrr.csv"
 
 # ========================
 # Load

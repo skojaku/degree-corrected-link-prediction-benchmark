@@ -217,15 +217,16 @@ def train_heldout(
                 {
                     "args": args.copy(),
                     "val_score": best_val_score,
-                    "model": model,
                 }
             )
+        # Clear model and metrics to free memory after each iteration
+        del model
+        torch.cuda.empty_cache()
 
     # Sort results by validation score
     results.sort(key=lambda x: x["val_score"], reverse=True)
 
     best_args = results[0]["args"]
-    best_model = results[0]["model"]
     best_args.val_pct = 0.0
 
     best_model = train(

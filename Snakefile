@@ -56,7 +56,8 @@ paramspace_train_test_split = to_paramspace(params_train_test_split)
 
 
 params_negative_edge_sampler = {
-    "negativeEdgeSampler": ["uniform", "degreeBiased"],
+    "negativeEdgeSampler": ["heart"],
+    #"negativeEdgeSampler": ["uniform", "degreeBiased", "heart"],
 }
 paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 

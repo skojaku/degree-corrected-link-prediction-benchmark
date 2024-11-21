@@ -102,13 +102,21 @@ Additionally, we need the following custom packages to run the experiments.
 These packages can be installed via pip as follows:
 ```bash
 pip install git+https://github.com/skojaku/gnn-tools.git@v1.0
-pip install git+https://github.com/skojaku/embcom.git@v1.01
+#pip install git+https://github.com/skojaku/embcom.git@v1.01
+pip install git+https://github.com/igraph/python-igraph
 ```
 And to install the LFR benchmark package:
 ```bash
 git clone https://github.com/skojaku/LFR-benchmark
 cd LFR-benchmark
 python setup.py build
+pip install -e .
+```
+
+And install the embcom package:
+```bash
+git clone https://github.com/skojaku/embcom
+cd embcom/libs/embcom
 pip install -e .
 ```
 
@@ -142,3 +150,4 @@ The file should be in the edge list format with 2 columns representing the sourc
 1 4
 ```
 where each row forms an edge between the source and destination nodes, and the node IDs should start from 1.
+

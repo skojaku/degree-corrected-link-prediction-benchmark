@@ -8,24 +8,17 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import gnn_tools
-import faiss
 import sys
 from sklearn.linear_model import LogisticRegression
 import scipy
 import GPUtil
+from MLP import load_model
 
 # %% Load
 if "snakemake" in sys.modules:
     train_net_file = snakemake.input["train_net_file"]
     test_edge_file = snakemake.input["test_edge_file"]
-    emb_file = (
-        snakemake.input["emb_file"]
-        if "emb_file" in list(snakemake.input.keys())
-        else None
-    )
-    model = snakemake.params["model"]
-    model_type = snakemake.params["model_type"]
-    # sampling = snakemake.params["sampling"]
+    model_file = snakemake.input["model_file"]
     data_name = snakemake.params["data_name"]
     output_file = snakemake.output["output_file"]
 else:
@@ -47,45 +40,6 @@ else:
     # sampling = "degreeBiased"
 
 
-def sample_candidates_faiss(
-    emb,
-    net,
-    maxk=100,
-    sampling="uniform",
-    test_edge_frac=0.25,
-):
-    res = faiss.StandardGpuResources()  # Use standard GPU resources
-    gpu_id = GPUtil.getFirstAvailable(
-        order="memory",
-        maxLoad=1,
-        maxMemory=0.5,
-        attempts=99999,
-        interval=60 * 1,
-        verbose=False,
-    )[0]
-
-    if sampling == "degreeBiased":
-        index = faiss.IndexFlatIP(emb.shape[1] + 1)  # Initialize the index on CPU
-        gpu_index = faiss.index_cpu_to_gpu(res, gpu_id, index)  # Move the index to GPU
-        deg = np.array(net.sum(axis=1)).flatten()
-        emb_key, emb_query = emb.copy(), emb.copy()
-        emb_key = np.hstack([emb_key, np.log(np.maximum(1, deg.reshape(-1, 1)))])
-        emb_query = np.hstack([emb_query, np.ones((emb_query.shape[0], 1))])
-        gpu_index.add(emb_key.astype("float32"))  # Add vectors to the index on GPU
-        D, I = gpu_index.search(
-            emb_query.astype("float32"), int(maxk)
-        )  # Perform the search on GPU
-        return D, I
-
-    index = faiss.IndexFlatIP(emb.shape[1])  # Initialize the index on CPU
-    gpu_index = faiss.index_cpu_to_gpu(res, gpu_id, index)  # Move the index to GPU
-    gpu_index.add(emb.astype("float32"))  # Add vectors to the index on GPU
-    D, I = gpu_index.search(
-        emb.astype("float32"), int(maxk)
-    )  # Perform the search on GPU
-    return D, I
-
-
 #  Preprocess
 train_net = sparse.load_npz(train_net_file)
 train_net = train_net + train_net.T
@@ -95,26 +49,24 @@ df = pd.read_csv(test_edge_file)
 test_net = sparse.csr_matrix(
     (df["isPositiveEdge"], (df["src"], df["trg"])), shape=train_net.shape
 )
+
 maxk = 100
 maxk = np.minimum(maxk, train_net.shape[1] - 1)
 
-if model_type == "topology":
-    scores, predicted = topology_models[model](train_net, maxk=maxk)
-elif model_type == "embedding":
-    assert emb_file is not None, "embedding file must be provided"
-    data = np.load(emb_file)
-    emb = data["emb"]
-    scores, predicted = sample_candidates_faiss(
-        emb,
-        train_net,
-        maxk=maxk,
-        sampling=(
-            "uniform"
-            # if model not in ["dcGIN", "dcGAT", "dcGraphSAGE", "dcGCN"]
-            # else "degreeBiased"
-        ),
-    )
-#
+
+model = load_model(model_file, device="cpu")
+model.eval()
+
+S = train_net @ train_net
+S = S - S.multiply(train_net)
+src, trg, _ = sparse.find(S)
+
+preds = model.forward_edges(train_net, src, trg)
+preds = preds.detach().numpy()
+prediction = sparse.csr_matrix((preds, (src, trg)), shape=S.shape)
+scores, predicted = find_k_largest_elements(prediction, maxk)
+
+
 # ========================
 # Evaluations
 # ========================
@@ -138,5 +90,3 @@ for topk in [5, 10, 25, 50, 100]:
 result = pd.DataFrame(result)
 
 result.to_csv(output_file, index=False)
-
-# %%

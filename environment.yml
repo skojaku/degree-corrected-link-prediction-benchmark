@@ -1,4 +1,4 @@
-name: linkpred
+name: mylinkpred
 channels:
   - conda-forge
   - defaults

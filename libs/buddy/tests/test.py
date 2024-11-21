@@ -61,13 +61,13 @@ model, config = buddy.train_heldout(
     adj_matrix,
     model_file_path="saved_models",
     config=config,
-    param_ranges={
-        "num_hops": [1, 2],
-        "hidden_channels": [256, 1024],
-        "feature_dropout": [0.2, 0.5],
-        "use_RA": [True, False],
-    },
-    max_patience=5,
+#    param_ranges={
+#        "num_hops": [1, 2],
+#        "hidden_channels": [256, 1024],
+#        "feature_dropout": [0.2, 0.5],
+#        "use_RA": [True, False],
+#    },
+#    max_patience=5,
     device="cuda:1",
 )
 # %%

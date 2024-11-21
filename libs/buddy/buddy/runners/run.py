@@ -262,11 +262,12 @@ def train(
     Wrapper function to train and evaluate BUDDY model using original infrastructure
     """
     # Create PyG Data object
-    dataset, args, train_loader, train_eval_loader, val_loader = compile_data(
+    dataset, args, train_loader, train_eval_loader = compile_data(
         adj_matrix=adj_matrix,
         device=device,
         node_features=node_features,
-        config=args,
+        config=config,
+        only_train_loader=True
     )
 
     # Initialize model
@@ -294,7 +295,7 @@ def train(
     return model
 
 
-def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = None):
+def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = None, only_train_loader = False):
     """
     Compile data into format expected by get_train_loaders
 
@@ -321,9 +322,10 @@ def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = N
     data = Data(x=x, edge_index=edge_index)
 
     # Split data using RandomLinkSplit
+    print(args.test_pct)
     transform = RandomLinkSplit(
-        num_val=args.val_pct,
-        num_test=args.test_pct,
+        num_val=0 if only_train_loader else args.val_pct,
+        num_test=0 if only_train_loader else args.test_pct,
         is_undirected=True,
         add_negative_train_samples=True,
         neg_sampling_ratio=1.0,
@@ -357,10 +359,16 @@ def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = N
     }
 
     # Get data loaders using original infrastructure
-    train_loader, train_eval_loader, val_loader = get_loaders(
-        args, dataset, splits, directed=False
-    )
-    return dataset, args, train_loader, train_eval_loader, val_loader
+    if only_train_loader: 
+        train_loader, train_eval_loader = get_train_loaders(
+            args, dataset, splits, directed=False
+        )
+        return dataset, args, train_loader, train_eval_loader
+    else:
+        train_loader, train_eval_loader, val_loader = get_loaders(
+            args, dataset, splits, directed=False
+        )
+        return dataset, args, train_loader, train_eval_loader, val_loader
 
 
 def train_with_early_stopping(

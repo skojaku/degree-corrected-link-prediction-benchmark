@@ -27,6 +27,9 @@ import os
 import json
 from dataclasses import asdict
 from typing import Tuple, Optional
+from torch_geometric.transforms import RandomLinkSplit
+from torch_geometric.data import Data
+import torch
 
 
 # Suppress SparseEfficiencyWarning
@@ -86,7 +89,7 @@ class BuddyConfig:
     use_edge_weight: bool = False
 
     # Training settings
-    lr: float = 0.0001
+    lr: float = 0.001  # 0.0001
     weight_decay: float = 0
     epochs: int = 100
     num_workers: int = 4
@@ -94,8 +97,8 @@ class BuddyConfig:
     train_node_embedding: bool = True
     propagate_embeddings: bool = False
     loss: str = "bce"
-    add_normed_features: Optional[bool] = None
-    use_RA: bool = True
+    add_normed_features: Optional[bool] = True
+    use_RA: bool = False
 
     # SEAL specific settings
     dynamic_train: bool = False
@@ -109,13 +112,13 @@ class BuddyConfig:
     eval_steps: int = 1
     log_steps: int = 1
     eval_metric: str = "hits"
-    K: int = 100
+    K: int = 50  # 100
 
     # Hash settings
     use_zero_one: bool = False
     floor_sf: bool = False
     hll_p: int = 8
-    minhash_num_perm: int = 128
+    minhash_num_perm: int = 64  # 128
     max_hash_hops: int = 2
     subgraph_feature_batch_size: int = 11000000
 
@@ -169,17 +172,17 @@ def train_heldout(
     node_features=None,
     config: BuddyConfig = None,
     model_file_path=None,
-    max_patience=30,
+    max_patience=5,
     param_ranges=None,
     device="cpu",
 ):
     # Use provided param_ranges or default to an empty dict
     if param_ranges is None:
         param_ranges = {
-            "num_hops": [1, 2],
+            "num_hops": [2],
             "hidden_channels": [256, 1024],
-            "feature_dropout": [0.2, 0.5],
-            "use_RA": [True, False],
+            "feature_dropout": [0.05, 0.2],
+            # "use_RA": [True, False],
         }
 
     # Generate all parameter combinations
@@ -197,14 +200,22 @@ def train_heldout(
         args = base_config.copy()
         for name, value in zip(param_names, combination):
             setattr(args, name, value)
+        dataset, args, train_loader, train_eval_loader, val_loader = compile_data(
+            adj_matrix=adj_matrix,
+            device=device,
+            node_features=node_features,
+            config=args,
+        )
 
         model, metrics = train_with_early_stopping(
-            adj_matrix,
-            node_features,
-            args,
+            dataset=dataset,
+            args=args,
+            device=device,
+            train_loader=train_loader,
+            train_eval_loader=train_eval_loader,
+            val_loader=val_loader,
             model_file_path=None,
             max_patience=max_patience,
-            device=device,
         )
 
         score = list(metrics.values())[0]
@@ -234,6 +245,7 @@ def train_heldout(
         node_features=node_features,
         config=best_args,
         model_file_path=model_file_path,
+        device=device,
     )
 
     return best_model, best_args
@@ -249,61 +261,12 @@ def train(
     """
     Wrapper function to train and evaluate BUDDY model using original infrastructure
     """
-    from torch_geometric.transforms import RandomLinkSplit
-    from torch_geometric.data import Data
-    import torch
-
-    args = BuddyConfig() if config is None else config
-    # args = default_args
-    device = torch.device(device)
-
-    if node_features is None:
-        node_features = np.zeros((adj_matrix.shape[0], 0))
-
     # Create PyG Data object
-    edge_index = torch.from_numpy(np.array(adj_matrix.nonzero())).long()
-    x = torch.from_numpy(node_features).float()
-    data = Data(x=x, edge_index=edge_index)
-
-    # Split data using RandomLinkSplit
-    transform = RandomLinkSplit(
-        num_val=0.0,
-        num_test=0.0,
-        is_undirected=True,
-        add_negative_train_samples=True,
-        neg_sampling_ratio=1.0,
-    )
-
-    train_data, val_data, test_data = transform(data)
-
-    # Create dataset object for BUDDY
-    class CustomDataset:
-        def __init__(self, root, x, data, edge_index, num_features):
-            self.root = root
-            self.x = x
-            self.data = data
-            self.edge_index = edge_index
-            self.num_features = num_features
-            self.data = data  # Store the original data
-
-    dataset = CustomDataset(
-        root="./",
-        data=data,
-        x=x,
-        edge_index=train_data.edge_index,
-        num_features=node_features.shape[1],
-    )
-
-    # Create splits in format expected by get_hashed_train_val_test_datasets
-    splits = {
-        "train": train_data,  # Keep the full PyG Data objects
-        "valid": val_data,
-        # "test": test_data,
-    }
-
-    # Get data loaders using original infrastructure
-    train_loader, train_eval_loader = get_train_loaders(
-        args, dataset, splits, directed=False
+    dataset, args, train_loader, train_eval_loader, val_loader = compile_data(
+        adj_matrix=adj_matrix,
+        device=device,
+        node_features=node_features,
+        config=args,
     )
 
     # Initialize model
@@ -331,20 +294,19 @@ def train(
     return model
 
 
-def train_with_early_stopping(
-    adj_matrix,
-    node_features=None,
-    config: BuddyConfig = None,
-    model_file_path=None,
-    max_patience=30,
-    device="cpu",
-):
+def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = None):
     """
-    Wrapper function to train and evaluate BUDDY model using original infrastructure
+    Compile data into format expected by get_train_loaders
+
+    Parameters
+    ----------
+    adj_matrix : scipy.sparse.csr_matrix
+        Adjacency matrix of the graph
+    node_features : numpy.ndarray, optional
+        Node features, by default None
+    config : BuddyConfig, optional
+        Configuration object, by default None
     """
-    from torch_geometric.transforms import RandomLinkSplit
-    from torch_geometric.data import Data
-    import torch
 
     args = BuddyConfig() if config is None else config
     # args = default_args
@@ -398,6 +360,25 @@ def train_with_early_stopping(
     train_loader, train_eval_loader, val_loader = get_loaders(
         args, dataset, splits, directed=False
     )
+    return dataset, args, train_loader, train_eval_loader, val_loader
+
+
+def train_with_early_stopping(
+    # adj_matrix,
+    # node_features=None,
+    # config: BuddyConfig = None,
+    dataset,
+    args,
+    device,
+    train_loader,
+    train_eval_loader,
+    val_loader,
+    model_file_path=None,
+    max_patience=30,
+):
+    """
+    Wrapper function to train and evaluate BUDDY model using original infrastructure
+    """
 
     # Initialize model
     emb = select_embedding(args, dataset.data.num_nodes, device)

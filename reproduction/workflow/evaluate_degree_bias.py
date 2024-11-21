@@ -10,6 +10,7 @@ if "snakemake" in sys.modules:
     edge_table_file = snakemake.input["edge_table_file"]
     pred_score_file = snakemake.input["pred_score_file"]
     nGroups = snakemake.params["parameters"]["nGroups"]
+    splitCriterion = snakemake.params["parameters"]["splitCriterion"]
     output_file = snakemake.output["output_file"]
 else:
     pred_score_file = "../data/derived/link-prediction/ht09-contact-list/score_basedOn~emb_testEdgeFraction~0.5_sampleId~3_negativeEdgeSampler~degreeBiased_model~dcSBM_dim~64.csv"
@@ -49,11 +50,6 @@ def get_deg_groups(x, nGroups):
     return np.array(groups - 1).astype(int)
 
 
-deg_groups = get_deg_groups(np.concatenate([deg[src], deg[trg]]), nGroups)
-src_groups = deg_groups[: len(src)]
-trg_groups = deg_groups[len(src) :]
-
-
 def calc_hitsk(y, ypred, k):
     order = np.argsort(-ypred)
     y, ypred = y[order], ypred[order]
@@ -72,85 +68,72 @@ def calc_mrr(y, ypred):
     return score
 
 
-deg_src = deg[src]
-deg_trg = deg[trg]
+if splitCriterion == "degdeg":
+    edge_score = deg[src] * deg[trg]
+elif splitCriterion == "degsum":
+    edge_score = deg[src] + deg[trg]
+elif splitCriterion == "degmax":
+    edge_score = np.maximum(deg[src], deg[trg])
+elif splitCriterion == "degmin":
+    edge_score = np.minimum(deg[src], deg[trg])
+else:
+    raise ValueError(f"Unknown split criterion: {splitCriterion}")
 
+edge_groups = get_deg_groups(edge_score, nGroups)
+
+
+# ========================
+# Calculate scores
+# ========================
 score_results = []
-for i in range(nGroups):
-    y_i = np.concatenate([y[src_groups == i], y[trg_groups == i]])
-    if np.all(y_i == 0) or np.all(y_i == 1):
-        continue
-    ypred_i = np.concatenate([ypred[src_groups == i], ypred[trg_groups == i]])
+for pos_i in range(nGroups):
+    for neg_j in range(nGroups):
+        edge_score_pos = edge_score[(edge_groups == pos_i) & (y == 1)]
+        edge_score_neg = edge_score[(edge_groups == neg_j) & (y == 0)]
 
-    aucroc_i = roc_auc_score(y_i, ypred_i)
-    deg_min = np.min(
-        np.concatenate([deg_src[src_groups == i], deg_trg[trg_groups == i]])
-    )
-    deg_max = np.max(
-        np.concatenate([deg_src[src_groups == i], deg_trg[trg_groups == i]])
-    )
-    quantile = i / nGroups
+        yij = np.concatenate(
+            [np.ones(len(edge_score_pos)), np.zeros(len(edge_score_neg))]
+        )
+        edge_score_ij = np.concatenate([edge_score_pos, edge_score_neg])
 
-    score_results.append(
-        {
-            "metric": "aucroc",
-            "score": aucroc_i,
-            "group": i,
-            "deg_min": deg_min,
-            "deg_max": deg_max,
-            "quantile": quantile,
-        }
-    )
+        aucroc_ij = roc_auc_score(yij, edge_score_ij)
 
-# Hits
-for i in range(nGroups):
-    y_i = np.concatenate([y[src_groups == i], y[trg_groups == i]])
-    ypred_i = np.concatenate([ypred[src_groups == i], ypred[trg_groups == i]])
-    if np.all(y_i == 0) or np.all(y_i == 1):
-        continue
-    deg_min = np.min(
-        np.concatenate([deg_src[src_groups == i], deg_trg[trg_groups == i]])
-    )
-    deg_max = np.max(
-        np.concatenate([deg_src[src_groups == i], deg_trg[trg_groups == i]])
-    )
-    quantile = i / nGroups
-
-    for k in [5, 10, 20, 50, 100, 250]:
-        hits_i = calc_hitsk(y_i, ypred_i, k)
         score_results.append(
             {
-                "metric": f"hits@{k}",
-                "score": hits_i,
-                "group": i,
-                "deg_min": deg_min,
-                "deg_max": deg_max,
-                "quantile": quantile,
+                "metric": "aucroc",
+                "score": aucroc_ij,
+                "pos_group": pos_i,
+                "neg_group": neg_j,
+                "n_samples": len(edge_score_pos) + len(edge_score_neg),
+                "n_pos_samples": len(edge_score_pos),
+                "n_neg_samples": len(edge_score_neg),
             }
         )
 
-# MRR
-for i in range(nGroups):
-    y_i = np.concatenate([y[src_groups == i], y[trg_groups == i]])
-    ypred_i = np.concatenate([ypred[src_groups == i], ypred[trg_groups == i]])
-    if np.all(y_i == 0) or np.all(y_i == 1):
-        continue
-    deg_min = np.min(
-        np.concatenate([deg_src[src_groups == i], deg_trg[trg_groups == i]])
-    )
-    deg_max = np.max(
-        np.concatenate([deg_src[src_groups == i], deg_trg[trg_groups == i]])
-    )
-    quantile = i / nGroups
-    mrr_i = calc_mrr(y_i, ypred_i)
+    for k in [5, 10, 20, 50, 100, 250]:
+        hits_ij = calc_hitsk(yij, edge_score_ij, k)
+        score_results.append(
+            {
+                "metric": f"hits@{k}",
+                "score": hits_ij,
+                "pos_group": pos_i,
+                "neg_group": neg_j,
+                "n_samples": len(edge_score_pos) + len(edge_score_neg),
+                "n_pos_samples": len(edge_score_pos),
+                "n_neg_samples": len(edge_score_neg),
+            }
+        )
+
+    mrr_ij = calc_mrr(yij, edge_score_ij)
     score_results.append(
         {
             "metric": "mrr",
-            "score": mrr_i,
-            "group": i,
-            "deg_min": deg_min,
-            "deg_max": deg_max,
-            "quantile": quantile,
+            "score": mrr_ij,
+            "pos_group": pos_i,
+            "neg_group": neg_j,
+            "n_samples": len(edge_score_pos) + len(edge_score_neg),
+            "n_pos_samples": len(edge_score_pos),
+            "n_neg_samples": len(edge_score_neg),
         }
     )
 

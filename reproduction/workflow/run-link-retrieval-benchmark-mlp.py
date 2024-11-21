@@ -55,15 +55,16 @@ maxk = np.minimum(maxk, train_net.shape[1] - 1)
 
 
 model = load_model(model_file, device="cpu")
+model.eval()
 
 S = train_net @ train_net
 S = S - S.multiply(train_net)
 src, trg, _ = sparse.find(S)
 
 preds = model.forward_edges(train_net, src, trg)
-preds = preds.numpy()
-predicted = sparse.csr_matrix((preds, (src, trg)), shape=train_net.shape)
-scores, predicted = find_k_largest_elements(predicted, maxk)
+preds = preds.detach().numpy()
+prediction = sparse.csr_matrix((preds, (src, trg)), shape=S.shape)
+scores, predicted = find_k_largest_elements(prediction, maxk)
 
 
 # ========================

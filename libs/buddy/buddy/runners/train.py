@@ -41,7 +41,9 @@ def train_buddy(model, optimizer, train_loader, args, device, emb=None):
     if args.wandb:
         wandb.log({"train_total_batches": len(train_loader)})
     batch_processing_times = []
-    loader = DataLoader(range(len(links)), args.batch_size, shuffle=True)
+    loader = DataLoader(
+        range(len(links)), args.batch_size, shuffle=True, num_workers=4, pin_memory=True
+    )
     for batch_count, indices in enumerate(loader):
         # do node level things
         if model.node_embedding is not None:

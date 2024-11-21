@@ -31,7 +31,7 @@ FIG_DIR =j("figs")
 DATA_LIST = [
     f.split("net_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
-
+DATA_LIST = ["ogbl-collab", "ogbl-ddi", "ogbl-biokg-protein", "ogbl-biokg-drug", "ogbl-biokg-function" ]
 
 # Small networks
 # Comment out if you want to run for all networks
@@ -71,7 +71,7 @@ MODEL_LIST = list(embedding_models.keys())
 #MODEL_LIST = ["GraphSAGE", "GIN", "GAT", "GCN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"] # added to limit
 MODEL_LIST = [m for m in MODEL_LIST if m not in ["EdgeCNN", "dcEdgeCNN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"]]
 MODEL_LIST = [m for m in MODEL_LIST if m not in ["nonbacktracking", "fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE", "dcFineTunedGCN", "dcFineTunedGAT", "dcFineTunedGraphSAGE"]] # because it takes too long and it is a weak predictor anyway
-#MODEL_LIST = ["fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE"]
+#MODEL_LIST = ["fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE", "fineTunedGIN"]
 params_emb = {"model": MODEL_LIST, "dim": [128]}
 paramspace_emb = to_paramspace(params_emb)
 print(MODEL_LIST)
@@ -403,6 +403,12 @@ BEST_RF_FEATURES = j(
 )
 
 LP_ALL_SCORE_OPT_STACK_FILE = j(RESULT_DIR, "result_opt_stack_auc_roc.csv")
+
+
+# ====================
+# Degree bias
+# ====================
+include: "./Snakefile_degree_bias.smk"
 
 # ====================
 # Output
@@ -1035,7 +1041,7 @@ rule eval_link_retrieval_mlp:
     output:
         output_file=RT_SCORE_MLP_FILE,
     script:
-        "workflow/run-link-retrieval-benchmark-buddy.py"
+        "workflow/run-link-retrieval-benchmark-mlp.py"
 
 rule eval_link_retrieval_linearClassifier:
     input:

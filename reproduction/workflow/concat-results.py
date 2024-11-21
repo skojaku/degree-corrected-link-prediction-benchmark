@@ -59,10 +59,14 @@ else:
     # AUC-ROC
     input_file_list = list(glob.glob("../data/derived/results/auc-roc/*/*.csv"))
     output_file = "../data/derived/results/result_auc_roc.csv"
+    
+    input_file_list = list(glob.glob("../data/derived/degree-bias-analysis/*/*.csv"))
+    output_file = "../data/derived/results/result_degree_bias.csv"
 
     # Results Retrievals
     # input_file_list = list(glob.glob("../data/derived/results/retrieval/*/*.csv"))
     # output_file = "../data/derived/results/result_retrieval.csv"
+    print(input_file_list)
 
 # ========================
 # Load

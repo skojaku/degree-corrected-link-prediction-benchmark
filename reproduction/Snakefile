@@ -50,15 +50,15 @@ print(DATA_LIST)
 #
 params_train_test_split = {
     "testEdgeFraction": [0.25],
-    "sampleId": [0],
-    #"sampleId": [0,1,2],
+    #"sampleId": [0],
+    "sampleId": [0,1,2],
     #"sampleId": list(range(N_ITERATION)),
 }
 paramspace_train_test_split = to_paramspace(params_train_test_split)
 
 
 params_negative_edge_sampler = {
-    "negativeEdgeSampler": ["uniform", "degreeBiased", "heart"],
+    "negativeEdgeSampler": ["uniform", "degreeBiased"],
 }
 paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 
@@ -69,7 +69,9 @@ paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 MODEL_LIST = list(embedding_models.keys())
 #MODEL_LIST = ["GraphSAGE", "GIN", "GAT", "GCN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"] # added to limit
 MODEL_LIST = [m for m in MODEL_LIST if m not in ["EdgeCNN", "dcEdgeCNN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"]]
-MODEL_LIST = ["fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE"]
+print(MODEL_LIST)
+#MODEL_LIST = ["fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE","fineTunedGIN"]
+MODEL_LIST = ["fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE","dcFineTunedGCN", "dcFineTunedGAT", "dcFineTunedGraphSAGE", "fineTunedGIN", "dcFineTunedGIN"]
 params_emb = {"model": MODEL_LIST, "dim": [128]}
 paramspace_emb = to_paramspace(params_emb)
 
@@ -776,7 +778,7 @@ rule plot_deg_pos_neg_edges:
     output:
         output_file = FIG_DEG_DIST_POS_NEG_EDGES
     script:
-        "workflow/plot_degere_dist_pos_neg_edges.py"
+        "workflow/plot_degree_dist_pos_neg_edges.py"
 
 rule plot_aucroc_lognormal:
     input:

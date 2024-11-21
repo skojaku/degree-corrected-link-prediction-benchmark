@@ -40,17 +40,17 @@ else:
         "k": 25,
         "clustering": "kmeans",
         "score_type": "esim",
-        "tau": 3.0,
+        "tau": 2.5,
         "model": [
             "dcSBN",
-            "GIN",
-            "dcGIN",
-            "GCN",
-            "dcGCN",
-            "GraphSAGE",
-            "dcGraphSAGE",
-            "GAT",
-            "dcGAT",
+            "fineTunedGIN",
+            "dcFineTunedGIN",
+            "fineTunedGCN",
+            "dcFineTunedGCN",
+            "fineTunedGraphSAGE",
+            "dcFineTunedGraphSAGE",
+            "fineTunedGAT",
+            "dcFineTunedGAT",
         ],
     }
     tau = params["tau"]
@@ -75,6 +75,7 @@ plot_data["model_type"] = plot_data["model"].apply(lambda x: x.replace("dc", "")
 plot_data["Biased"] = plot_data["model"].apply(
     lambda x: "Degree corrected" if "dc" in x else "Original"
 )
+plot_data
 # %%
 #
 # Plot
@@ -84,27 +85,28 @@ model_list = plot_data["model"].unique().tolist()
 color_palette = sns.color_palette().as_hex()
 baseline_color = sns.desaturate(color_palette[0], 0.3)
 model_colors = {
-    "GAT": baseline_color,
-    "GCN": baseline_color,
-    "GraphSAGE": baseline_color,
-    "GIN": baseline_color,
+    "fineTunedGAT": baseline_color,
+    "fineTunedGCN": baseline_color,
+    "fineTunedGraphSAGE": baseline_color,
+    "fineTunedGIN": baseline_color,
 }
 model_markers = {
-    "GAT": "o",
-    "GCN": "s",
-    "GraphSAGE": "v",
-    "GIN": "d",
+    "fineTunedGAT": "o",
+    "fineTunedGCN": "s",
+    "fineTunedGraphSAGE": "v",
+    "fineTunedGIN": "d",
 }
 model_linestyles = {k: (1, 1) for k in model_colors.keys()}
 model_marker_size = {k: 10 for k in model_colors.keys()}
 for k in list(model_colors.keys()):
-    model_colors["dc" + k] = "#%02x%02x%02x" % tuple(
+    k_capitalized = k[0].upper() + k[1:]
+    model_colors["dc" + k_capitalized] = "#%02x%02x%02x" % tuple(
         int(c * 255) for c in sns.desaturate(model_colors[k], 0.5)
     )
-    model_colors["dc" + k] = color_palette[1]
-    model_markers["dc" + k] = model_markers[k]
-    model_linestyles["dc" + k] = None
-    model_marker_size["dc" + k] = 10
+    model_colors["dc" + k_capitalized] = color_palette[1]
+    model_markers["dc" + k_capitalized] = model_markers[k]
+    model_linestyles["dc" + k_capitalized] = None
+    model_marker_size["dc" + k_capitalized] = 10
 
 model_edge_color = {
     k: sns.dark_palette(model_colors[k], 3)[0] for k in model_colors.keys()
@@ -196,22 +198,47 @@ fig.savefig(
 # %%
 # for name, df in :
 
+plot_data["model"].unique()
+# %%
+
+def get_model_type(model_name):
+    s = model_name.replace("FineTuned", "")
+    s = s.replace("fineTuned", "")
+    s = s.replace("dc", "")
+    return s
 df = (
-    plot_data.groupby(["model", "sample"])
+    plot_data.sort_values(by=["mu"])
+    .groupby(["model", "sample"])
     .apply(lambda x: np.trapz(x["score"], x["mu"]))
     .reset_index()
 )
-df["model_type"] = df["model"].apply(lambda x: x.replace("dc", ""))
+df["model_type"] = df["model"].apply(get_model_type)
 df["Biased"] = df["model"].apply(
     lambda x: "Degree-corrected" if "dc" in x else "Original"
 )
-
+# %%
 
 sns.set_style("white")
 sns.set(font_scale=1.3)
 sns.set_style("ticks")
 fig, ax = plt.subplots(figsize=(7, 5))
 
+# Add boxplot first
+sns.boxplot(
+    data=df,
+    x="model_type",
+    y=0,
+    hue="Biased",
+    palette={
+        "Degree-corrected": color_palette[1],
+        "Original": baseline_color,
+    },
+    width=0.7,
+    ax=ax,
+    legend=False  # Remove legend for boxplot
+)
+
+# Add swarmplot on top
 sns.swarmplot(
     data=df,
     x="model_type",
@@ -224,8 +251,10 @@ sns.swarmplot(
     size=10,
     edgecolor="k",
     linewidth=1.0,
-    ax=ax,
+    dodge=True,
+    ax=ax
 )
+
 sns.despine()
 ax.set_xlabel("Model")
 ax.set_ylabel("AUC of performance curve")

@@ -26,12 +26,15 @@ params_mpm = {
 
 params_lfr = { # LFR
     "n": [3000],  # Network size
-    "k": [25, 50],  # Average degree
+    #"k": [25, 50],  # Average degree
+    "k": [25],  # Average degree
     "tau": [2.5, 3],  # degree exponent
     "tau2": [3],  # community size exponent
     "minc": [100],  # min community size
-    "maxk": [500, 1000], # maximum degree,
-    "maxc": [500, 1000], # maximum community size
+    #"maxk": [500], # maximum degree,
+    "maxk": [1000], # maximum degree,
+    #"maxc": [500], # maximum community size
+    "maxc": [1000], # maximum community size
     "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
     "sample": list(range(N_SAMPLES)),  # Number of samples
 }

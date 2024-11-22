@@ -359,7 +359,7 @@ def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = N
     }
 
     # Get data loaders using original infrastructure
-    if only_train_loader: 
+    if only_train_loader:
         train_loader, train_eval_loader = get_train_loaders(
             args, dataset, splits, directed=False
         )
@@ -460,11 +460,12 @@ def predict_edge_likelihood(
         torch.Tensor: Prediction scores for candidate edges
     """
     model.eval()
-    edge_index = torch.from_numpy(np.array(adj_matrix.nonzero())).long().to(device)
+    model.to(device)
+    edge_index = torch.from_numpy(np.array(adj_matrix.nonzero())).long()
     if node_features is not None:
-        x = torch.from_numpy(node_features).float().to(device)
+        x = torch.from_numpy(node_features).float()
     else:
-        x = torch.zeros((adj_matrix.shape[0], 0)).float().to(device)
+        x = torch.zeros((adj_matrix.shape[0], 0)).float()
 
     network_data = Data(x=x, edge_index=edge_index)
 
@@ -473,8 +474,8 @@ def predict_edge_likelihood(
         root="elph_data",
         split="valid",
         data=network_data,
-        pos_edges=candidate_edges.long().t().to(device),
-        neg_edges=torch.empty((0, 2), device=candidate_edges.device).long().to(device),
+        pos_edges=candidate_edges.long().t(),
+        neg_edges=torch.empty((0, 2)).long(),
         args=args,
         use_coalesce=False,
         directed=False,
@@ -489,7 +490,7 @@ def predict_edge_likelihood(
     emb = None
     if model.node_embedding is not None:
         emb = (
-            model.propagate_embeddings_func(network_data.edge_index.to(device))
+            model.propagate_embeddings_func(network_data.edge_index)
             if args.propagate_embeddings
             else model.node_embedding.weight
         )

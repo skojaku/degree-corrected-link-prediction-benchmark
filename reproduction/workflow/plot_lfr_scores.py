@@ -41,6 +41,8 @@ else:
         "clustering": "kmeans",
         "score_type": "esim",
         "tau": 2.5,
+        "kmax":1000,
+        "cmax":1000,
         "model": [
             "dcSBN",
             "fineTunedGIN",
@@ -54,6 +56,7 @@ else:
         ],
     }
     tau = params["tau"]
+    "../figs/lfr_perf_curve_n~3000_k~25_tau~3_dim~128_minc~100_maxk~1000_maxc~1000.pdf"
     output_file_performance = f"../figs/lfr_scores_performance_curve_tau~{tau}.pdf"
     output_file_aucesim = f"../figs/lfr_scores_aucroc_tau~{tau}.pdf"
 
@@ -61,8 +64,6 @@ else:
 # Load
 #
 data_table = pd.read_csv(input_file)
-data_table
-# %%
 plot_data = data_table.copy()
 for k, v in params.items():
     if k not in plot_data.columns:
@@ -235,11 +236,10 @@ sns.boxplot(
     },
     width=0.7,
     ax=ax,
-    legend=False  # Remove legend for boxplot
 )
 
 # Add swarmplot on top
-sns.swarmplot(
+sns.stripplot(
     data=df,
     x="model_type",
     y=0,
@@ -248,11 +248,13 @@ sns.swarmplot(
         "Degree-corrected": color_palette[1],
         "Original": baseline_color,
     },
-    size=10,
+    size=6,
     edgecolor="k",
     linewidth=1.0,
+    alpha = 0.8,
     dodge=True,
-    ax=ax
+    ax=ax,
+    legend=False  # Remove legend for boxplot
 )
 
 sns.despine()

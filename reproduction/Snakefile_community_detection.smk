@@ -26,8 +26,7 @@ params_mpm = {
 
 params_lfr = { # LFR
     "n": [3000],  # Network size
-    #"k": [25, 50],  # Average degree
-    "k": [25],  # Average degree
+    "k": [25, 50],  # Average degree
     "tau": [2.5, 3],  # degree exponent
     "tau2": [3],  # community size exponent
     "minc": [100],  # min community size
@@ -204,7 +203,7 @@ rule plot_lfr_result:
         output_file_performance = FIG_LFR_PERF_CURVE,
         output_file_aucesim = FIG_LFR_AUCESIM,
     params:
-        model = ["GIN", "GCN", "GAT", "GraphSAGE", "dcGIN", "dcGCN", "dcGAT", "dcGraphSAGE"],
+        model = ["fineTunedGIN", "fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE", "dcFineTunedGIN", "dcFineTunedGCN", "dcFineTunedGAT", "dcFineTunedGraphSAGE"],
         clustering = "kmeans",
         metric = "cosine",
         score_type = "esim",
@@ -225,7 +224,7 @@ rule plot_lfr_result_nmi:
         output_file_performance = FIG_LFR_PERF_CURVE_NMI,
         output_file_aucesim = FIG_LFR_AUCNMI,
     params:
-        model = ["GIN", "GCN", "GAT", "GraphSAGE", "dcGIN", "dcGCN", "dcGAT", "dcGraphSAGE"],
+        model = ["fineTunedGIN", "fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE", "dcFineTunedGIN", "dcFineTunedGCN", "dcFineTunedGAT", "dcFineTunedGraphSAGE"],
         clustering = "kmeans",
         metric = "cosine",
         score_type = "nmi",

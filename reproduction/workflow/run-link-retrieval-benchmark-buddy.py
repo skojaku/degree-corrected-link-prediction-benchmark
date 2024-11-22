@@ -39,6 +39,22 @@ else:
     # sampling = "uniform"
     # sampling = "degreeBiased"
 
+def get_gpu_id(excludeID=[]):
+    device = GPUtil.getFirstAvailable(
+        order="random",
+        maxLoad=1.0,
+        maxMemory=0.6,
+        attempts=99999,
+        interval=60 * 1,
+        verbose=False,
+        # excludeID=excludeID,
+        # excludeID=[6, 7],
+    )[0]
+    device = f"cuda:{device}"
+    return device
+
+
+device = get_gpu_id()
 
 #  Preprocess
 train_net = sparse.load_npz(train_net_file)
@@ -55,20 +71,15 @@ maxk = np.minimum(maxk, train_net.shape[1] - 1)
 
 model, config = buddy.load_model(model_path=model_file, device="cpu")
 
-S = train_net @ train_net
-S = S - S.multiply(train_net)
+scores, indices = local_random_walk_forward_push(train_net, maxk = maxk * 2)
 
-AA = train_net @ train_net
-AAA = AA @ train_net
-S = AA + AAA
-S = S - S.multiply(train_net)
-S.setdiag(0)
-src, trg, _ = sparse.find(S)
-
-
+src = np.arange(train_net.shape[0]).reshape((-1,1)) @ np.ones((1, indices.shape[1]))
+trg = indices
+src, trg = src.flatten(), trg.flatten()
 candidate_edges = torch.from_numpy(np.column_stack([src, trg])).long().T
+
 preds = buddy.predict_edge_likelihood(
-    model, train_net, candidate_edges, args=config, device="cpu"
+    model, train_net, candidate_edges, args=config, device=device
 )
 preds = preds.numpy()
 predicted = sparse.csr_matrix((preds, (src, trg)), shape=train_net.shape)

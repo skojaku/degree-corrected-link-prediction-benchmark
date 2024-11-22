@@ -67,7 +67,7 @@ model, config = buddy.train_heldout(
 #        "feature_dropout": [0.2, 0.5],
 #        "use_RA": [True, False],
 #    },
-#    max_patience=5,
+    max_patience=2,
     device="cuda:1",
 )
 # %%
@@ -104,7 +104,7 @@ preds = buddy.predict_edge_likelihood(
     adj_matrix=adj_matrix,
     candidate_edges=candidate_edges,
     args=config,
-    device="cpu",
+    device="cuda:1",
 )
 import seaborn as sns
 

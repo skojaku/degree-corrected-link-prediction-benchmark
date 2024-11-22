@@ -31,7 +31,7 @@ FIG_DIR =j("figs")
 DATA_LIST = [
     f.split("net_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
-DATA_LIST = ["ogbl-collab", "ogbl-ddi", "ogbl-biokg-protein", "ogbl-biokg-drug", "ogbl-biokg-function" ]
+DATA_LIST = ["ogbl-collab", "ogbl-ddi", "ogbl-biokg_protein", "ogbl-biokg_drug", "ogbl-biokg_function" ]
 
 # Small networks
 # Comment out if you want to run for all networks
@@ -466,7 +466,7 @@ rule _all_buddy:
     input:
         expand(LP_SCORE_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_buddy),
         expand(LP_SCORE_HITS_MRR_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_buddy),
-        expand(RT_SCORE_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_buddy),
+        #expand(RT_SCORE_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_buddy),
 
 rule _all_mlp:
     input:

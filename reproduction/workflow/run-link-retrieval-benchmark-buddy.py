@@ -13,8 +13,10 @@ from sklearn.linear_model import LogisticRegression
 import scipy
 import GPUtil
 import buddy
+import sys
 
-# %% Load
+
+#  Load
 if "snakemake" in sys.modules:
     train_net_file = snakemake.input["train_net_file"]
     test_edge_file = snakemake.input["test_edge_file"]
@@ -23,17 +25,14 @@ if "snakemake" in sys.modules:
     output_file = snakemake.output["output_file"]
 else:
     data_name = "airport-rach"
-    data_name = "subelj-cora-cora"
-    train_net_file = f"../data/derived/datasets/{data_name}/train-net_testEdgeFraction~0.25_sampleId~0.npz"
-    test_edge_file = f"../data/derived/datasets/{data_name}/testEdgeTable_testEdgeFraction~0.25_sampleId~0.csv"
-    output_file = "."
+    data_name = "maayan-foodweb"
+    train_net_file = f"../data/derived/datasets/{data_name}/train-net_testEdgeFraction~0.25_sampleId~3.npz"
+    test_edge_file = f"../data/derived/datasets/{data_name}/testEdgeTable_testEdgeFraction~0.25_sampleId~3.csv"
+    output_file = ""
     maxk = 100
     model = "commonNeighbors"
     model_type = "embedding"
-    emb_file = f"../data/derived/embedding/{data_name}/emb_testEdgeFraction~0.25_sampleId~0_model~node2vec_dim~128.npz"
-    # emb_file = f"../data/derived/embedding/{data_name}/emb_testEdgeFraction~0.25_sampleId~0_model~dcGCN_dim~128.npz"
-    # emb_file = f"../data/derived/embedding/{data_name}/emb_testEdgeFraction~0.25_sampleId~0_model~GCN_dim~128.npz"
-    emb_file = f"../data/derived/embedding/{data_name}/emb_testEdgeFraction~0.25_sampleId~0_model~deepwalk_dim~128.npz"
+    model_file = f"../data/derived/models/buddy/{data_name}/buddy_model~Buddy_testEdgeFraction~0.25_sampleId~3"
     model = "localRandomWalk"
     # model_type = "topology"
     # sampling = "uniform"
@@ -53,13 +52,15 @@ def get_gpu_id(excludeID=[]):
     device = f"cuda:{device}"
     return device
 
-
 device = get_gpu_id()
 
 #  Preprocess
 train_net = sparse.load_npz(train_net_file)
 train_net = train_net + train_net.T
 train_net.data = train_net.data * 0.0 + 1.0
+train_net.shape
+
+# %%
 
 df = pd.read_csv(test_edge_file)
 test_net = sparse.csr_matrix(
@@ -83,6 +84,8 @@ preds = buddy.predict_edge_likelihood(
 )
 preds = preds.numpy()
 predicted = sparse.csr_matrix((preds, (src, trg)), shape=train_net.shape)
+
+# %%
 scores, predicted = find_k_largest_elements(predicted, maxk)
 
 
@@ -109,3 +112,5 @@ for topk in [5, 10, 25, 50, 100]:
 result = pd.DataFrame(result)
 
 result.to_csv(output_file, index=False)
+
+# %%

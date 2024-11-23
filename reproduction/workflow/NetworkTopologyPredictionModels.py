@@ -352,6 +352,7 @@ def local_random_walk_forward_push(network, maxk, batch_size=100000):
         Array of shape (n_nodes, maxk) containing indices of top scores
     """
     n = network.shape[0]
+    maxk = np.minimum(maxk, n - 1)
     network_csr = network.tocsr()
 
     # Precompute values

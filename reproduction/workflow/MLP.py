@@ -38,7 +38,7 @@ class MLP(torch.nn.Module):
 
         # Input features: resource allocation, common neighbors, jaccard index,
         # adamic adar, local random walk, and optionally degree
-        input_dim = 4 if not with_degree else 7
+        input_dim = 4 if not with_degree else 4
 
         # Define layers
         layers = []
@@ -170,13 +170,14 @@ def compute_network_stats(network, src, trg, with_degree=False, std=None, mean=N
         deg = network.sum(axis=1).A1
         deg_prod = deg[src] * deg[trg]
         features = [
-            ra,
-            ji,
-            aa,
-            lrw,
+            # ra,
+            # ji,
+            # aa,
+            # lrw,
             np.maximum(deg[trg], deg[src]),
             np.minimum(deg[trg], deg[src]),
             deg_prod,
+            deg[src] + deg[trg],
         ]
     else:
         features = [ra, ji, aa, lrw]
@@ -195,7 +196,7 @@ def train_mlp_with_early_stopping(
     y_val,
     epochs=100,
     batch_size=1024,
-    lr=0.001,
+    lr=0.005,
     device="cpu",
     patience=30,
     min_delta=0.001,
@@ -322,9 +323,9 @@ def train_heldout(
     # Default parameter ranges if none provided
     if param_ranges is None:
         param_ranges = {
-            "hidden_layers": [[32], [32, 32], [64], [64, 64]],
+            "hidden_layers": [[32, 32], [64, 64]],
             "dropout_rate": [0.2, 0.5],
-            "activation": ["relu", "leaky_relu"],
+            "activation": ["leaky_relu"],
         }
 
     # Generate all parameter combinations

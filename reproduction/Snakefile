@@ -31,7 +31,7 @@ FIG_DIR =j("figs")
 DATA_LIST = [
     f.split("net_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
-DATA_LIST = ["ogbl-collab", "ogbl-ddi", "ogbl-biokg-protein", "ogbl-biokg-drug", "ogbl-biokg-function" ]
+#DATA_LIST = ["ogbl-collab", "ogbl-ddi", "ogbl-biokg-protein", "ogbl-biokg-drug", "ogbl-biokg-function" ]
 
 # Small networks
 # Comment out if you want to run for all networks
@@ -51,8 +51,8 @@ print(DATA_LIST)
 params_train_test_split = {
     "testEdgeFraction": [0.25],
     #"sampleId": [0],
-    #"sampleId": [0,1,2],
-    "sampleId": list(range(N_ITERATION)),
+    "sampleId": [1,2],
+    #"sampleId": list(range(N_ITERATION)),
 }
 paramspace_train_test_split = to_paramspace(params_train_test_split)
 
@@ -70,7 +70,8 @@ paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 MODEL_LIST = list(embedding_models.keys())
 #MODEL_LIST = ["GraphSAGE", "GIN", "GAT", "GCN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"] # added to limit
 MODEL_LIST = [m for m in MODEL_LIST if m not in ["EdgeCNN", "dcEdgeCNN", "dcGraphSAGE", "dcGIN", "dcGAT", "dcGCN"]]
-MODEL_LIST = [m for m in MODEL_LIST if m not in ["nonbacktracking", "fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE", "dcFineTunedGCN", "dcFineTunedGAT", "dcFineTunedGraphSAGE"]] # because it takes too long and it is a weak predictor anyway
+#MODEL_LIST = [m for m in MODEL_LIST if m not in ["nonbacktracking", "fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE", "dcFineTunedGCN", "dcFineTunedGAT", "dcFineTunedGraphSAGE"]] # because it takes too long and it is a weak predictor anyway
+MODEL_LIST = [m for m in MODEL_LIST if m not in ["nonbacktracking", "dcFineTunedGCN","dcFineTunedGIN",  "dcFineTunedGAT", "dcFineTunedGraphSAGE"]] # because it takes too long and it is a weak predictor anyway
 #MODEL_LIST = ["fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE", "fineTunedGIN"]
 params_emb = {"model": MODEL_LIST, "dim": [128]}
 paramspace_emb = to_paramspace(params_emb)
@@ -469,7 +470,7 @@ rule _all_buddy:
         expand(LP_SCORE_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_buddy),
         expand(LP_SCORE_HITS_MRR_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_buddy),
         expand(RT_SCORE_BUDDY_FILE, data=DATA_LIST, **params_train_test_split, **params_buddy),
-
+print(DATA_LIST)
 rule _all_mlp:
     input:
         expand(LP_SCORE_MLP_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_mlp),
@@ -481,6 +482,26 @@ rule _all_linear:
         expand(LP_SCORE_LINEAR_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_linear),
         expand(LP_SCORE_HITS_MRR_LINEAR_FILE, data=DATA_LIST, **params_train_test_split, **params_negative_edge_sampler, **params_linear),
         expand(RT_SCORE_LINEAR_FILE, data=DATA_LIST, **params_train_test_split, **params_linear),
+
+rule _all_emb:
+    input:
+        #
+        # Link classification (Check point 3)
+        #
+        expand(
+            LP_SCORE_EMB_FILE,
+            data=DATA_LIST,
+            **params_emb,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        ),
+        expand(
+            RT_SCORE_EMB_FILE,
+            data=DATA_LIST,
+            **params_emb,
+            **params_negative_edge_sampler,
+            **params_train_test_split
+        )
 
 rule _all:
     input:

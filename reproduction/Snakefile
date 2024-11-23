@@ -58,7 +58,6 @@ paramspace_train_test_split = to_paramspace(params_train_test_split)
 
 
 params_negative_edge_sampler = {
-    #"negativeEdgeSampler": ["heart"],
     "negativeEdgeSampler": ["uniform", "degreeBiased", "heart"],
 }
 paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
@@ -1139,7 +1138,7 @@ rule plot_deg_pos_neg_edges:
     output:
         output_file = FIG_DEG_DIST_POS_NEG_EDGES
     script:
-        "workflow/plot_degere_dist_pos_neg_edges.py"
+        "workflow/plot_degree_dist_pos_neg_edges.py"
 
 rule plot_aucroc_lognormal:
     input:

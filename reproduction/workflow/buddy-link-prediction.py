@@ -10,6 +10,7 @@ import sys
 from scipy import sparse
 import buddy
 import torch
+import GPUtil
 
 if "snakemake" in sys.modules:
     input_file = snakemake.input["input_file"]
@@ -20,6 +21,23 @@ if "snakemake" in sys.modules:
 else:
     input_file = "../data/"
     output_file = "../data/"
+
+def get_gpu_id(excludeID=[]):
+    device = GPUtil.getFirstAvailable(
+        order="random",
+        maxLoad=1.0,
+        maxMemory=0.6,
+        attempts=99999,
+        interval=60 * 1,
+        verbose=False,
+        # excludeID=excludeID,
+        # excludeID=[6, 7],
+    )[0]
+    device = f"cuda:{device}"
+    return device
+
+
+device = get_gpu_id()
 
 # ========================
 # Load
@@ -46,7 +64,7 @@ ypred = buddy.predict_edge_likelihood(
     adj_matrix=net,
     candidate_edges=candidate_edges,
     args=config,
-    device="cpu",
+    device=device,
 )
 
 ypred = ypred.numpy()

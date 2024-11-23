@@ -6,7 +6,8 @@
 # @Last Modified time: 2023-04-19 21:56:17
 from scipy import sparse
 import numpy as np
-from numba import njit
+from tqdm import tqdm
+from numba import jit, prange
 
 topology_models = {}
 topology_model = lambda f: topology_models.setdefault(f.__name__, f)
@@ -253,3 +254,135 @@ def find_k_largest_elements(A, k):
         indices[i, : len(ind)] = A.indices[A.indptr[i] : A.indptr[i + 1]][ind]
         scores[i, : len(ind)] = A.data[A.indptr[i] : A.indptr[i + 1]][ind]
     return scores, indices
+
+#
+# RandomWalk index with forward push
+#
+
+@jit(nopython=True, cache=True, nogil=True, fastmath=True)
+def _push_local_random_walk(node, residual, walk_scores, neighbors_indptr,
+                          neighbors_indices, deg_inv, walk_length):
+    """Optimized single node push operation"""
+    push_value = residual[node]
+    residual[node] = 0
+    walk_scores[node] += push_value
+
+    if walk_length > 0:
+        start = neighbors_indptr[node]
+        end = neighbors_indptr[node + 1]
+
+        if start != end:
+            neighbor_update = push_value * deg_inv[node]
+            neighbors = neighbors_indices[start:end]
+            residual[neighbors] += neighbor_update
+
+    return residual
+
+@jit(nopython=True, cache=True, nogil=True, fastmath=True)
+def _forward_push_single_source(source, n, neighbors_indptr, neighbors_indices,
+                              deg_inv, walk_scores):
+    """Compute walk scores for a single source"""
+    for length in range(3):  # Compute 1,2,3 length walks
+        residual = np.zeros(n)
+        residual[source] = 1.0
+
+        for _ in range(length + 1):
+            new_residual = np.zeros(n)
+            nonzero_indices = np.where(residual > 0)[0]
+            for node in nonzero_indices:
+                new_residual = _push_local_random_walk(
+                    node, residual, walk_scores[length],
+                    neighbors_indptr, neighbors_indices, deg_inv, length
+                )
+            residual = new_residual
+
+@jit(nopython=True, parallel=True, cache=True, nogil=True, fastmath=True)
+def _process_batch(batch_sources, n, neighbors_indptr, neighbors_indices,
+                  deg_inv, maxk):
+    """Process a batch of source nodes in parallel"""
+    batch_size = len(batch_sources)
+    batch_scores = np.zeros((batch_size, maxk))
+    batch_indices = np.zeros((batch_size, maxk), dtype=np.int32)
+
+    for i in prange(batch_size):
+        source = batch_sources[i]
+        walk_scores = np.zeros((3, n))
+
+        # Compute walks
+        _forward_push_single_source(
+            source, n, neighbors_indptr, neighbors_indices,
+            deg_inv, walk_scores
+        )
+
+        # Combine scores
+        combined_scores = walk_scores[0] + walk_scores[1] + walk_scores[2]
+
+        # Remove direct connections and self-loops
+        start = neighbors_indptr[source]
+        end = neighbors_indptr[source + 1]
+        neighbors = neighbors_indices[start:end]
+        combined_scores[neighbors] = 0
+        combined_scores[source] = 0
+
+        # Get top k efficiently
+        top_k_idx = np.argsort(-combined_scores)[:maxk]
+        batch_indices[i] = top_k_idx
+        batch_scores[i] = combined_scores[top_k_idx]
+
+    return batch_scores, batch_indices
+
+def local_random_walk_forward_push(network, maxk, batch_size=100000):
+    """
+    Optimized local random walk computation using forward push method.
+
+    Parameters:
+    -----------
+    network : scipy.sparse.csr_matrix
+        Adjacency matrix
+    maxk : int
+        Number of top scores to return per node
+    batch_size : int
+        Size of batches for parallel processing
+
+    Returns:
+    --------
+    scores : ndarray
+        Array of shape (n_nodes, maxk) containing top scores
+    indices : ndarray
+        Array of shape (n_nodes, maxk) containing indices of top scores
+    """
+    n = network.shape[0]
+    maxk = np.minimum(maxk, n - 1)
+    network_csr = network.tocsr()
+
+    # Precompute values
+    deg = np.array(network_csr.sum(1)).flatten()
+    deg_inv = 1.0 / np.maximum(deg, 1e-12)
+    neighbors_indptr = network_csr.indptr
+    neighbors_indices = network_csr.indices
+
+    # Initialize result arrays
+    all_scores = np.zeros((n, maxk))
+    all_indices = np.zeros((n, maxk), dtype=np.int32)
+
+    # Process in parallel batches
+    n_batches = (n + batch_size - 1) // batch_size
+    with tqdm(total=n, desc="Computing local random walks") as pbar:
+        for batch_idx in range(n_batches):
+            start_idx = batch_idx * batch_size
+            end_idx = min(start_idx + batch_size, n)
+            batch_sources = np.arange(start_idx, end_idx)
+
+            # Process batch in parallel
+            batch_scores, batch_indices = _process_batch(
+                batch_sources, n, neighbors_indptr, neighbors_indices,
+                deg_inv, maxk
+            )
+
+            # Store results
+            all_scores[start_idx:end_idx] = batch_scores
+            all_indices[start_idx:end_idx] = batch_indices
+
+            pbar.update(len(batch_sources))
+
+    return all_scores, all_indices

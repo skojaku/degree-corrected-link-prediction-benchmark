@@ -262,11 +262,12 @@ def train(
     Wrapper function to train and evaluate BUDDY model using original infrastructure
     """
     # Create PyG Data object
-    dataset, args, train_loader, train_eval_loader, val_loader = compile_data(
+    dataset, args, train_loader, train_eval_loader = compile_data(
         adj_matrix=adj_matrix,
         device=device,
         node_features=node_features,
-        config=args,
+        config=config,
+        only_train_loader=True
     )
 
     # Initialize model
@@ -294,7 +295,7 @@ def train(
     return model
 
 
-def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = None):
+def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = None, only_train_loader = False):
     """
     Compile data into format expected by get_train_loaders
 
@@ -321,9 +322,10 @@ def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = N
     data = Data(x=x, edge_index=edge_index)
 
     # Split data using RandomLinkSplit
+    print(args.test_pct)
     transform = RandomLinkSplit(
-        num_val=args.val_pct,
-        num_test=args.test_pct,
+        num_val=0 if only_train_loader else args.val_pct,
+        num_test=0 if only_train_loader else args.test_pct,
         is_undirected=True,
         add_negative_train_samples=True,
         neg_sampling_ratio=1.0,
@@ -357,10 +359,16 @@ def compile_data(adj_matrix, device, node_features=None, config: BuddyConfig = N
     }
 
     # Get data loaders using original infrastructure
-    train_loader, train_eval_loader, val_loader = get_loaders(
-        args, dataset, splits, directed=False
-    )
-    return dataset, args, train_loader, train_eval_loader, val_loader
+    if only_train_loader:
+        train_loader, train_eval_loader = get_train_loaders(
+            args, dataset, splits, directed=False
+        )
+        return dataset, args, train_loader, train_eval_loader
+    else:
+        train_loader, train_eval_loader, val_loader = get_loaders(
+            args, dataset, splits, directed=False
+        )
+        return dataset, args, train_loader, train_eval_loader, val_loader
 
 
 def train_with_early_stopping(
@@ -452,11 +460,12 @@ def predict_edge_likelihood(
         torch.Tensor: Prediction scores for candidate edges
     """
     model.eval()
-    edge_index = torch.from_numpy(np.array(adj_matrix.nonzero())).long().to(device)
+    model.to(device)
+    edge_index = torch.from_numpy(np.array(adj_matrix.nonzero())).long()
     if node_features is not None:
-        x = torch.from_numpy(node_features).float().to(device)
+        x = torch.from_numpy(node_features).float()
     else:
-        x = torch.zeros((adj_matrix.shape[0], 0)).float().to(device)
+        x = torch.zeros((adj_matrix.shape[0], 0)).float()
 
     network_data = Data(x=x, edge_index=edge_index)
 
@@ -465,8 +474,8 @@ def predict_edge_likelihood(
         root="elph_data",
         split="valid",
         data=network_data,
-        pos_edges=candidate_edges.long().t().to(device),
-        neg_edges=torch.empty((0, 2), device=candidate_edges.device).long().to(device),
+        pos_edges=candidate_edges.long().t(),
+        neg_edges=torch.empty((0, 2)).long(),
         args=args,
         use_coalesce=False,
         directed=False,
@@ -481,7 +490,7 @@ def predict_edge_likelihood(
     emb = None
     if model.node_embedding is not None:
         emb = (
-            model.propagate_embeddings_func(network_data.edge_index.to(device))
+            model.propagate_embeddings_func(network_data.edge_index)
             if args.propagate_embeddings
             else model.node_embedding.weight
         )

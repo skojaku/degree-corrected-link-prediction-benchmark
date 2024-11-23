@@ -13,8 +13,10 @@ from sklearn.linear_model import LogisticRegression
 import scipy
 import GPUtil
 import buddy
+import sys
 
-# %% Load
+
+#  Load
 if "snakemake" in sys.modules:
     train_net_file = snakemake.input["train_net_file"]
     test_edge_file = snakemake.input["test_edge_file"]
@@ -23,27 +25,42 @@ if "snakemake" in sys.modules:
     output_file = snakemake.output["output_file"]
 else:
     data_name = "airport-rach"
-    data_name = "subelj-cora-cora"
-    train_net_file = f"../data/derived/datasets/{data_name}/train-net_testEdgeFraction~0.25_sampleId~0.npz"
-    test_edge_file = f"../data/derived/datasets/{data_name}/testEdgeTable_testEdgeFraction~0.25_sampleId~0.csv"
-    output_file = "."
+    data_name = "maayan-foodweb"
+    train_net_file = f"../data/derived/datasets/{data_name}/train-net_testEdgeFraction~0.25_sampleId~3.npz"
+    test_edge_file = f"../data/derived/datasets/{data_name}/testEdgeTable_testEdgeFraction~0.25_sampleId~3.csv"
+    output_file = ""
     maxk = 100
     model = "commonNeighbors"
     model_type = "embedding"
-    emb_file = f"../data/derived/embedding/{data_name}/emb_testEdgeFraction~0.25_sampleId~0_model~node2vec_dim~128.npz"
-    # emb_file = f"../data/derived/embedding/{data_name}/emb_testEdgeFraction~0.25_sampleId~0_model~dcGCN_dim~128.npz"
-    # emb_file = f"../data/derived/embedding/{data_name}/emb_testEdgeFraction~0.25_sampleId~0_model~GCN_dim~128.npz"
-    emb_file = f"../data/derived/embedding/{data_name}/emb_testEdgeFraction~0.25_sampleId~0_model~deepwalk_dim~128.npz"
+    model_file = f"../data/derived/models/buddy/{data_name}/buddy_model~Buddy_testEdgeFraction~0.25_sampleId~3"
     model = "localRandomWalk"
     # model_type = "topology"
     # sampling = "uniform"
     # sampling = "degreeBiased"
 
+def get_gpu_id(excludeID=[]):
+    device = GPUtil.getFirstAvailable(
+        order="random",
+        maxLoad=1.0,
+        maxMemory=0.6,
+        attempts=99999,
+        interval=60 * 1,
+        verbose=False,
+        # excludeID=excludeID,
+        # excludeID=[6, 7],
+    )[0]
+    device = f"cuda:{device}"
+    return device
+
+device = get_gpu_id()
 
 #  Preprocess
 train_net = sparse.load_npz(train_net_file)
 train_net = train_net + train_net.T
 train_net.data = train_net.data * 0.0 + 1.0
+train_net.shape
+
+# %%
 
 df = pd.read_csv(test_edge_file)
 test_net = sparse.csr_matrix(
@@ -55,23 +72,20 @@ maxk = np.minimum(maxk, train_net.shape[1] - 1)
 
 model, config = buddy.load_model(model_path=model_file, device="cpu")
 
-S = train_net @ train_net
-S = S - S.multiply(train_net)
+scores, indices = local_random_walk_forward_push(train_net, maxk = maxk * 2)
 
-AA = train_net @ train_net
-AAA = AA @ train_net
-S = AA + AAA
-S = S - S.multiply(train_net)
-S.setdiag(0)
-src, trg, _ = sparse.find(S)
-
-
+src = np.arange(train_net.shape[0]).reshape((-1,1)) @ np.ones((1, indices.shape[1]))
+trg = indices
+src, trg = src.flatten(), trg.flatten()
 candidate_edges = torch.from_numpy(np.column_stack([src, trg])).long().T
+
 preds = buddy.predict_edge_likelihood(
-    model, train_net, candidate_edges, args=config, device="cpu"
+    model, train_net, candidate_edges, args=config, device=device
 )
 preds = preds.numpy()
 predicted = sparse.csr_matrix((preds, (src, trg)), shape=train_net.shape)
+
+# %%
 scores, predicted = find_k_largest_elements(predicted, maxk)
 
 
@@ -98,3 +112,5 @@ for topk in [5, 10, 25, 50, 100]:
 result = pd.DataFrame(result)
 
 result.to_csv(output_file, index=False)
+
+# %%

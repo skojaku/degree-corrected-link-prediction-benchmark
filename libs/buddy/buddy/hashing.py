@@ -267,7 +267,7 @@ class ElphHashes(object):
         """
         if links.dim() == 1:
             links = links.unsqueeze(0)
-        link_loader = DataLoader(range(links.size(0)), batch_size, shuffle=False, num_workers=0)
+        link_loader = DataLoader(range(links.size(0)), batch_size, shuffle=False, num_workers=5)
         all_features = []
         for batch in tqdm(link_loader):
             intersections = self._get_intersections(links[batch], hash_table)

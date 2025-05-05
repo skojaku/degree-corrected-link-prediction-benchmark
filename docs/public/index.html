@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en-us"><head>
+	<meta name="generator" content="Hugo 0.147.1"><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+
+  <title>
+    
+      Implicit degree bias in the link prediction task
+    
+  </title>
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/" />
+  
+  
+  
+  <link rel="stylesheet" href="/css/main.900100e9dbee2d56c58fac8bb717037cae7e26a9c36c29d2ff587bdd65f0cbbe510b41d81a3bb234919cdfdc7550d786b2fab70c8fc507772d732fe097106d12.css" integrity="sha512-kAEA6dvuLVbFj6yLtxcDfK5&#43;JqnDbCnS/1h73WXwy75RC0HYGjuyNJGc39x1UNeGsvq3DI/FB3ctcy/glxBtEg==" />
+  
+</head>
+<body a="auto">
+        <main class="page-content" aria-label="Content">
+            <div class="w">
+
+<header>
+    <h1>Implicit degree bias in the link prediction task</h1></header>
+<style>
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  height: 44px;
+  padding: 0 12px;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: bold;
+  text-align: center;
+  background-color: #444;
+  color: white;
+  border-radius: 16px;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background 0.2s;
+}
+.btn:hover {
+  background-color: #222;
+}
+.img-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+.btn .icon {
+  margin-right: 10px;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+}
+.button-row {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  margin: 32px 0;
+  flex-wrap: wrap;
+}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<div class="button-row">
+  <a class="btn" href="paper.pdf" target="_blank">
+    <span class="icon"><i class="fas fa-file-pdf"></i></span>
+    Paper (TBD)
+  </a>
+  <a class="btn" href="https://arxiv.org/abs/2405.14985" target="_blank">
+    <span class="icon"><i class="fas fa-file-pdf"></i></span>
+    Preprint
+  </a>
+  <a class="btn" href="https://github.com/skojaku/degree-corrected-link-prediction-benchmark" target="_blank">
+    <span class="icon"><i class="fab fa-github"></i></span>
+    GitHub
+  </a>
+</div>
+<h2 id="summary">Summary</h2>
+<p>Link prediction benchmarks are widely used to evaluate models for recommendations and discovery. However, a subtle design flaw&mdash;uniform sampling of edges&mdash;introduces a <strong>degree bias</strong> that inflates performance scores for trivial heuristics. In a benchmark of 27 models across 95 real-world networks, we find that many models achieve excessively high benchmark performance by merely identifying high-degree nodes, not learning structural patterns. This post explains how this happens and outlines steps to fix the evaluation pipeline.</p>
+<div>
+<marimo-iframe data-height="600px" data-show-code="true">
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> pandas <span style="color:#66d9ef">as</span> pd
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> marimo <span style="color:#66d9ef">as</span> mo
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> numpy <span style="color:#66d9ef">as</span> np
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plot_data <span style="color:#f92672">=</span> pd<span style="color:#f92672">.</span>read_csv(<span style="color:#e6db74">&#34;https://localhost:1313/assets/aucroc-agg.csv&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>focal_method_dict <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;preferentialAttachment&#34;</span>: <span style="color:#e6db74">&#34;Preferential Attachment&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;Buddy&#34;</span>: <span style="color:#e6db74">&#34;BUDDY&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;fineTunedGAT&#34;</span>: <span style="color:#e6db74">&#34;GAT&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;fineTunedGraphSAGE&#34;</span>: <span style="color:#e6db74">&#34;GraphSAGE&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;node2vec&#34;</span>: <span style="color:#e6db74">&#34;node2vec&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;resourceAllocation&#34;</span>: <span style="color:#e6db74">&#34;Resource Allocation&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;localPathIndex&#34;</span>: <span style="color:#e6db74">&#34;Local Path Index&#34;</span>,
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plot_data[<span style="color:#e6db74">&#34;model&#34;</span>] <span style="color:#f92672">=</span> plot_data[<span style="color:#e6db74">&#34;model&#34;</span>]<span style="color:#f92672">.</span>map(
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">lambda</span> x: focal_method_dict[x] <span style="color:#66d9ef">if</span> x <span style="color:#f92672">in</span> focal_method_dict <span style="color:#66d9ef">else</span> x
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>method_button <span style="color:#f92672">=</span> mo<span style="color:#f92672">.</span>ui<span style="color:#f92672">.</span>radio(
+</span></span><span style="display:flex;"><span>    focal_method_dict<span style="color:#f92672">.</span>values(),
+</span></span><span style="display:flex;"><span>    value<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Preferential Attachment&#34;</span>,
+</span></span><span style="display:flex;"><span>    inline<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>    label<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;🤖 **Link prediction method**&#34;</span>,
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>sampling_method_dict <span style="color:#f92672">=</span> {
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;Standard (No degree correction)&#34;</span>: <span style="color:#e6db74">&#34;uniform&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;Proposed (Degree correction)&#34;</span>: <span style="color:#e6db74">&#34;degreeBiased&#34;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;HearT&#34;</span>: <span style="color:#e6db74">&#34;heart&#34;</span>
+</span></span><span style="display:flex;"><span>}
+</span></span><span style="display:flex;"><span>sampling_button <span style="color:#f92672">=</span> mo<span style="color:#f92672">.</span>ui<span style="color:#f92672">.</span>radio(
+</span></span><span style="display:flex;"><span>    sampling_method_dict<span style="color:#f92672">.</span>keys(),
+</span></span><span style="display:flex;"><span>    value<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Standard (No degree correction)&#34;</span>,
+</span></span><span style="display:flex;"><span>    inline<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>    label<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;🎯 **Benchmark type**&#34;</span>,
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>mo<span style="color:#f92672">.</span>vstack([method_button, sampling_button])
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> altair <span style="color:#66d9ef">as</span> alt
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Assuming plot_data is your original dataframe</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Prepare the data similar to the original code</span>
+</span></span><span style="display:flex;"><span>focal_sampling_method <span style="color:#f92672">=</span> sampling_method_dict[sampling_button<span style="color:#f92672">.</span>value]
+</span></span><span style="display:flex;"><span>df <span style="color:#f92672">=</span> plot_data<span style="color:#f92672">.</span>query(<span style="color:#e6db74">&#34;negativeEdgeSampler == @focal_sampling_method&#34;</span>)<span style="color:#f92672">.</span>copy()
+</span></span><span style="display:flex;"><span>df[<span style="color:#e6db74">&#34;isFocalMethod&#34;</span>] <span style="color:#f92672">=</span> df[<span style="color:#e6db74">&#34;model&#34;</span>] <span style="color:#f92672">==</span> method_button<span style="color:#f92672">.</span>value
+</span></span><span style="display:flex;"><span>df <span style="color:#f92672">=</span> df<span style="color:#f92672">.</span>sort_values(<span style="color:#e6db74">&#34;lognorm_sigma&#34;</span>)
+</span></span><span style="display:flex;"><span>df[<span style="color:#e6db74">&#34;data_code&#34;</span>] <span style="color:#f92672">=</span> np<span style="color:#f92672">.</span>arange(df<span style="color:#f92672">.</span>shape[<span style="color:#ae81ff">0</span>])
+</span></span><span style="display:flex;"><span>df[<span style="color:#e6db74">&#34;data_code&#34;</span>] <span style="color:#f92672">=</span> <span style="color:#ae81ff">100</span> <span style="color:#f92672">*</span> df[<span style="color:#e6db74">&#34;data_code&#34;</span>] <span style="color:#f92672">/</span> df[<span style="color:#e6db74">&#34;data_code&#34;</span>]<span style="color:#f92672">.</span>nunique()
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Create tooltip with dataname and model name</span>
+</span></span><span style="display:flex;"><span>tooltip <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>    alt<span style="color:#f92672">.</span>Tooltip(<span style="color:#e6db74">&#34;data:N&#34;</span>, title<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Dataset&#34;</span>),
+</span></span><span style="display:flex;"><span>    alt<span style="color:#f92672">.</span>Tooltip(<span style="color:#e6db74">&#34;model:N&#34;</span>, title<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Method&#34;</span>),
+</span></span><span style="display:flex;"><span>    alt<span style="color:#f92672">.</span>Tooltip(<span style="color:#e6db74">&#34;score:Q&#34;</span>, title<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;AUC-ROC&#34;</span>, format<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;.3f&#34;</span>),
+</span></span><span style="display:flex;"><span>]
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Common x and y axis definitions</span>
+</span></span><span style="display:flex;"><span>x_axis <span style="color:#f92672">=</span> alt<span style="color:#f92672">.</span>X(
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#34;data_code:Q&#34;</span>, title<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Graphs&#34;</span>, scale<span style="color:#f92672">=</span>alt<span style="color:#f92672">.</span>Scale(domain<span style="color:#f92672">=</span>[<span style="color:#f92672">-</span><span style="color:#ae81ff">1</span>, <span style="color:#ae81ff">101</span>])
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>y_axis <span style="color:#f92672">=</span> alt<span style="color:#f92672">.</span>Y(<span style="color:#e6db74">&#34;score:Q&#34;</span>, title<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;AUC-ROC&#34;</span>, scale<span style="color:#f92672">=</span>alt<span style="color:#f92672">.</span>Scale(domain<span style="color:#f92672">=</span>[<span style="color:#ae81ff">0.2</span>, <span style="color:#ae81ff">1.01</span>]))
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For focal method points, first create a black stroke layer</span>
+</span></span><span style="display:flex;"><span>focal_points <span style="color:#f92672">=</span> (
+</span></span><span style="display:flex;"><span>    alt<span style="color:#f92672">.</span>Chart(df<span style="color:#f92672">.</span>query(<span style="color:#e6db74">&#34;isFocalMethod&#34;</span>))
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">.</span>mark_circle(stroke<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;black&#34;</span>, strokeWidth<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">.</span>encode(
+</span></span><span style="display:flex;"><span>        x<span style="color:#f92672">=</span>x_axis,
+</span></span><span style="display:flex;"><span>        y<span style="color:#f92672">=</span>y_axis,
+</span></span><span style="display:flex;"><span>        size<span style="color:#f92672">=</span>alt<span style="color:#f92672">.</span>value(<span style="color:#ae81ff">100</span>),
+</span></span><span style="display:flex;"><span>        color<span style="color:#f92672">=</span>alt<span style="color:#f92672">.</span>value(<span style="color:#e6db74">&#34;#FF7F0E&#34;</span>),
+</span></span><span style="display:flex;"><span>        tooltip<span style="color:#f92672">=</span>tooltip,
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># For non-focal method points</span>
+</span></span><span style="display:flex;"><span>other_points <span style="color:#f92672">=</span> (
+</span></span><span style="display:flex;"><span>    alt<span style="color:#f92672">.</span>Chart(df<span style="color:#f92672">.</span>query(<span style="color:#e6db74">&#34;isFocalMethod == False&#34;</span>))
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">.</span>mark_circle()
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">.</span>encode(
+</span></span><span style="display:flex;"><span>        x<span style="color:#f92672">=</span>x_axis,
+</span></span><span style="display:flex;"><span>        y<span style="color:#f92672">=</span>y_axis,
+</span></span><span style="display:flex;"><span>        size<span style="color:#f92672">=</span>alt<span style="color:#f92672">.</span>value(<span style="color:#ae81ff">40</span>),
+</span></span><span style="display:flex;"><span>        color<span style="color:#f92672">=</span>alt<span style="color:#f92672">.</span>value(<span style="color:#e6db74">&#34;#d3d3d3&#34;</span>),
+</span></span><span style="display:flex;"><span>        tooltip<span style="color:#f92672">=</span>tooltip,
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Layer the charts with non-focal points below focal points</span>
+</span></span><span style="display:flex;"><span>chart <span style="color:#f92672">=</span> (
+</span></span><span style="display:flex;"><span>    (other_points <span style="color:#f92672">+</span> focal_points)
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">.</span>properties(width<span style="color:#f92672">=</span><span style="color:#ae81ff">550</span>, height<span style="color:#f92672">=</span><span style="color:#ae81ff">450</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">.</span>configure_axis(labelFontSize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>, titleFontSize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#f92672">.</span>configure_view(strokeWidth<span style="color:#f92672">=</span><span style="color:#ae81ff">0</span>)
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># To save the plot (interactive features will only work in HTML format)</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># chart.save(output_file_uniform + &#34;.html&#34;)</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Display the chart</span>
+</span></span><span style="display:flex;"><span>chart
+</span></span></code></pre></div></marimo-iframe>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@marimo-team/marimo-snippets@1"></script>
+<h2 id="how-link-prediction-is-typically-evaluated">How Link Prediction is Typically Evaluated</h2>
+<p>Link prediction aims to identify missing connections in networks, which is essential for applications ranging from social media recommendations to drug discovery.</p>
+<p>Standard benchmarks for testing link prediction algorithms follow a simple process: take a complete network, randomly remove some edges to create a test set, and train models on the remaining network.</p>
+<p><img src="assets/figs/random-edge-removal.png" alt=""></p>
+<p>The link prediction model then scores both the held-out edges and randomly sampled non-existent edges.
+Performance is typically measured using AUC-ROC, which shows how well the model distinguishes between real missing edges and random non-edges. A higher score means the model is better at ranking actual connections above non-connections.</p>
+<p><img src="assets/figs/link-prediction-scoring.png" alt=""></p>
+<h2 id="benchmark-results">Benchmark results</h2>
+<p>To demonstrate the issue of the benchmark, we benchmarked <strong>27 different link prediction methods</strong> on <strong>95 real-world networks</strong>, including social, technological, and biological graphs. These ranged from small graphs with a few dozen nodes to massive networks with over 100 million. The link prediction methods covered a range of techniques (i.e., topological, embedding-based, and graph neural networks).</p>
+<p><img src="assets/figs/auc-roc.png" alt=""></p>
+<p>And yet, one of the top performers across these datasets was <strong>Preferential Attachment</strong>, a method that simply scores node pairs by multiplying their degrees:
+$$
+s_{ij} = k_i \cdot k_j
+$$</p>
+<p>This method does not learn anything from the data. It uses no features, no labels, and no training. And still, it consistently achieved <strong>AUC scores above 0.9</strong> on large, high-profile datasets:</p>
+<ul>
+<li><strong>0.94</strong> on a citation network of 95M papers</li>
+<li><strong>0.91</strong> on the US patent citation network</li>
+<li><strong>0.93</strong> on a protein interaction network</li>
+<li><strong>0.99</strong> on a drug interaction network</li>
+</ul>
+<p>These results should be alarming.</p>
+<hr>
+<h2 id="the-problem-isnt-the-model--its-the-benchmark">The Problem Isn&rsquo;t the Model — It&rsquo;s the Benchmark</h2>
+<p>What these results suggest is that current link prediction benchmarks are not really testing what we think they are. When the evaluation procedure rewards models for reproducing node degree rather than learning structural patterns, we are encouraging the development of models that succeed by shortcut.</p>
+<p>In fact, <strong>a trivial model that exploits degree can outperform sophisticated GNNs</strong>, simply because the benchmark leaks that information through its sampling strategy.</p>
+<p>The implication is clear: models can appear to perform well, even when they fail to generalize or capture meaningful network structure.</p>
+<hr>
+<h2 id="where-do-we-go-from-here">Where Do We Go From Here?</h2>
+<p>Fixing this problem doesn&rsquo;t mean discarding benchmarks—it means designing better ones. Specifically, we need to:</p>
+<ul>
+<li><strong>Control for degree</strong> when sampling test edges and negatives.</li>
+<li><strong>Stratify</strong> or <strong>balance</strong> the evaluation sets to reflect structural diversity, not degree imbalance.</li>
+<li><strong>Use evaluation metrics</strong> that are less sensitive to class imbalance and structural shortcuts.</li>
+</ul>
+<p>Without these changes, our benchmarks will continue to tell us comforting lies about model performance.</p>
+<hr>
+<p>If you&rsquo;re building or evaluating link prediction models, take a moment to ask: <em>What is my benchmark really measuring?</em></p>
+<p>Sometimes, the answer isn&rsquo;t what you hoped.</p>
+<hr>
+<p><strong>Contact</strong>
+📧 <a href="mailto:skojaku@binghamton.edu">skojaku@binghamton.edu</a>
+🧠 <a href="https://kojaku.github.io">kojaku.github.io</a></p>
+
+<ul><li>info</li>
+            <ul><li>a (nearly) no-CSS, fast, minimalist Hugo theme ported from <a href='https://github.com/riggraz/no-style-please'>riggraz/no-style-please</a>.</li><li><a href="https://github.com/hanwenguo/hugo-theme-nostyleplease">github repo</a></li></ul>
+<li>all posts</li>
+<li>posts by category</li>
+<li><a href="/index.xml">rss</a></li><li>another list</li>
+            <ul><li>with subitems</li>
+            <ul><li>with subsubitems</li><li><a href="/about">example page</a></li></ul>
+</ul>
+<li>PRO TIP</li>
+            <ul><li>to edit this menu, edit data/menu.toml file</li></ul>
+</ul>
+
+
+
+                
+    
+    
+        This is footer.
+You can edit this in ../nostyleplease/layouts/footer.md
+    
+
+
+            </div>
+        </main>
+    </body>
+</html>

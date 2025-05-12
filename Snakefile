@@ -31,6 +31,7 @@ FIG_DIR =j("figs")
 DATA_LIST = [
     f.split("net_")[1].split(".")[0] for f in os.listdir(RAW_UNPROCESSED_NETWORKS_DIR)
 ]
+DATA_LIST = [d for d in DATA_LIST if "ogbl" not in d]
 
 # Small networks
 # Comment out if you want to run for all networks
@@ -55,7 +56,8 @@ paramspace_train_test_split = to_paramspace(params_train_test_split)
 
 
 params_negative_edge_sampler = {
-    "negativeEdgeSampler": ["uniform", "degreeBiased"],
+    "negativeEdgeSampler": ["heart"],
+    #"negativeEdgeSampler": ["uniform", "degreeBiased", "heart"],
 }
 paramspace_negative_edge_sampler = to_paramspace(params_negative_edge_sampler)
 
@@ -283,11 +285,11 @@ rule calc_network_stats:
     script:
         "workflow/calc-network-stats.py"
 
-rule calc_aucroc_pa_powerlaw:
-    output:
-        output_file = AUCROC_PA_POWERLAW_FILE
-    script:
-        "workflow/calc-aucroc-pa-powerlaw.py"
+#rule calc_aucroc_pa_powerlaw:
+#    output:
+#        output_file = AUCROC_PA_POWERLAW_FILE
+#    script:
+#        "workflow/calc-aucroc-pa-powerlaw.py"
 
 # ============================
 # Generating benchmark dataset

@@ -30,8 +30,10 @@ params_lfr = { # LFR
     "tau": [2.5, 3],  # degree exponent
     "tau2": [3],  # community size exponent
     "minc": [100],  # min community size
-    "maxk": [500, 1000], # maximum degree,
-    "maxc": [500, 1000], # maximum community size
+    #"maxk": [500], # maximum degree,
+    "maxk": [1000], # maximum degree,
+    #"maxc": [500], # maximum community size
+    "maxc": [1000], # maximum community size
     "mu": ["%.2f" % d for d in np.linspace(0.1, 1, 19)],
     "sample": list(range(N_SAMPLES)),  # Number of samples
 }
@@ -201,7 +203,7 @@ rule plot_lfr_result:
         output_file_performance = FIG_LFR_PERF_CURVE,
         output_file_aucesim = FIG_LFR_AUCESIM,
     params:
-        model = ["GIN", "GCN", "GAT", "GraphSAGE", "dcGIN", "dcGCN", "dcGAT", "dcGraphSAGE"],
+        model = ["fineTunedGIN", "fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE", "dcFineTunedGIN", "dcFineTunedGCN", "dcFineTunedGAT", "dcFineTunedGraphSAGE"],
         clustering = "kmeans",
         metric = "cosine",
         score_type = "esim",
@@ -222,7 +224,7 @@ rule plot_lfr_result_nmi:
         output_file_performance = FIG_LFR_PERF_CURVE_NMI,
         output_file_aucesim = FIG_LFR_AUCNMI,
     params:
-        model = ["GIN", "GCN", "GAT", "GraphSAGE", "dcGIN", "dcGCN", "dcGAT", "dcGraphSAGE"],
+        model = ["fineTunedGIN", "fineTunedGCN", "fineTunedGAT", "fineTunedGraphSAGE", "dcFineTunedGIN", "dcFineTunedGCN", "dcFineTunedGAT", "dcFineTunedGraphSAGE"],
         clustering = "kmeans",
         metric = "cosine",
         score_type = "nmi",

@@ -56,11 +56,26 @@ if "snakemake" in sys.modules:
     input_file_list = snakemake.input["input_file_list"]
     output_file = snakemake.output["output_file"]
 else:
-    input_file = "../data/"
-    output_file = "../data/"
+    # AUC-ROC
+    input_file_list = list(glob.glob("../data/derived/results/auc-roc/*/*.csv"))
+    output_file = "../data/derived/results/result_auc_roc.csv"
+
+    # Results Retrievals
+    input_file_list = list(glob.glob("../data/derived/results/retrieval/*/*.csv"))
+    output_file = "../data/derived/results/result_retrieval.csv"
+
+    # Results Retrievals
+    # input_file_list = list(glob.glob("../data/derived/results/retrieval/*/*.csv"))
+    # output_file = "../data/derived/results/result_retrieval.csv"
+
+    # Results Retrievals
+    # input_file_list = list(glob.glob("../data/derived/results/hits-mrr/*/*.csv"))
+    # output_file = "../data/derived/results/result_hits-mrr.csv"
 
 # ========================
 # Load
 # ========================
 data_table = load_files(input_file_list)
 data_table.to_csv(output_file)
+
+# %%

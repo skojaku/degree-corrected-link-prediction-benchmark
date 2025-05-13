@@ -1,7 +1,7 @@
 baseURL = 'https://skojaku.github.io/'
 languageCode = 'en-us'
 title = 'Implicit degree bias in the link prediction task'
-theme = "hugo-nostyleplease"
+theme = "hugo-theme-nostyleplease"
 
 [markup]
   [markup.goldmark]

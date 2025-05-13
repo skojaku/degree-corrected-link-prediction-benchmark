@@ -1,5 +1,6 @@
 # Repository for "Implicit degree bias in the link prediction task"
 
+
 ## Citation
 ```
 @article{aiyappa2024implicit,

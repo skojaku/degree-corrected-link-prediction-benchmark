@@ -4,3 +4,6 @@
 [submodule "libs/LFR-benchmark"]
 	path = libs/LFR-benchmark
 	url = https://github.com/skojaku/LFR-benchmark
+[submodule "docs/themes/hugo-theme-nostyleplease"]
+    path = docs/themes/hugo-theme-nostyleplease
+    url = https://github.com/hanwenguo/hugo-theme-nostyleplease.git 

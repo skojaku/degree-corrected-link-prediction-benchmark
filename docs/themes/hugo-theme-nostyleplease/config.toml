@@ -1,12 +1,14 @@
-baseURL = 'https://skojaku.github.io/'
-languageCode = 'en-us'
-title = 'Implicit degree bias in the link prediction task'
-theme = "hugo-nostyleplease"
+[module]
+  [module.hugoVersion]
+    extended = true
+    min      = "0.41.0"
 
 [markup]
   [markup.goldmark]
-    [markup.goldmark.renderer]
-      unsafe = true
+    [markup.goldmark.parser]
+      [markup.goldmark.parser.attribute]
+        block = true
+        title = true
 
   [markup.highlight]
     anchorLineNos      = false

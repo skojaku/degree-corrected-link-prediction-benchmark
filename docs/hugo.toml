@@ -35,3 +35,7 @@ theme = "nostyleplease"
     date_format       = "2006-01-02"
     isListGroupByDate = false
     isShowFooter      = true
+
+[caches]
+  [caches.images]
+    dir = ':cacheDir/images'

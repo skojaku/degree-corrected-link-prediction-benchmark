@@ -3,11 +3,12 @@
 
 ## Citation
 ```
-@article{aiyappa2024implicit,
-  title={Implicit degree bias in the link prediction task},
-  author={Rachith Aiyappa and Xin Wang and Munjung Kim and Ozgur Can Seckin and Jisung Yoon and Yong-Yeol Ahn and Sadamori Kojaku},
-  journal={arxiv: 2405.14985}
-  year={2024}
+@inproceedings{aiyappa2025implicit,
+title={Implicit degree bias in the link prediction task},
+author={Rachith Aiyappa and Xin Wang and Munjung Kim and Ozgur Can Seckin and Yong-Yeol Ahn and Sadamori Kojaku},
+booktitle={Forty-second International Conference on Machine Learning},
+year={2025},
+url={https://openreview.net/forum?id=gJ7cU9cdZB}
 }
 ```
 

@@ -1,0 +1,41 @@
+name: Deploy pages
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  hugo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: 'latest'
+          extended: true
+      - name: Run hugo
+        shell: bash
+        run: |
+          cd docs
+          mkdir -p public
+          hugo --minify
+      - name: Deploy to gh-pages branch
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git checkout --orphan gh-pages
+          git rm -rf .
+          cp -r docs/public/* .
+          rm -rf docs/public
+          git add .
+          git commit -m "Deploy website to gh-pages"
+          git push -f origin gh-pages

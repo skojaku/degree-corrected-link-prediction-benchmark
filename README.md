@@ -1,16 +1,7 @@
-# Repository for "Implicit degree bias in the link prediction task"
+# Degree-corrected link prediction task
 
+![](./figs/poster.png)
 
-## Citation
-```
-@inproceedings{aiyappa2025implicit,
-title={Implicit degree bias in the link prediction task},
-author={Rachith Aiyappa and Xin Wang and Munjung Kim and Ozgur Can Seckin and Yong-Yeol Ahn and Sadamori Kojaku},
-booktitle={Forty-second International Conference on Machine Learning},
-year={2025},
-url={https://openreview.net/forum?id=gJ7cU9cdZB}
-}
-```
 
 ## Table of content
 
@@ -21,7 +12,17 @@ url={https://openreview.net/forum?id=gJ7cU9cdZB}
 - [Reproducing the results](#reproducing-the-results)
 
 
-# Degree-corrected link prediction task
+## Citation
+
+```
+@inproceedings{aiyappa2025implicit,
+title={Implicit degree bias in the link prediction task},
+author={Rachith Aiyappa and Xin Wang and Munjung Kim and Ozgur Can Seckin and Yong-Yeol Ahn and Sadamori Kojaku},
+booktitle={Forty-second International Conference on Machine Learning},
+year={2025},
+url={https://openreview.net/forum?id=gJ7cU9cdZB}
+}
+```
 
 This repository provides the code to generate the degree-corrected link prediction task.
 ## Installation

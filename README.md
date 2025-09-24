@@ -87,6 +87,4 @@ trg_test # The destination nodes of the test edges
 y_test # The labels of the test edges, where 1 means positive and 0 means negative
 ```
 
-# Reproducing the results
-
 We provide all source code and data to reproduce the results in the paper. For detailed instructions, please see [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md).

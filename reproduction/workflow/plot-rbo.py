@@ -57,7 +57,7 @@ else:
     retrieval_result_file = "../data/derived/results/result_retrieval.csv"
     classification_result_file = "../data/derived/results/result_auc_roc.csv"
     rbop = 0.5
-    topk = 10
+    topk = 50
     focal_score = "vp"
     output_file = "../../figs/rbo.pdf"
 
@@ -96,16 +96,16 @@ for sampling, dg in rank_class.groupby("negativeEdgeSampler"):
 
 result_table = pd.DataFrame(results)
 result_table["sampling"] = result_table["sampling"].map(
-    {"uniform": "Original", "degreeBiased": "Degree-corrected"}
+    {"uniform": "Original", "degreeBiased": "Degree-corrected", "heart": "HeaRT"}
 )
-
+# %%
 # ===================
 # Plot
 # ===================
 sns.set_style("white")
 sns.set(font_scale=1.2)
 sns.set_style("ticks")
-fig, ax = plt.subplots(figsize=(4, 5))
+fig, ax = plt.subplots(figsize=(7, 5))
 
 color_palette = sns.color_palette().as_hex()
 baseline_color = sns.desaturate(color_palette[0], 0.24)
@@ -121,8 +121,8 @@ ax = sns.stripplot(
     color="#ffffff",
     edgecolor="black",
     linewidth=0.5,
-    hue_order=["Original", "Degree-corrected"],
-    order=["Original", "Degree-corrected"],
+    hue_order=["Original", "HeaRT", "Degree-corrected"],
+    order=["Original", "HeaRT", "Degree-corrected"],
     ax=ax,
 )
 ax = sns.violinplot(
@@ -133,9 +133,14 @@ ax = sns.violinplot(
     bw_adjust=0.5,
     cut=0,
     common_norm=True,
-    order=["Original", "Degree-corrected"],
+    order=[
+        "Original",
+        "HeaRT",
+        "Degree-corrected",
+    ],
     palette={
         "Original": baseline_color,
+        "HeaRT": sns.desaturate(color_palette[0], 0.24),
         "Degree-corrected": focal_color,
     },
 )

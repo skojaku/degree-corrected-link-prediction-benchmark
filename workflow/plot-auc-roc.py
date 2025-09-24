@@ -24,6 +24,8 @@ data_table = pd.read_csv(
 )
 
 netstat_table = pd.read_csv(netstat_table_file)
+data_table.query("data == 'ogbl-collab'")
+# %%
 
 # ========================
 # Preprocessing
@@ -42,6 +44,9 @@ plot_data = df.query("model == 'preferentialAttachment'")[
 
 plot_data = df.merge(plot_data, on=["data", "negativeEdgeSampler"])
 plot_data["relative_score"] = plot_data["score"].values / plot_data["score_pa"].values
+# %%
+
+# %%
 
 # %% Merge with the network stats
 plot_data = plot_data.merge(netstat_table, left_on="data", right_on="network")
@@ -56,6 +61,8 @@ exclude = [
 ]
 plot_data = plot_data[~plot_data["model"].isin(exclude)]
 
+# %%
+plot_data.query("data == 'ogbl-collab'")
 # %%
 df = netstat_table.sort_values("lognorm_sigma")[["network", "lognorm_sigma"]]
 df["data_code"] = np.arange(df.shape[0], dtype="int")
@@ -171,3 +178,5 @@ fig.savefig(output_file_uniform, bbox_inches="tight", dpi=300)
 #
 ## %%
 #
+
+# %%
